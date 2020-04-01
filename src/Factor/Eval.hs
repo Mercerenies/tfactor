@@ -31,7 +31,7 @@ evalEval val r0 s0 = fmap fst $ runEval val r0 s0
 
 evalStmt :: Monad m => Statement -> EvalT m ()
 evalStmt (Literal d) = pushStack [d]
-evalStmt (Call _) = error "Not implemented"
+evalStmt (Call v) = callFunction v
 
 evalSeq :: Monad m => Sequence -> EvalT m ()
 evalSeq (Sequence xs) = mapM_ evalStmt xs
