@@ -2,11 +2,12 @@
 
 module Factor.State(EvalState(..), ReadOnlyState(..), newState, newReader,
                     pushStack, peekStackMaybe, peekStack, popStackMaybe, popStack,
-                    declsToReadOnly, lookupFn) where
+                    declsToReadOnly, lookupFn, lookupFn') where
 
 import Factor.Error
 import Factor.Code
 import Factor.Id
+import Factor.Type
 
 import Data.Map(Map)
 import qualified Data.Map as Map
@@ -18,7 +19,7 @@ data EvalState = EvalState {
     } deriving (Show)
 
 data ReadOnlyState = ReadOnlyState {
-      readerFunctions :: Map Id Function
+      readerFunctions :: Map Id (FunctionType, Function)
     } deriving (Show)
 
 newState :: EvalState
@@ -52,14 +53,17 @@ declsToReadOnly :: MonadError FactorError m => [Declaration] -> m ReadOnlyState
 declsToReadOnly = foldM go newReader
     where go reader decl =
               case decl of
-                FunctionDecl (Function Nothing _) ->
+                FunctionDecl _ (Function Nothing _) ->
                     throwError (InternalError "Unnamed top-level function")
-                FunctionDecl (Function (Just v) def)
+                FunctionDecl t (Function (Just v) def)
                  | Map.member v (readerFunctions reader) -> throwError (DuplicateFunctionDecl v)
-                 | otherwise -> pure $ defineFunction v def reader
-          defineFunction v def reader =
+                 | otherwise -> pure $ defineFunction v t def reader
+          defineFunction v t def reader =
               reader { readerFunctions =
-                           Map.insert v (Function (Just v) def) (readerFunctions reader) }
+                           Map.insert v (t, Function (Just v) def) (readerFunctions reader) }
 
-lookupFn :: Id -> ReadOnlyState -> Maybe Function
+lookupFn :: Id -> ReadOnlyState -> Maybe (FunctionType, Function)
 lookupFn v (readerFunctions -> fns) = Map.lookup v fns
+
+lookupFn' :: MonadError FactorError m => Id -> ReadOnlyState -> m (FunctionType, Function)
+lookupFn' v r = maybe (throwError $ NoSuchFunction v) pure $ lookupFn v r

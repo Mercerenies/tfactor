@@ -37,6 +37,4 @@ evalSeq :: Monad m => Sequence -> EvalT m ()
 evalSeq (Sequence xs) = mapM_ evalStmt xs
 
 callFunction :: Monad m => Id -> EvalT m ()
-callFunction v = asks (lookupFn v) >>= \case
-                 Nothing -> throwError (NoSuchFunction v)
-                 Just (Function _ ss) -> evalSeq ss
+callFunction v = ask >>= lookupFn' v >>= \(_, Function _ ss) -> evalSeq ss

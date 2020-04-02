@@ -3,6 +3,7 @@ module Factor.Parser(parseStmt, parseSeq, parseDecl, parseFile) where
 
 import Factor.Id
 import Factor.Code
+import Factor.Type
 
 import Text.Parsec
 import Data.Char
@@ -10,7 +11,7 @@ import Data.Char
 type Parser = Parsec String ()
 
 semiSpecialChars :: [Char]
-semiSpecialChars = ":;" -- TBA
+semiSpecialChars = ":;()" -- TBA
 
 specialChars :: [Char]
 specialChars = "" -- TBA
@@ -38,13 +39,32 @@ seq_ :: Parser Sequence
 seq_ = Sequence <$> (many $ spaces *> statement <* spaces)
 
 decl :: Parser Declaration
-decl = FunctionDecl <$> functionDecl
+decl = (\(t, s) -> FunctionDecl t s) <$> functionDecl
     where functionDecl = do
             try (char ':' *> spaces1)
             name <- id_ <* spaces
+            ty <- functionType <* spaces1
             def <- seq_ <* spaces
             char ';' *> spaces
-            return $ Function (Just name) def
+            return $ (ty, Function (Just name) def)
+
+primType :: Parser PrimType
+primType = TInt <$ string "Int" <|>
+           TAny <$ string "Any" <|>
+           TNothing <$ string "Nothing"
+
+type_ :: Parser Type
+type_ = PrimType <$> primType <|>
+        FunType <$> functionType
+
+functionType :: Parser FunctionType
+functionType = do
+  try (char '(' *> spaces1)
+  args <- many (type_ <* spaces1)
+  string "--" *> spaces
+  rets <- many (type_ <* spaces1)
+  _ <- char ')'
+  return $ FunctionType args rets
 
 parseStmt :: SourceName -> String -> Either ParseError Statement
 parseStmt = parse statement

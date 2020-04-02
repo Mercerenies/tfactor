@@ -2,6 +2,7 @@
 module Factor.Code where
 
 import Factor.Id
+import Factor.Type
 
 -- Functions may be named but are not necessarily so.
 data Function = Function (Maybe Id) Sequence
@@ -18,7 +19,7 @@ data Statement = Call Id
 newtype Sequence = Sequence { unSequence :: [Statement] }
     deriving (Show, Eq)
 
-data Declaration = FunctionDecl Function
+data Declaration = FunctionDecl FunctionType Function
                    deriving (Show, Eq)
 
 functionName :: Function -> Maybe Id
