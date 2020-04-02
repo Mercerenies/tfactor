@@ -1,4 +1,4 @@
-{-# LANGUAGE LambdaCase #-}
+{-# LANGUAGE LambdaCase, FlexibleContexts #-}
 
 module Factor.Eval where
 
@@ -30,12 +30,15 @@ runEval val r0 s0 = runIdentity $ runEvalT val r0 s0
 evalEval :: Eval a -> ReadOnlyState -> EvalState -> Either FactorError a
 evalEval val r0 s0 = fmap fst $ runEval val r0 s0
 
-evalStmt :: Monad m => Statement -> EvalT m ()
+evalStmt :: (MonadReader ReadOnlyState m, MonadState EvalState m, MonadError FactorError m) =>
+            Statement -> m ()
 evalStmt (Literal d) = pushStack (Stack.singleton d)
 evalStmt (Call v) = callFunction v
 
-evalSeq :: Monad m => Sequence -> EvalT m ()
+evalSeq :: (MonadReader ReadOnlyState m, MonadState EvalState m, MonadError FactorError m) =>
+           Sequence -> m ()
 evalSeq (Sequence xs) = mapM_ evalStmt xs
 
-callFunction :: Monad m => Id -> EvalT m ()
+callFunction :: (MonadReader ReadOnlyState m, MonadState EvalState m, MonadError FactorError m) =>
+                Id -> m ()
 callFunction v = ask >>= lookupFn' v >>= \(_, Function _ ss) -> evalSeq ss
