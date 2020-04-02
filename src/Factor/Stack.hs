@@ -3,6 +3,9 @@
 module Factor.Stack where
 
 import Data.Monoid
+import Data.Foldable as F hiding (length)
+import qualified Data.Foldable as F(length)
+import Prelude hiding (length)
 import Control.Applicative.Backwards
 
 -- I'm tired of forgetting which side of my "stack" is the top, so I'm
@@ -55,5 +58,24 @@ peekStack = fmap fst . popStack
 
 splitStack :: Int -> Stack a -> Maybe (Stack a, Stack a)
 splitStack n (Stack xs)
-    | length xs < n = Nothing
-    | otherwise     = Just (Stack $ take n xs, Stack $ drop n xs)
+    | F.length xs < n = Nothing
+    |   otherwise     = Just (Stack $ take n xs, Stack $ drop n xs)
+
+takeTop :: Int -> Stack a -> Maybe (Stack a)
+takeTop n s = fmap fst (splitStack n s)
+
+takeBottom :: Int -> Stack a -> Maybe (Stack a)
+takeBottom n s = fmap snd (splitStack (length s - n) s)
+
+-- We're not defining a general Foldable instance for Stack, so these
+-- functions is provided here for convenience.
+
+length :: Stack a -> Int
+length = F.length . FromTop
+
+toList :: Stack a -> [a]
+toList (Stack xs) = xs
+
+-- Top of stack is front of list
+fromList :: [a] -> Stack a
+fromList = Stack
