@@ -4,6 +4,7 @@ module Factor.Parser(parseStmt, parseSeq, parseDecl, parseFile) where
 import Factor.Id
 import Factor.Code
 import Factor.Type
+import qualified Factor.Stack as Stack
 
 import Text.Parsec
 import Data.Char
@@ -64,7 +65,9 @@ functionType = do
   string "--" *> spaces
   rets <- many (type_ <* spaces1)
   _ <- char ')'
-  return $ FunctionType args rets
+  -- Reverse since we write the types with stack top on right but
+  -- store them with stack top on left.
+  return $ FunctionType (Stack.fromList $ reverse args) (Stack.fromList $ reverse rets)
 
 parseStmt :: SourceName -> String -> Either ParseError Statement
 parseStmt = parse statement

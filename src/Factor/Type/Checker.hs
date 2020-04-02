@@ -7,6 +7,7 @@ import Factor.State
 import Factor.Type
 import Factor.Type.Unify
 import Factor.Error
+import qualified Factor.Stack as Stack
 
 import Control.Monad.Reader
 import Control.Monad.Except
@@ -21,7 +22,7 @@ typeOfValue value = case value of
 typeOf :: (MonadError FactorError m, MonadReader ReadOnlyState m) => Statement -> m FunctionType
 typeOf stmt = case stmt of
                 Call v -> ask >>= lookupFn' v >>= \(t, _) -> return t
-                Literal d -> (\t -> FunctionType [] [t]) <$> typeOfValue d
+                Literal d -> (\t -> FunctionType Stack.empty (Stack.singleton t)) <$> typeOfValue d
 
 typeOfSeq :: (MonadError FactorError m, MonadReader ReadOnlyState m) => Sequence -> m FunctionType
 typeOfSeq (Sequence xs) = mapM typeOf xs >>= foldM composeFunctions emptyFnType

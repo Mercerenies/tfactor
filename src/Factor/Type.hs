@@ -2,13 +2,14 @@
 module Factor.Type where
 
 import Factor.Util
+import Factor.Stack(Stack)
+import qualified Factor.Stack as Stack
 
 data Type = PrimType PrimType
           | FunType FunctionType
             deriving (Eq)
 
--- Top of stack is on the right, here.
-data FunctionType = FunctionType [Type] [Type]
+data FunctionType = FunctionType (Stack Type) (Stack Type)
                     deriving (Eq)
 
 data PrimType = TInt | TAny | TNothing
@@ -28,8 +29,9 @@ instance Show Type where
 instance Show FunctionType where
     showsPrec _ (FunctionType args rets) =
         ("( " ++) . args' . (" -- " ++) . rets' . (" )" ++)
-            where args' = sepBy (" " ++) (map (showsPrec 10) args)
-                  rets' = sepBy (" " ++) (map (showsPrec 10) rets)
+            where listOut = sepBy (" " ++) . fmap (showsPrec 10) . Stack.FromBottom
+                  args' = listOut args
+                  rets' = listOut rets
 
 emptyFnType :: FunctionType
-emptyFnType = FunctionType [] []
+emptyFnType = FunctionType Stack.empty Stack.empty
