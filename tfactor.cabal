@@ -4,7 +4,7 @@ cabal-version: 1.12
 --
 -- see: https://github.com/sol/hpack
 --
--- hash: 1f119a4720a33cc850043c5d866d831b46e9331c47ead9953e817649dabd29be
+-- hash: 06d79b75570c6bc172e199031abf97eded431e1094d85bbd08b4f40bf227323c
 
 name:           tfactor
 version:        0.1.0.0
@@ -31,6 +31,7 @@ library
       Factor.Eval
       Factor.Id
       Factor.Parser
+      Factor.Stack
       Factor.State
       Factor.Type
       Factor.Type.Checker
@@ -47,6 +48,7 @@ library
     , containers >=0 && <1
     , mtl >=2.2.2 && <3
     , parsec >=3 && <4
+    , transformers >=0 && <1
   default-language: Haskell2010
 
 executable tfactor-exe
@@ -62,6 +64,7 @@ executable tfactor-exe
     , mtl >=2.2.2 && <3
     , parsec >=3 && <4
     , tfactor
+    , transformers >=0 && <1
   default-language: Haskell2010
 
 test-suite tfactor-test
@@ -78,4 +81,5 @@ test-suite tfactor-test
     , mtl >=2.2.2 && <3
     , parsec >=3 && <4
     , tfactor
+    , transformers >=0 && <1
   default-language: Haskell2010

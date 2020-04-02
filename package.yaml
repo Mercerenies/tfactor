@@ -23,6 +23,7 @@ dependencies:
 - base >= 4.7 && < 5
 - parsec >= 3 && < 4
 - mtl >= 2.2.2 && < 3
+- transformers >= 0 && < 1
 - containers >= 0 && < 1
 
 library:

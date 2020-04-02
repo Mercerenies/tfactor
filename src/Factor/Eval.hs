@@ -6,6 +6,7 @@ import Factor.Code
 import Factor.Error
 import Factor.State
 import Factor.Id
+import qualified Factor.Stack as Stack
 
 import Control.Monad.RWS
 import Control.Monad.Except
@@ -30,7 +31,7 @@ evalEval :: Eval a -> ReadOnlyState -> EvalState -> Either FactorError a
 evalEval val r0 s0 = fmap fst $ runEval val r0 s0
 
 evalStmt :: Monad m => Statement -> EvalT m ()
-evalStmt (Literal d) = pushStack [d]
+evalStmt (Literal d) = pushStack (Stack.singleton d)
 evalStmt (Call v) = callFunction v
 
 evalSeq :: Monad m => Sequence -> EvalT m ()

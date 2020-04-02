@@ -8,6 +8,8 @@ import Factor.Error
 import Factor.Code
 import Factor.Id
 import Factor.Type
+import Factor.Stack(Stack)
+import qualified Factor.Stack as Stack
 
 import Data.Map(Map)
 import qualified Data.Map as Map
@@ -15,7 +17,7 @@ import Control.Monad.State
 import Control.Monad.Except
 
 data EvalState = EvalState {
-      stateStack :: [Data]
+      stateStack :: Stack Data
     } deriving (Show)
 
 data ReadOnlyState = ReadOnlyState {
@@ -23,30 +25,28 @@ data ReadOnlyState = ReadOnlyState {
     } deriving (Show)
 
 newState :: EvalState
-newState = EvalState []
+newState = EvalState Stack.empty
 
 newReader :: ReadOnlyState
 newReader = ReadOnlyState Map.empty
 
-pushStack :: MonadState EvalState m => [Data] -> m ()
-pushStack xs = modify $ \s -> s { stateStack = xs ++ stateStack s }
+pushStack :: MonadState EvalState m => Stack Data -> m ()
+pushStack xs = modify $ \s -> s { stateStack = Stack.appendStack xs (stateStack s) }
 
-peekStackMaybe :: MonadState EvalState m => Int -> m (Maybe [Data])
-peekStackMaybe n = extractFirstN <$> gets stateStack
-    where extractFirstN stack = take n stack <$ guard (length stack >= n)
+peekStackMaybe :: MonadState EvalState m => Int -> m (Maybe (Stack Data))
+peekStackMaybe n = go <$> gets stateStack
+    where go = fmap fst . Stack.splitStack n
 
-peekStack :: (MonadState EvalState m, MonadError FactorError m) => Int -> m [Data]
+peekStack :: (MonadState EvalState m, MonadError FactorError m) => Int -> m (Stack Data)
 peekStack n = peekStackMaybe n >>= maybe (throwError StackUnderflow) return
 
-popStackMaybe :: MonadState EvalState m => Int -> m (Maybe [Data])
-popStackMaybe n = gets stateStack >>= extractFirstN
-    where extractFirstN stack = if length stack < n then
-                                    return Nothing
-                                else
-                                    let (h, t) = splitAt n stack
-                                    in Just h <$ modify (\s -> s { stateStack = t })
+popStackMaybe :: MonadState EvalState m => Int -> m (Maybe (Stack Data))
+popStackMaybe n = gets stateStack >>= go
+    where go ss = case Stack.splitStack n ss of
+                    Nothing -> pure Nothing
+                    Just (a, b) -> Just a <$ modify (\s -> s { stateStack = b})
 
-popStack :: (MonadState EvalState m, MonadError FactorError m) => Int -> m [Data]
+popStack :: (MonadState EvalState m, MonadError FactorError m) => Int -> m (Stack Data)
 popStack n = popStackMaybe n >>= maybe (throwError StackUnderflow) return
 
 declsToReadOnly :: MonadError FactorError m => [Declaration] -> m ReadOnlyState
