@@ -47,7 +47,7 @@ decl = (\(t, s) -> FunctionDecl t s) <$> functionDecl
             ty <- functionType <* spaces1
             def <- seq_ <* spaces
             char ';' *> spaces
-            return $ (ty, Function (Just name) def)
+            return $ (PolyFunctionType (allQuantVars $ FunType ty) ty, Function (Just name) def)
 
 primType :: Parser PrimType
 primType = TInt <$ string "Int" <|>

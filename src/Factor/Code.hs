@@ -19,7 +19,7 @@ data Statement = Call Id
 newtype Sequence = Sequence { unSequence :: [Statement] }
     deriving (Show, Eq)
 
-data Declaration = FunctionDecl FunctionType Function
+data Declaration = FunctionDecl PolyFunctionType Function
                    deriving (Show, Eq)
 
 functionName :: Function -> Maybe Id

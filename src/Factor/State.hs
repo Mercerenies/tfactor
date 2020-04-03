@@ -28,8 +28,8 @@ data ReadOnlyState = ReadOnlyState {
       readerFunctions :: Map Id ReaderFunction
     }
 
-data ReaderFunction = UDFunction FunctionType  Function    -- User-defined function
-                    | BIFunction FunctionType (BuiltIn ()) -- Built-in function
+data ReaderFunction = UDFunction PolyFunctionType  Function    -- User-defined function
+                    | BIFunction PolyFunctionType (BuiltIn ()) -- Built-in function
 
 type BuiltInConstraints m = (MonadReader ReadOnlyState m, MonadState EvalState m, MonadError FactorError m)
 
@@ -80,6 +80,6 @@ lookupFn v (readerFunctions -> fns) = Map.lookup v fns
 lookupFn' :: MonadError FactorError m => Id -> ReadOnlyState -> m ReaderFunction
 lookupFn' v r = maybe (throwError $ NoSuchFunction v) pure $ lookupFn v r
 
-readerFunctionType :: ReaderFunction -> FunctionType
+readerFunctionType :: ReaderFunction -> PolyFunctionType
 readerFunctionType (UDFunction t _) = t
 readerFunctionType (BIFunction t _) = t

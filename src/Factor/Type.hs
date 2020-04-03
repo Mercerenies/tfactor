@@ -68,6 +68,9 @@ polyFunctionType ids args rets = PolyFunctionType ids (functionType args rets)
 liftFnType :: FunctionType -> PolyFunctionType
 liftFnType = PolyFunctionType []
 
+underlyingFnType :: PolyFunctionType -> FunctionType
+underlyingFnType (PolyFunctionType _ t) = t
+
 -- Ground, then Quant
 gensub :: (Id -> Type) -> (Id -> Type) -> Type -> Type
 gensub a b = go
