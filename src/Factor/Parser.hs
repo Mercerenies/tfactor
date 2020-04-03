@@ -12,7 +12,7 @@ import Data.Char
 type Parser = Parsec String ()
 
 semiSpecialChars :: [Char]
-semiSpecialChars = ":;()" -- TBA
+semiSpecialChars = ":;()'"
 
 specialChars :: [Char]
 specialChars = "" -- TBA

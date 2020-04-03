@@ -7,6 +7,7 @@ import Data.Foldable as F hiding (length)
 import qualified Data.Foldable as F(length)
 import Prelude hiding (length)
 import Control.Applicative.Backwards
+import Control.Monad(zipWithM)
 
 -- I'm tired of forgetting which side of my "stack" is the top, so I'm
 -- making an ADT for it.
@@ -82,3 +83,6 @@ reverse (Stack xs) = Stack (Prelude.reverse xs)
 -- Top of stack is front of list
 fromList :: [a] -> Stack a
 fromList = Stack
+
+zipWithM :: Monad m => (a -> b -> m c) -> Stack a -> Stack b -> m (Stack c)
+zipWithM f (Stack xs) (Stack ys) = Stack <$> Control.Monad.zipWithM f xs ys

@@ -4,7 +4,7 @@ cabal-version: 1.12
 --
 -- see: https://github.com/sol/hpack
 --
--- hash: c3c25fb5007b10a73cf5e25059426b069b59ca9f4b668911fa8b2d6f7927c4a9
+-- hash: a62b2da2420075f51a2a27c9394b20a678bd8653abfa313d87ce015f08df7f64
 
 name:           tfactor
 version:        0.1.0.0
@@ -45,7 +45,7 @@ library
       src
   ghc-options: -Wall -Wextra -Werror -Wincomplete-uni-patterns
   build-depends:
-      base >=4.7 && <5
+      base >=4.9 && <5
     , containers >=0 && <1
     , mtl >=2.2.2 && <3
     , parsec >=3 && <4
@@ -60,7 +60,7 @@ executable tfactor-exe
       app
   ghc-options: -threaded -rtsopts -with-rtsopts=-N -Wall -Wextra -Werror -Wincomplete-uni-patterns
   build-depends:
-      base >=4.7 && <5
+      base >=4.9 && <5
     , containers >=0 && <1
     , mtl >=2.2.2 && <3
     , parsec >=3 && <4
@@ -77,7 +77,7 @@ test-suite tfactor-test
       test
   ghc-options: -threaded -rtsopts -with-rtsopts=-N -Wall -Wextra -Werror -Wincomplete-uni-patterns
   build-depends:
-      base >=4.7 && <5
+      base >=4.9 && <5
     , containers >=0 && <1
     , mtl >=2.2.2 && <3
     , parsec >=3 && <4
