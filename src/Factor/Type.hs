@@ -121,7 +121,7 @@ renameToAvoidConflicts conflict t = gensub GroundVar (QuantVar . rename) t
               | not (conflict v) = v
               | otherwise = head [v' | n <- [0 :: Int ..]
                                      , let v' = v <> Id (show n)
-                                     , not (isConflicting v)]
+                                     , not (isConflicting v')]
           quants = allQuantVars t
           isConflicting v = conflict v || v `elem` quants
 

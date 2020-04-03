@@ -1,2 +1,2 @@
-: b ( -- Int Int Any ) 3 4 5 ;
-: main ( -- Int Any Int ) b swap swap ;
+: my-swap ( 'd 'c -- 'c 'd ) swap ;
+: main ( -- Int Int Int ) 3 4 5 my-swap ;

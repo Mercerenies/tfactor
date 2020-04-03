@@ -54,8 +54,12 @@ primType = TInt <$ string "Int" <|>
            TAny <$ string "Any" <|>
            TNothing <$ string "Nothing"
 
+quantType :: Parser Id
+quantType = char '\'' *> id_
+
 type_ :: Parser Type
 type_ = PrimType <$> primType <|>
+        QuantVar <$> quantType <|>
         FunType <$> functionType
 
 functionType :: Parser FunctionType

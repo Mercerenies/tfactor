@@ -35,6 +35,10 @@ typeOfSeq (Sequence xs) = mapM typeOf xs >>= foldM composePFunctions emptyPolyFn
 -- that the types line up. The assumptions we used to get there are
 -- irrelevant.
 checkDeclaredType :: (MonadError FactorError m, MonadReader ReadOnlyState m) => PolyFunctionType -> Function -> m ()
-checkDeclaredType (PolyFunctionType _ declared) (Function _ ss) =
-    let check = typeOfSeq ss >>= ((`isFnSubtypeOf` declared) . underlyingFnType)
-    in fmap fst $ runWriterT check
+checkDeclaredType (PolyFunctionType ids declared) (Function _ ss) = fmap fst . runWriterT $ do
+  ss' <- typeOfSeq ss
+  let inferred = underlyingFnType ss'
+  toGround' ids inferred `isFnSubtypeOf` toGround' ids declared
+      where toGround' i fn = case toGround i (FunType fn) of
+                               FunType fn' -> fn'
+                               _ -> error "toGround changed shape of type in checkDeclaredType"
