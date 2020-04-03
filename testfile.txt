@@ -1,3 +1,2 @@
-: a ( -- Int ) 3 ;
-: b ( -- Int Int Any ) 3 4 5 ;
-: main ( -- Int Int ) b drop ;
+: b ( -- Int Int Int ) 3 4 5 ;
+: main ( -- Int Any Any ) b swap ;

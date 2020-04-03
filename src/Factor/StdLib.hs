@@ -2,6 +2,7 @@
 
 module Factor.StdLib(builtins, stdlibs) where
 
+import qualified Factor.Stack as Stack
 import Factor.State
 import Factor.Id
 import Factor.Type
@@ -20,9 +21,19 @@ import qualified Data.Map as Map
 drop_ :: BuiltIn ()
 drop_ = BuiltIn $ void (popStack 1)
 
+-- This one can be written in the language as simply a no-op. But
+-- sometimes explicit is better than implicit.
+id_ :: BuiltIn ()
+id_ = BuiltIn $ pure ()
+
+swap :: BuiltIn ()
+swap = BuiltIn $ popStack 2 >>= (pushStack . Stack.reverse)
+
 builtins :: Map Id ReaderFunction
 builtins = Map.fromList [
-            (Id "drop", BIFunction (functionType [PrimType TAny] []) drop_)
+            (Id "drop", BIFunction (functionType [PrimType TAny] []) drop_),
+            (Id "id", BIFunction (functionType [] []) id_),
+            (Id "swap", BIFunction (functionType [PrimType TAny, PrimType TAny] [PrimType TAny, PrimType TAny]) swap)
            ]
 
 stdlibs :: ReadOnlyState

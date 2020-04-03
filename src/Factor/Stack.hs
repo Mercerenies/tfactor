@@ -76,6 +76,9 @@ length = F.length . FromTop
 toList :: Stack a -> [a]
 toList (Stack xs) = xs
 
+reverse :: Stack a -> Stack a
+reverse (Stack xs) = Stack (Prelude.reverse xs)
+
 -- Top of stack is front of list
 fromList :: [a] -> Stack a
 fromList = Stack
