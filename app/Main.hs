@@ -1,4 +1,4 @@
-{-# LANGUAGE LambdaCase #-}
+{-# LANGUAGE LambdaCase, FlexibleContexts #-}
 
 module Main where
 
@@ -7,6 +7,7 @@ import Factor.Eval
 import Factor.State
 import Factor.Error
 import Factor.Id
+import Factor.StdLib
 import Factor.Type.Checker
 
 import System.Environment
@@ -26,13 +27,17 @@ main' = do
           Right ((), state) -> print (stateStack state)
   putStrLn "Hi :)"
 
+-- The ID will be for better error messages later
+checkTypeOf :: (MonadError FactorError m, MonadReader ReadOnlyState m) => Id -> ReaderFunction -> m ()
+checkTypeOf _ (UDFunction t f) = checkDeclaredType t f
+checkTypeOf _ (BIFunction _ _) = pure () -- We don't typecheck primitives.
+
 run :: FilePath -> ExceptT FactorError IO ()
 run filename = do
   contents <- liftIO $ readFile filename
   decls <- liftParseError $ parseFile filename contents
-  reader <- declsToReadOnly decls
-  _ <- runReaderT (Map.traverseWithKey (\_ (t, f) -> checkDeclaredType t f) $
-                      readerFunctions reader)
+  reader <- declsToReadOnly decls stdlibs
+  _ <- runReaderT (Map.traverseWithKey checkTypeOf $ readerFunctions reader)
                   reader
   (_, state) <- liftEither $ runEval (callFunction (Id "main")) reader newState
   liftIO $ print state

@@ -21,7 +21,7 @@ typeOfValue value = case value of
 -- treat its type as a function type.
 typeOf :: (MonadError FactorError m, MonadReader ReadOnlyState m) => Statement -> m FunctionType
 typeOf stmt = case stmt of
-                Call v -> ask >>= lookupFn' v >>= \(t, _) -> return t
+                Call v -> ask >>= lookupFn' v >>= return . readerFunctionType
                 Literal d -> (\t -> FunctionType Stack.empty (Stack.singleton t)) <$> typeOfValue d
 
 typeOfSeq :: (MonadError FactorError m, MonadReader ReadOnlyState m) => Sequence -> m FunctionType

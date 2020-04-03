@@ -4,7 +4,7 @@ cabal-version: 1.12
 --
 -- see: https://github.com/sol/hpack
 --
--- hash: 06d79b75570c6bc172e199031abf97eded431e1094d85bbd08b4f40bf227323c
+-- hash: c3c25fb5007b10a73cf5e25059426b069b59ca9f4b668911fa8b2d6f7927c4a9
 
 name:           tfactor
 version:        0.1.0.0
@@ -33,6 +33,7 @@ library
       Factor.Parser
       Factor.Stack
       Factor.State
+      Factor.StdLib
       Factor.Type
       Factor.Type.Checker
       Factor.Type.Error

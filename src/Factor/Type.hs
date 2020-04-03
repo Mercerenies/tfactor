@@ -5,6 +5,8 @@ import Factor.Util
 import Factor.Stack(Stack)
 import qualified Factor.Stack as Stack
 
+import Data.Function
+
 data Type = PrimType PrimType
           | FunType FunctionType
             deriving (Eq)
@@ -35,3 +37,7 @@ instance Show FunctionType where
 
 emptyFnType :: FunctionType
 emptyFnType = FunctionType Stack.empty Stack.empty
+
+-- Top of stack is to the left, as per usual
+functionType :: [Type] -> [Type] -> FunctionType
+functionType = FunctionType `on` Stack.fromList

@@ -1,8 +1,11 @@
-{-# LANGUAGE FlexibleContexts, ViewPatterns #-}
+{-# LANGUAGE FlexibleContexts, ViewPatterns, RankNTypes, ConstraintKinds, KindSignatures #-}
 
-module Factor.State(EvalState(..), ReadOnlyState(..), newState, newReader,
+module Factor.State(EvalState(..), ReadOnlyState(..), ReaderFunction(..),
+                    BuiltIn(..), BuiltInConstraints,
+                    newState, newReader,
                     pushStack, peekStackMaybe, peekStack, popStackMaybe, popStack,
-                    declsToReadOnly, lookupFn, lookupFn') where
+                    declsToReadOnly, lookupFn, lookupFn',
+                    readerFunctionType) where
 
 import Factor.Error
 import Factor.Code
@@ -13,6 +16,7 @@ import qualified Factor.Stack as Stack
 
 import Data.Map(Map)
 import qualified Data.Map as Map
+import Control.Monad.Reader hiding (reader)
 import Control.Monad.State
 import Control.Monad.Except
 
@@ -21,8 +25,15 @@ data EvalState = EvalState {
     } deriving (Show)
 
 data ReadOnlyState = ReadOnlyState {
-      readerFunctions :: Map Id (FunctionType, Function)
-    } deriving (Show)
+      readerFunctions :: Map Id ReaderFunction
+    }
+
+data ReaderFunction = UDFunction FunctionType  Function    -- User-defined function
+                    | BIFunction FunctionType (BuiltIn ()) -- Built-in function
+
+type BuiltInConstraints m = (MonadReader ReadOnlyState m, MonadState EvalState m, MonadError FactorError m)
+
+newtype BuiltIn a = BuiltIn { unBuiltIn :: forall m. BuiltInConstraints m => m a }
 
 newState :: EvalState
 newState = EvalState Stack.empty
@@ -44,13 +55,13 @@ popStackMaybe :: MonadState EvalState m => Int -> m (Maybe (Stack Data))
 popStackMaybe n = gets stateStack >>= go
     where go ss = case Stack.splitStack n ss of
                     Nothing -> pure Nothing
-                    Just (a, b) -> Just a <$ modify (\s -> s { stateStack = b})
+                    Just (a, b) -> Just a <$ modify (\s -> s { stateStack = b })
 
 popStack :: (MonadState EvalState m, MonadError FactorError m) => Int -> m (Stack Data)
 popStack n = popStackMaybe n >>= maybe (throwError StackUnderflow) return
 
-declsToReadOnly :: MonadError FactorError m => [Declaration] -> m ReadOnlyState
-declsToReadOnly = foldM go newReader
+declsToReadOnly :: MonadError FactorError m => [Declaration] -> ReadOnlyState -> m ReadOnlyState
+declsToReadOnly ds r = foldM go r ds
     where go reader decl =
               case decl of
                 FunctionDecl _ (Function Nothing _) ->
@@ -60,10 +71,15 @@ declsToReadOnly = foldM go newReader
                  | otherwise -> pure $ defineFunction v t def reader
           defineFunction v t def reader =
               reader { readerFunctions =
-                           Map.insert v (t, Function (Just v) def) (readerFunctions reader) }
+                           Map.insert v (UDFunction t $ Function (Just v) def)
+                                  (readerFunctions reader) }
 
-lookupFn :: Id -> ReadOnlyState -> Maybe (FunctionType, Function)
+lookupFn :: Id -> ReadOnlyState -> Maybe ReaderFunction
 lookupFn v (readerFunctions -> fns) = Map.lookup v fns
 
-lookupFn' :: MonadError FactorError m => Id -> ReadOnlyState -> m (FunctionType, Function)
+lookupFn' :: MonadError FactorError m => Id -> ReadOnlyState -> m ReaderFunction
 lookupFn' v r = maybe (throwError $ NoSuchFunction v) pure $ lookupFn v r
+
+readerFunctionType :: ReaderFunction -> FunctionType
+readerFunctionType (UDFunction t _) = t
+readerFunctionType (BIFunction t _) = t
