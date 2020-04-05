@@ -31,9 +31,9 @@ swap = BuiltIn $ popStack 2 >>= (pushStack . Stack.reverse)
 
 builtins :: Map Id ReaderFunction
 builtins = Map.fromList [
-            (Id "drop", BIFunction (polyFunctionType [] [PrimType TAny] []) drop_),
-            (Id "id", BIFunction (polyFunctionType [] [] []) id_),
-            (Id "swap", BIFunction (polyFunctionType [Id "a", Id "b"] [QuantVar (Id "a"), QuantVar (Id "b")] [QuantVar (Id "b"), QuantVar (Id "a")]) swap)
+            (Id "drop", BIFunction (polyFunctionType [Id "R"] [PrimType TAny] (RestQuant $ Id "R") [] (RestQuant $ Id "R")) drop_),
+            (Id "id", BIFunction (polyFunctionType [Id "R"] [] (RestQuant $ Id "R") [] (RestQuant $ Id "R")) id_),
+            (Id "swap", BIFunction (polyFunctionType [Id "R", Id "a", Id "b"] [QuantVar (Id "a"), QuantVar (Id "b")] (RestQuant $ Id "R") [QuantVar (Id "b"), QuantVar (Id "a")] (RestQuant $ Id "R")) swap)
            ]
 
 stdlibs :: ReadOnlyState

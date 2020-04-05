@@ -8,6 +8,8 @@ import qualified Factor.Stack as Stack
 
 import Text.Parsec
 import Data.Char
+import Data.Maybe(listToMaybe)
+import Control.Monad
 
 type Parser = Parsec String ()
 
@@ -21,9 +23,25 @@ spaces1 :: Parser ()
 spaces1 = skipMany1 space
 
 id_ :: Parser Id
-id_ = Id <$> ((:) <$> (satisfy isStartingChar) <*> many (satisfy isStandardChar))
+id_ = Id <$> ((:) <$> (satisfy isStartingChar) <*> many (satisfy isStandardChar)) <?> "identifier"
     where isStartingChar ch = isStandardChar ch && not (isDigit ch) && ch `notElem` semiSpecialChars
           isStandardChar ch = not (isSpace ch) && not (isControl ch) && ch `notElem` specialChars
+
+lowerId :: Parser Id
+lowerId = go <?> "lowercase identifier"
+    where go = do
+            Id i <- id_
+            unless (maybe False isLower (listToMaybe i))
+                   (unexpected "identifier" <?> "lowercase identifier")
+            return (Id i)
+
+upperId :: Parser Id
+upperId = go <?> "uppercase identifier"
+    where go = do
+            Id i <- id_
+            unless (maybe False isUpper (listToMaybe i))
+                   (unexpected "identifier" <?> "uppercase identifier")
+            return (Id i)
 
 statement :: Parser Statement
 statement = Literal <$> literal <|>
@@ -55,23 +73,30 @@ primType = TInt <$ string "Int" <|>
            TNothing <$ string "Nothing"
 
 quantType :: Parser Id
-quantType = char '\'' *> id_
+quantType = char '\'' *> lowerId
 
 type_ :: Parser Type
-type_ = PrimType <$> primType <|>
-        QuantVar <$> quantType <|>
-        FunType <$> functionType
+type_ = (PrimType <$> primType <?> "primitive type") <|>
+        (QuantVar <$> quantType <?> "type variable") <|>
+        (FunType <$> functionType <?> "function type")
 
+stackDesc :: Parser StackDesc
+stackDesc = go <?> "stack descriptor"
+    where go = do
+            r <- char '\'' *> upperId
+            args <- many $ try (spaces1 *> type_)
+            return $ StackDesc (Stack.fromList $ reverse args) (RestQuant r)
+
+-- TODO Make the stack rest var passthrough if it's not listed (right
+-- now, it's required)
 functionType :: Parser FunctionType
 functionType = do
   try (char '(' *> spaces1)
-  args <- many (type_ <* spaces1)
-  string "--" *> spaces
-  rets <- many (type_ <* spaces1)
-  _ <- char ')'
-  -- Reverse since we write the types with stack top on right but
-  -- store them with stack top on left.
-  return $ FunctionType (Stack.fromList $ reverse args) (Stack.fromList $ reverse rets)
+  args <- stackDesc
+  spaces *> string "--" *> spaces
+  rets <- stackDesc
+  _ <- spaces *> char ')'
+  return $ FunctionType args rets
 
 parseStmt :: SourceName -> String -> Either ParseError Statement
 parseStmt = parse statement

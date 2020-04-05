@@ -1,12 +1,10 @@
 
 module Factor.Type where
 
-import Factor.Util
 import Factor.Id
 import Factor.Stack(Stack, FromTop(..))
 import qualified Factor.Stack as Stack
 
-import Data.Function
 import Data.Map(Map)
 import qualified Data.Map as Map
 --import Data.Set(Set)
@@ -23,8 +21,15 @@ data Type = PrimType PrimType
 data PolyFunctionType = PolyFunctionType [Id] FunctionType
                         deriving (Eq)
 
-data FunctionType = FunctionType (Stack Type) (Stack Type)
+data FunctionType = FunctionType StackDesc StackDesc
                     deriving (Eq)
+
+data StackDesc = StackDesc (Stack Type) RestVar
+                 deriving (Eq)
+
+data RestVar = RestGround Id
+             | RestQuant Id
+               deriving (Eq)
 
 data PrimType = TInt | TAny | TNothing
                 deriving (Eq, Ord, Enum)
@@ -36,6 +41,14 @@ instance Show PrimType where
           TAny -> ("Any" ++)
           TNothing -> ("Nothing" ++)
 
+instance Show RestVar where
+    showsPrec n (RestGround t) = ("'" ++) . showsPrec n t
+    showsPrec n (RestQuant t) = ("''" ++) . showsPrec n t
+
+instance Show StackDesc where
+    showsPrec _ (StackDesc ts r) = showsPrec 10 r . foldr (.) id (listOut ts)
+        where listOut = fmap (\t -> (" " ++) . showsPrec 10 t) . Stack.FromBottom
+
 instance Show Type where
     showsPrec n (PrimType t) = showsPrec n t
     showsPrec n (FunType t) = showsPrec n t
@@ -44,26 +57,24 @@ instance Show Type where
 
 instance Show FunctionType where
     showsPrec _ (FunctionType args rets) =
-        ("( " ++) . args' . (" -- " ++) . rets' . (" )" ++)
-            where listOut = sepBy (" " ++) . fmap (showsPrec 10) . Stack.FromBottom
-                  args' = listOut args
-                  rets' = listOut rets
+        ("( " ++) . showsPrec 10 args . (" -- " ++) . showsPrec 10 rets . (" )" ++)
 
 instance Show PolyFunctionType where
     showsPrec n (PolyFunctionType _ f) = showsPrec n f
 
-emptyFnType :: FunctionType
-emptyFnType = FunctionType Stack.empty Stack.empty
+emptyFnType :: RestVar -> FunctionType
+emptyFnType v = FunctionType (StackDesc Stack.empty v) (StackDesc Stack.empty v)
 
 emptyPolyFnType :: PolyFunctionType
-emptyPolyFnType = PolyFunctionType [] emptyFnType
+emptyPolyFnType = PolyFunctionType [Id "R"] $ emptyFnType (RestQuant $ Id "R")
 
 -- Top of stack is to the left, as per usual
-functionType :: [Type] -> [Type] -> FunctionType
-functionType = FunctionType `on` Stack.fromList
+functionType :: [Type] -> RestVar -> [Type] -> RestVar -> FunctionType
+functionType t v t' v' =
+    FunctionType (StackDesc (Stack.fromList t) v) (StackDesc (Stack.fromList t') v')
 
-polyFunctionType :: [Id] -> [Type] -> [Type] -> PolyFunctionType
-polyFunctionType ids args rets = PolyFunctionType ids (functionType args rets)
+polyFunctionType :: [Id] -> [Type] -> RestVar -> [Type] -> RestVar -> PolyFunctionType
+polyFunctionType ids args a rets r = PolyFunctionType ids (functionType args a rets r)
 
 liftFnType :: FunctionType -> PolyFunctionType
 liftFnType = PolyFunctionType []
@@ -75,7 +86,8 @@ underlyingFnType (PolyFunctionType _ t) = t
 gensub :: (Id -> Type) -> (Id -> Type) -> Type -> Type
 gensub a b = go
     where go (PrimType t) = PrimType t
-          go (FunType (FunctionType xs ys)) = FunType (FunctionType (fmap go xs) (fmap go ys))
+          go (FunType (FunctionType (StackDesc xs x) (StackDesc ys y))) =
+              FunType (FunctionType (StackDesc (fmap go xs) x) (StackDesc (fmap go ys) y))
           go (GroundVar v) = a v
           go (QuantVar v) = b v
 
@@ -88,11 +100,47 @@ substitute m = gensub GroundVar trysub
 substituteUntilDone :: Map Id Type -> Type -> Type
 substituteUntilDone m x = let x' = substitute m x in if x == x' then x else substituteUntilDone m x'
 
+-- Ground, then Quant
+gensubstack :: (Id -> StackDesc) -> (Id -> StackDesc) -> (Type -> Type, StackDesc -> StackDesc)
+gensubstack a b = (go, go')
+    where go (PrimType t) = (PrimType t)
+          go (FunType (FunctionType arg ret)) = FunType (FunctionType (go' arg) (go' ret))
+          go (GroundVar v) = GroundVar v
+          go (QuantVar v) = QuantVar v
+          go' (StackDesc xs x) =
+              let (f, x0) = case x of
+                              RestGround x1 -> (a, x1)
+                              RestQuant x1 -> (b, x1)
+                  StackDesc xs' x' = f x0 in StackDesc (xs <> xs') x'
+
+substituteStack :: Map Id StackDesc -> Type -> Type
+substituteStack m = fst $ gensubstack (StackDesc mempty . RestGround) trysub
+    where trysub v
+              | Just t <- Map.lookup v m = t
+              | otherwise = (StackDesc mempty $ RestQuant v)
+
+substituteStackUntilDone :: Map Id StackDesc -> Type -> Type
+substituteStackUntilDone m x =
+    let x' = substituteStack m x in if x == x' then x else substituteStackUntilDone m x'
+
+substituteStack' :: Map Id StackDesc -> StackDesc -> StackDesc
+substituteStack' m = snd $ gensubstack (StackDesc mempty . RestGround) trysub
+    where trysub v
+              | Just t <- Map.lookup v m = t
+              | otherwise = (StackDesc mempty $ RestQuant v)
+
+substituteStackUntilDone' :: Map Id StackDesc -> StackDesc -> StackDesc
+substituteStackUntilDone' m x =
+    let x' = substituteStack' m x in if x == x' then x else substituteStackUntilDone' m x'
+
 toGround :: [Id] -> Type -> Type
-toGround ids = gensub GroundVar test
+toGround ids = fst (gensubstack (StackDesc mempty . RestGround) test') . gensub GroundVar test
     where test v
               | v `elem` ids = GroundVar v
               | otherwise = QuantVar v
+          test' v
+              | v `elem` ids = StackDesc mempty $ RestGround v
+              | otherwise = StackDesc mempty $ RestQuant v
 
 toQuant :: [Id] -> Type -> Type
 toQuant ids = gensub test QuantVar
@@ -103,20 +151,28 @@ toQuant ids = gensub test QuantVar
 allGroundVars :: Type -> [Id]
 allGroundVars = Set.toList . go
     where go (PrimType {}) = Set.empty
-          go (FunType (FunctionType xs ys)) = foldMap go (FromTop xs) <> foldMap go (FromTop ys)
+          go (FunType (FunctionType (StackDesc xs x) (StackDesc ys y))) =
+              foldMap go (FromTop xs) <> include x <> foldMap go (FromTop ys) <> include y
           go (GroundVar v) = Set.singleton v
           go (QuantVar {}) = Set.empty
+          include (RestGround x) = Set.singleton x
+          include _ = Set.empty
 
 allQuantVars :: Type -> [Id]
 allQuantVars = Set.toList . go
     where go (PrimType {}) = Set.empty
-          go (FunType (FunctionType xs ys)) = foldMap go (FromTop xs) <> foldMap go (FromTop ys)
+          go (FunType (FunctionType (StackDesc xs x) (StackDesc ys y))) =
+              foldMap go (FromTop xs) <> include x <> foldMap go (FromTop ys) <> include y
           go (GroundVar {}) = Set.empty
           go (QuantVar v) = Set.singleton v
+          include (RestQuant x) = Set.singleton x
+          include _ = Set.empty
 
 -- Renames Quants
 renameToAvoidConflicts :: (Id -> Bool) -> Type -> Type
-renameToAvoidConflicts conflict t = gensub GroundVar (QuantVar . rename) t
+renameToAvoidConflicts conflict t =
+      fst (gensubstack (StackDesc mempty . RestGround) (StackDesc mempty . RestQuant . rename)) .
+      gensub GroundVar (QuantVar . rename) $ t
     where rename v
               | not (conflict v) = v
               | otherwise = head [v' | n <- [0 :: Int ..]
@@ -130,6 +186,15 @@ renameToAvoidConflicts' conflict t =
     case renameToAvoidConflicts conflict (FunType t) of
       FunType t' -> t'
       _ -> error "gensub changed shape of type in renameToAvoidConflicts'"
+
+renameToAvoidConflicts'' :: (Id -> Bool) -> [Id] -> [Id]
+renameToAvoidConflicts'' conflict t = fmap rename t
+    where rename v
+              | not (conflict v) = v
+              | otherwise = head [v' | n <- [0 :: Int ..]
+                                     , let v' = v <> Id (show n)
+                                     , not (isConflicting v')]
+          isConflicting v = conflict v || v `elem` t
 
 newQuant :: Type -> Id
 newQuant t = head $ filter (not . isConflicting) [Id "t" <> Id (show n) | n <- [0 :: Int ..]]
