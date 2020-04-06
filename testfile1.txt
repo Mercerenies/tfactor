@@ -1,2 +1,2 @@
-: factorial ( 'R Int -- 'R Int ) dup 0 <= [ drop 1 ] [ dup 1 - factorial * ]if ;
+: factorial ( 'R Int -- 'R Int ) dup 0 <= [ drop 1 ] [ dup 1 - factorial * ] if ;
 : main ( 'R -- 'R Int ) 5 factorial ;
