@@ -1,6 +1,8 @@
 {-# LANGUAGE FlexibleContexts #-}
 
-module Factor.Error where
+module Factor.Error(FactorError(..),
+                    liftParseError, liftTypeError,
+                    assertBool, assertFunction) where
 
 import Factor.Id
 import Factor.Type.Error

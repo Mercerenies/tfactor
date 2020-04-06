@@ -1,13 +1,18 @@
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 
-module Factor.Stack where
+module Factor.Stack(Stack(..), FromTop(..), FromBottom(..),
+                    empty, singleton,
+                    pushStack, appendStack, popStack, peekStack,
+                    splitStack, takeTop, takeBottom,
+                    length, toList, reverse, fromList, zipWithM) where
 
 import Data.Monoid
-import Data.Foldable as F hiding (length)
+import Data.Foldable hiding (length, toList)
 import qualified Data.Foldable as F(length)
-import Prelude hiding (length)
+import Prelude hiding (length, reverse)
+import qualified Prelude
 import Control.Applicative.Backwards
-import Control.Monad(zipWithM)
+import qualified Control.Monad(zipWithM)
 
 -- I'm tired of forgetting which side of my "stack" is the top, so I'm
 -- making an ADT for it.

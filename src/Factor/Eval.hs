@@ -1,6 +1,9 @@
 {-# LANGUAGE LambdaCase, FlexibleContexts #-}
 
-module Factor.Eval where
+module Factor.Eval(EvalT, Eval,
+                   runEvalT, evalEvalT, runEval, evalEval,
+                   evalStmt, evalSeq,
+                   callFunction) where
 
 import Factor.Code
 import Factor.Error

@@ -1,5 +1,6 @@
 
-module Factor.Code where
+module Factor.Code(Function(..), Data(..), Statement(..), Sequence(..), Declaration(..),
+                   functionName, functionSeq) where
 
 import Factor.Id
 import Factor.Type

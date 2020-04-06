@@ -1,5 +1,5 @@
 
-module Factor.Util where
+module Factor.Util(sepBy, padLeft, foldM1) where
 
 import Control.Monad
 

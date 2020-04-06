@@ -1,5 +1,12 @@
 
-module Factor.Type where
+module Factor.Type(Type(..), PolyFunctionType(..), FunctionType(..),
+                   StackDesc(..), RestVar(..), PrimType(..),
+                   emptyFnType, emptyPolyFnType, functionType, polyFunctionType,
+                   liftFnType, quantifiedVars, underlyingFnType,
+                   substitute, substituteUntilDone, substituteStack, substituteStackUntilDone,
+                   substituteStack', substituteStackUntilDone',
+                   toGround, toQuant, allGroundVars, allQuantVars,
+                   renameToAvoidConflicts, renameToAvoidConflicts', renameToAvoidConflicts'') where
 
 import Factor.Id
 import Factor.Stack(Stack, FromTop(..))
@@ -202,11 +209,6 @@ renameToAvoidConflicts'' conflict t = fmap rename t
                                      , let v' = v <> Id (show n)
                                      , not (isConflicting v')]
           isConflicting v = conflict v || v `elem` t
-
-newQuant :: Type -> Id
-newQuant t = head $ filter (not . isConflicting) [Id "t" <> Id (show n) | n <- [0 :: Int ..]]
-    where quants = allQuantVars t
-          isConflicting = (`elem` quants)
 
 -- TODO: Somewhere we need to check for cycles, so we know these
 -- substitutions will terminate. Cyclic type assumptions are an error.
