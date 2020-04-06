@@ -1,2 +1,2 @@
 : my-swap ( 'R 'd 'c -- 'R 'c 'd ) swap ;
-: main ( 'R -- 'R Int Int ) 3 4 [ my-swap ] call ;
+: main ( 'R -- 'R Int Int ) 2 1 true [ my-swap ] [ ] if ;

@@ -42,17 +42,17 @@ removeSynonyms (Assumptions m0 m1) = Assumptions (removeSynonyms0 m0) (removeSyn
     where removeSynonyms0 m =
               let classify k (QuantVar k') | k < k' && Map.lookup k' m == Just (QuantVar k) = True
                   classify _ _ = False
-                  (removals, keeps) = Map.partitionWithKey classify m
-                  keeps' = fmap (substituteUntilDone removals) keeps
-              in keeps'
+                  (_removals, keeps) = Map.partitionWithKey classify m
+--                  keeps' = fmap (substituteUntilDone removals) keeps
+              in keeps
           removeSynonyms1 :: Map Id StackDesc -> Map Id StackDesc
           removeSynonyms1 m =
               let classify k (StackDesc (Stack []) (RestQuant k'))
                       | k < k' && Map.lookup k' m == Just (StackDesc (Stack []) (RestQuant k)) = True
                   classify _ _ = False
-                  (removals, keeps) = Map.partitionWithKey classify m
-                  keeps' = fmap (substituteStackUntilDone' removals) keeps
-              in keeps'
+                  (_removals, keeps) = Map.partitionWithKey classify m
+--                  keeps' = fmap (substituteStackUntilDone' removals) keeps
+              in keeps
 
 consolidate :: (FromTypeError e, MonadError e m, MonadWriter AssumptionsAll m) =>
                AssumptionsAll -> m Assumptions
@@ -243,7 +243,7 @@ composePFunctions (PolyFunctionType i f) (PolyFunctionType j g) =
     where allQuants = i `List.union` (renameToAvoidConflicts'' (`elem` i) j)
           substituteBoth (Assumptions a b) = substituteUntilDone a . substituteStackUntilDone b
           go f0 g0 = do
-            (h, AssumptionsAll w w') <- listen (composeFunctions f0 g0)
+            (h, AssumptionsAll w w') <- censor (const mempty) $ listen (composeFunctions f0 g0)
             let (univ , assum ) = Map.partitionWithKey (\k _ -> k `elem` allQuants) w
             let (univ', assum') = Map.partitionWithKey (\k _ -> k `elem` allQuants) w'
             -- The variables universally quantified by the functions
