@@ -4,6 +4,8 @@ module Factor.Error where
 
 import Factor.Id
 import Factor.Type.Error
+import Factor.Type
+import Factor.Code
 
 import Text.Parsec(ParseError)
 import Control.Monad.Except
@@ -16,6 +18,7 @@ data FactorError = NoSuchFunction Id
                  | ParseError ParseError
                  | TypeError TypeError
                  | NotAFunction
+                 | RuntimeTypeError Data Type
                    deriving (Eq)
 
 instance Show FactorError where
@@ -29,6 +32,7 @@ instance Show FactorError where
           ParseError p -> shows p
           TypeError t -> shows t
           NotAFunction -> ("Attempt to call non-function" ++)
+          RuntimeTypeError d t -> ("Expected value of type " ++) . shows t . (", got " ++) . shows d
 
 instance FromTypeError FactorError where
     fromTypeError = TypeError
@@ -38,3 +42,11 @@ liftParseError = liftEither . left ParseError
 
 liftTypeError :: MonadError FactorError m => Either TypeError a -> m a
 liftTypeError = liftEither . left TypeError
+
+assertBool :: MonadError FactorError m => Data -> m Bool
+assertBool (Bool x) = pure x
+assertBool v = throwError (RuntimeTypeError v (PrimType TBool))
+
+assertFunction :: MonadError FactorError m => Data -> m Function
+assertFunction (FunctionValue x) = pure x
+assertFunction _ = throwError NotAFunction
