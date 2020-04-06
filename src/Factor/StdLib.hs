@@ -49,9 +49,13 @@ _popStack5 = popStack 5 >>= \case
             Stack [x, y, z, t, u] -> pure (x, y, z, t, u)
             _ -> error "Internal error in popStack5"
 
--- ( Any -- )
+-- ( 'R Any -- 'R )
 drop_ :: BuiltIn ()
 drop_ = BuiltIn $ void (popStack 1)
+
+-- ( 'R 'a -- 'R 'a 'a )
+dup :: BuiltIn ()
+dup = BuiltIn $ popStack1 >>= \x -> pushStack (Stack.fromList [x, x])
 
 -- This one can be written in the language as simply a no-op. But
 -- sometimes explicit is better than implicit.
@@ -88,6 +92,7 @@ if_ = BuiltIn $ popStack3 >>= \(f, t, cond) -> do
 builtins :: Map Id ReaderFunction
 builtins = Map.fromList [
             (Id "drop", BIFunction (polyFunctionType [Id "R"] [PrimType TAny] (RestQuant $ Id "R") [] (RestQuant $ Id "R")) drop_),
+            (Id "dup", BIFunction (polyFunctionType [Id "R", Id "a"] [QuantVar (Id "a")] (RestQuant $ Id "R") [QuantVar (Id "a"), QuantVar (Id "a")] (RestQuant $ Id "R")) dup),
             (Id "id", BIFunction (polyFunctionType [Id "R"] [] (RestQuant $ Id "R") [] (RestQuant $ Id "R")) id_),
             (Id "swap", BIFunction (polyFunctionType [Id "R", Id "a", Id "b"] [QuantVar (Id "b"), QuantVar (Id "a")] (RestQuant $ Id "R") [QuantVar (Id "a"), QuantVar (Id "b")] (RestQuant $ Id "R")) swap),
             (Id "call", BIFunction (polyFunctionType [Id "S", Id "T"] [FunType (functionType [] (RestQuant (Id "S")) [] (RestQuant (Id "T")))] (RestQuant $ Id "S") [] (RestQuant $ Id "T")) call),
