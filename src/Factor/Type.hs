@@ -111,7 +111,7 @@ gensubstack a b = (go, go')
               let (f, x0) = case x of
                               RestGround x1 -> (a, x1)
                               RestQuant x1 -> (b, x1)
-                  StackDesc xs' x' = f x0 in StackDesc (xs <> xs') x'
+                  StackDesc xs' x' = f x0 in StackDesc (fmap go xs <> xs') x'
 
 substituteStack :: Map Id StackDesc -> Type -> Type
 substituteStack m = fst $ gensubstack (StackDesc mempty . RestGround) trysub

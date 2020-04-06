@@ -14,7 +14,7 @@ import Control.Monad
 type Parser = Parsec String ()
 
 semiSpecialChars :: [Char]
-semiSpecialChars = ":;()'"
+semiSpecialChars = ":;()'[]"
 
 specialChars :: [Char]
 specialChars = "" -- TBA
@@ -51,11 +51,15 @@ sign :: Num a => Parser (a -> a)
 sign = id <$ char '+' <|>
        negate <$ char '-'
 
+functionLit :: Parser Function
+functionLit = Function Nothing <$> (char '[' *> spaces *> seq_ <* spaces <* char ']')
+
 literal :: Parser Data
-literal = Int <$> (option id sign <*> (read <$> many1 digit))
+literal = (Int <$> (option id sign <*> (read <$> many1 digit)) <?> "integer literal") <|>
+          (FunctionValue <$> functionLit <?> "function literal")
 
 seq_ :: Parser Sequence
-seq_ = Sequence <$> (many $ spaces *> statement <* spaces)
+seq_ = Sequence <$> (many . try $ spaces *> statement <* spaces)
 
 decl :: Parser Declaration
 decl = (\(t, s) -> FunctionDecl t s) <$> functionDecl
