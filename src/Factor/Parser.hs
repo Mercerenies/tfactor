@@ -74,7 +74,8 @@ decl = (\(t, s) -> FunctionDecl t s) <$> functionDecl
 primType :: Parser PrimType
 primType = TInt <$ string "Int" <|>
            TAny <$ string "Any" <|>
-           TNothing <$ string "Nothing"
+           TNothing <$ string "Nothing" <|>
+           TBool <$ string "Bool"
 
 quantType :: Parser Id
 quantType = char '\'' *> lowerId

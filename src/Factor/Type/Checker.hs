@@ -34,6 +34,7 @@ typeOfValue :: (MonadError FactorError m, MonadReader ReadOnlyState m,
 typeOfValue value = case value of
                       Int _ -> return (PrimType TInt)
                       FunctionValue (Function _ ss) -> FunType <$> (typeOfSeq ss >>= monomorphize)
+                      Bool _ -> return (PrimType TBool)
 
 -- A single statement always carries an effect on the stack, hence we
 -- treat its type as a function type.

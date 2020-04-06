@@ -10,6 +10,7 @@ data Function = Function (Maybe Id) Sequence
 
 data Data = Int Integer
           | FunctionValue Function
+          | Bool Bool
             deriving (Show, Eq)
 
 data Statement = Call Id
