@@ -38,6 +38,7 @@ typeOfValue :: (MonadError FactorError m, MonadReader ReadOnlyState m,
 typeOfValue value = case value of
                       Int _ -> return (PrimType TInt)
                       Bool _ -> return (PrimType TBool)
+                      String _ -> return (PrimType TString)
                       FunctionValue (Function _ ss) -> do
                          (PolyFunctionType ids ss', AssumptionsAll w w') <- capture (typeOfSeq ss)
                          let (univ , assum ) = Map.partitionWithKey (\k _ -> k `elem` ids) w

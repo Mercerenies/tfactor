@@ -16,7 +16,7 @@ import Control.Monad
 type Parser = Parsec String ()
 
 semiSpecialChars :: [Char]
-semiSpecialChars = ":;()'[]"
+semiSpecialChars = ":;()'[]\""
 
 specialChars :: [Char]
 specialChars = "" -- TBA
@@ -58,7 +58,9 @@ functionLit = Function Nothing <$> (char '[' *> spaces *> seq_ <* spaces <* char
 
 literal :: Parser Data
 literal = (Int <$> (try (option id sign <*> (read <$> many1 digit)) <?> "integer literal")) <|>
-          (FunctionValue <$> functionLit <?> "function literal")
+          (FunctionValue <$> functionLit <?> "function literal") <|>
+          (String <$> string_)
+    where string_ = char '"' *> many (noneOf ['"']) <* char '"' -- TODO Escape sequences
 
 seq_ :: Parser Sequence
 seq_ = Sequence <$> (many . try $ spaces *> statement <* spaces)
@@ -77,7 +79,8 @@ primType :: Parser PrimType
 primType = TInt <$ string "Int" <|>
            TAny <$ string "Any" <|>
            TNothing <$ string "Nothing" <|>
-           TBool <$ string "Bool"
+           TBool <$ string "Bool" <|>
+           TString <$ string "String"
 
 quantType :: Parser Id
 quantType = char '\'' *> lowerId
