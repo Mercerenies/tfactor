@@ -29,8 +29,8 @@ popStack1 = popStack 1 >>= \case
             Stack [x] -> pure x
             _ -> error "Internal error in popStack1"
 
-_popStack2 :: (MonadState EvalState m, MonadError FactorError m) => m (Data, Data)
-_popStack2 = popStack 2 >>= \case
+popStack2 :: (MonadState EvalState m, MonadError FactorError m) => m (Data, Data)
+popStack2 = popStack 2 >>= \case
             Stack [x, y] -> pure (x, y)
             _ -> error "Internal error in popStack2"
 
@@ -89,6 +89,20 @@ if_ = BuiltIn $ popStack3 >>= \(f, t, cond) -> do
         Function _ f' <- assertFunction f
         evalSeq (if cond' then t' else f')
 
+-- ( 'R Int Int -- 'R Int )
+binmathop :: (Integer -> Integer -> Integer) -> BuiltIn ()
+binmathop f = BuiltIn $ popStack2 >>= \(b, a) -> do
+                b' <- assertInt b
+                a' <- assertInt a
+                pushStack (Stack.singleton (Int $ f a' b'))
+
+-- ( 'R Int Int -- 'R Bool )
+binmathcmp :: (Integer -> Integer -> Bool) -> BuiltIn ()
+binmathcmp f = BuiltIn $ popStack2 >>= \(b, a) -> do
+                b' <- assertInt b
+                a' <- assertInt a
+                pushStack (Stack.singleton (Bool $ f a' b'))
+
 builtins :: Map Id ReaderFunction
 builtins = Map.fromList [
             (Id "drop", BIFunction (polyFunctionType [Id "R"] [PrimType TAny] (RestQuant $ Id "R") [] (RestQuant $ Id "R")) drop_),
@@ -98,7 +112,17 @@ builtins = Map.fromList [
             (Id "call", BIFunction (polyFunctionType [Id "S", Id "T"] [FunType (functionType [] (RestQuant (Id "S")) [] (RestQuant (Id "T")))] (RestQuant $ Id "S") [] (RestQuant $ Id "T")) call),
             (Id "if", BIFunction (polyFunctionType [Id "S", Id "T"] [FunType (functionType [] (RestQuant (Id "S")) [] (RestQuant (Id "T"))), FunType (functionType [] (RestQuant (Id "S")) [] (RestQuant (Id "T"))), PrimType TBool] (RestQuant $ Id "S") [] (RestQuant $ Id "T")) if_),
             (Id "true", BIFunction (polyFunctionType [Id "R"] [] (RestQuant $ Id "R") [PrimType TBool] (RestQuant $ Id "R")) true),
-            (Id "false", BIFunction (polyFunctionType [Id "R"] [] (RestQuant $ Id "R") [PrimType TBool] (RestQuant $ Id "R")) false)
+            (Id "false", BIFunction (polyFunctionType [Id "R"] [] (RestQuant $ Id "R") [PrimType TBool] (RestQuant $ Id "R")) false),
+            (Id "+", BIFunction (polyFunctionType [Id "R"] [PrimType TInt, PrimType TInt] (RestQuant $ Id "R") [PrimType TInt] (RestQuant $ Id "R")) (binmathop (+))),
+            (Id "-", BIFunction (polyFunctionType [Id "R"] [PrimType TInt, PrimType TInt] (RestQuant $ Id "R") [PrimType TInt] (RestQuant $ Id "R")) (binmathop (-))),
+            (Id "*", BIFunction (polyFunctionType [Id "R"] [PrimType TInt, PrimType TInt] (RestQuant $ Id "R") [PrimType TInt] (RestQuant $ Id "R")) (binmathop (*))),
+            (Id "/", BIFunction (polyFunctionType [Id "R"] [PrimType TInt, PrimType TInt] (RestQuant $ Id "R") [PrimType TInt] (RestQuant $ Id "R")) (binmathop div)),
+            (Id "=", BIFunction (polyFunctionType [Id "R"] [PrimType TInt, PrimType TInt] (RestQuant $ Id "R") [PrimType TBool] (RestQuant $ Id "R")) (binmathcmp (==))),
+            (Id "!=", BIFunction (polyFunctionType [Id "R"] [PrimType TInt, PrimType TInt] (RestQuant $ Id "R") [PrimType TBool] (RestQuant $ Id "R")) (binmathcmp (/=))),
+            (Id "<", BIFunction (polyFunctionType [Id "R"] [PrimType TInt, PrimType TInt] (RestQuant $ Id "R") [PrimType TBool] (RestQuant $ Id "R")) (binmathcmp (<))),
+            (Id ">", BIFunction (polyFunctionType [Id "R"] [PrimType TInt, PrimType TInt] (RestQuant $ Id "R") [PrimType TBool] (RestQuant $ Id "R")) (binmathcmp (>))),
+            (Id "<=", BIFunction (polyFunctionType [Id "R"] [PrimType TInt, PrimType TInt] (RestQuant $ Id "R") [PrimType TBool] (RestQuant $ Id "R")) (binmathcmp (<=))),
+            (Id ">=", BIFunction (polyFunctionType [Id "R"] [PrimType TInt, PrimType TInt] (RestQuant $ Id "R") [PrimType TBool] (RestQuant $ Id "R")) (binmathcmp (>=)))
            ]
 
 stdlibs :: ReadOnlyState
