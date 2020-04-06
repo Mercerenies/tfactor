@@ -154,7 +154,7 @@ isSubtypeOf :: (FromTypeError e, MonadError e m, MonadWriter AssumptionsAll m) =
 isSubtypeOf s t = do
   let noUnify = throwError (fromTypeError $ CouldNotUnify s t)
   (u, w) <- listen (s `intersection` t)
-  tell w
+  --tell w -- Don't need this; I misunderstood what `listen' does.
   cw <- consolidateUntilDone w
   let subAll :: Assumptions -> Type -> Type
       subAll (Assumptions m m') = substituteStackUntilDone m' . substituteUntilDone m

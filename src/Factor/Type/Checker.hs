@@ -11,6 +11,7 @@ import Factor.Id
 
 import Data.Set(Set)
 import qualified Data.Set as Set
+import qualified Data.Map as Map
 import Control.Monad.Writer
 import Control.Monad.Reader
 import Control.Monad.State
@@ -28,13 +29,28 @@ monomorphize' v p = evalState (monomorphize p) v
 knownVars :: MonadState (Set Id) m => [Id] -> m ()
 knownVars vs = modify $ (Set.fromList vs `Set.union`)
 
+capture :: MonadWriter w m => m a -> m (a, w)
+capture = censor (const mempty) . listen
+
 typeOfValue :: (MonadError FactorError m, MonadReader ReadOnlyState m,
                 MonadWriter AssumptionsAll m) =>
                Data -> StateT (Set Id) m Type
 typeOfValue value = case value of
                       Int _ -> return (PrimType TInt)
-                      FunctionValue (Function _ ss) -> FunType <$> (typeOfSeq ss >>= monomorphize)
                       Bool _ -> return (PrimType TBool)
+                      FunctionValue (Function _ ss) -> do
+                         (PolyFunctionType ids ss', AssumptionsAll w w') <- capture (typeOfSeq ss)
+                         let (univ , assum ) = Map.partitionWithKey (\k _ -> k `elem` ids) w
+                         let (univ', assum') = Map.partitionWithKey (\k _ -> k `elem` ids) w'
+                         tell $ AssumptionsAll assum assum'
+                         let asm = AssumptionsAll univ univ'
+                         casm <- consolidateUntilDone asm
+                         let ss'' = case substituteBoth casm (FunType ss') of
+                                      FunType x -> x
+                                      _ -> error "Substitution changed type in typeOfValue"
+                         ss''' <- monomorphize (PolyFunctionType ids ss'')
+                         return $ FunType ss'''
+    where substituteBoth (Assumptions a b) = substituteUntilDone a . substituteStackUntilDone b
 
 -- A single statement always carries an effect on the stack, hence we
 -- treat its type as a function type.
@@ -42,7 +58,14 @@ typeOf :: (MonadError FactorError m, MonadReader ReadOnlyState m, MonadWriter As
           Statement -> StateT (Set Id) m PolyFunctionType
 typeOf stmt = case stmt of
                 Call v -> ask >>= lookupFn' v >>= return . readerFunctionType
-                Literal d -> (\t -> polyFunctionType [Id "R"] [] (RestQuant $ Id "R") [t] (RestQuant $ Id "R")) <$> typeOfValue d
+                Literal d -> do
+                          d' <- typeOfValue d
+                          let quants = allQuantVars d'
+                              r' = head [v | n <- [0 :: Int ..]
+                                           , let v = Id "R" <> Id (show n)
+                                           , not (v `elem` quants)]
+                              fn = functionType [] (RestQuant r') [d'] (RestQuant r')
+                          return $ PolyFunctionType (allQuantVars $ FunType fn) fn
 
 typeOfSeq :: (MonadError FactorError m, MonadReader ReadOnlyState m, MonadWriter AssumptionsAll m) =>
              Sequence -> StateT (Set Id) m PolyFunctionType
