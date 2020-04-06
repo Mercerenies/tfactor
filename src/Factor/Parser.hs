@@ -4,11 +4,13 @@ module Factor.Parser(parseStmt, parseSeq, parseDecl, parseFile) where
 import Factor.Id
 import Factor.Code
 import Factor.Type hiding (functionType)
+import Factor.Stack(Stack)
 import qualified Factor.Stack as Stack
 
-import Text.Parsec
+import Text.Parsec hiding (many, (<|>))
 import Data.Char
 import Data.Maybe(listToMaybe)
+import Control.Applicative
 import Control.Monad
 
 type Parser = Parsec String ()
@@ -85,23 +87,35 @@ type_ = (PrimType <$> primType <?> "primitive type") <|>
         (QuantVar <$> quantType <?> "type variable") <|>
         (FunType <$> functionType <?> "function type")
 
-stackDesc :: Parser StackDesc
+stackDesc :: Parser (Either (Stack Type) StackDesc)
 stackDesc = go <?> "stack descriptor"
     where go = do
-            r <- char '\'' *> upperId
-            args <- many $ try (spaces1 *> type_)
-            return $ StackDesc (Stack.fromList $ reverse args) (RestQuant r)
+            r <- optionMaybe . try $ char '\'' *> upperId
+            args <- many $ try (spaces *> type_ <* spaces)
+            return $ case r of
+                       Nothing -> Left . Stack.fromList $ reverse args
+                       Just r' -> Right $ StackDesc (Stack.fromList $ reverse args) (RestQuant r')
 
--- TODO Make the stack rest var passthrough if it's not listed (right
--- now, it's required)
+freshVar :: [Id] -> Id
+freshVar vs = head [v | n <- [0 :: Int ..], let v = Id ("R" <> show n), v `notElem` vs]
+
 functionType :: Parser FunctionType
 functionType = do
   try (char '(' *> spaces1)
   args <- stackDesc
   spaces *> string "--" *> spaces
   rets <- stackDesc
-  _ <- spaces *> char ')'
-  return $ FunctionType args rets
+  spaces <* char ')'
+  case (args, rets) of
+    (Right args', Right rets') -> return $ FunctionType args' rets'
+    (Left args', Left rets') ->
+        let used = foldMap allQuantVars (Stack.FromTop args') <>
+                   foldMap allQuantVars (Stack.FromTop rets')
+            fresh = freshVar used
+            args'' = StackDesc args' (RestQuant fresh)
+            rets'' = StackDesc rets' (RestQuant fresh)
+        in return $ FunctionType args'' rets''
+    (_, _) -> fail "stack var asymmetry in function type"
 
 parseStmt :: SourceName -> String -> Either ParseError Statement
 parseStmt = parse statement

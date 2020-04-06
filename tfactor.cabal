@@ -4,7 +4,7 @@ cabal-version: 1.12
 --
 -- see: https://github.com/sol/hpack
 --
--- hash: a62b2da2420075f51a2a27c9394b20a678bd8653abfa313d87ce015f08df7f64
+-- hash: a1846595d7a32a19634a1067ba52e2c12f7f12bc4df0b4b965eb9e67e7583def
 
 name:           tfactor
 version:        0.1.0.0
@@ -47,6 +47,7 @@ library
   build-depends:
       base >=4.9 && <5
     , containers >=0 && <1
+    , mmorph >=1 && <2
     , mtl >=2.2.2 && <3
     , parsec >=3 && <4
     , transformers >=0 && <1
@@ -62,6 +63,7 @@ executable tfactor-exe
   build-depends:
       base >=4.9 && <5
     , containers >=0 && <1
+    , mmorph >=1 && <2
     , mtl >=2.2.2 && <3
     , parsec >=3 && <4
     , tfactor
@@ -79,6 +81,7 @@ test-suite tfactor-test
   build-depends:
       base >=4.9 && <5
     , containers >=0 && <1
+    , mmorph >=1 && <2
     , mtl >=2.2.2 && <3
     , parsec >=3 && <4
     , tfactor

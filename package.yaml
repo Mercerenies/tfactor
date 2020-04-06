@@ -25,6 +25,7 @@ dependencies:
 - mtl >= 2.2.2 && < 3
 - transformers >= 0 && < 1
 - containers >= 0 && < 1
+- mmorph >= 1 && < 2
 
 library:
   source-dirs: src
