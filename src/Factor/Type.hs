@@ -79,6 +79,12 @@ polyFunctionType ids args a rets r = PolyFunctionType ids (functionType args a r
 liftFnType :: FunctionType -> PolyFunctionType
 liftFnType = PolyFunctionType []
 
+quantifiedVars :: PolyFunctionType -> [Id]
+quantifiedVars (PolyFunctionType vs _) = vs
+
+-- This function should be regarded as generally dangerous, as it does
+-- no checks that the names being introduced do not conflict with
+-- names that already exist elsewhere in the type.
 underlyingFnType :: PolyFunctionType -> FunctionType
 underlyingFnType (PolyFunctionType _ t) = t
 
