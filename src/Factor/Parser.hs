@@ -6,6 +6,7 @@ import Factor.Code
 import Factor.Type hiding (functionType)
 import Factor.Stack(Stack)
 import qualified Factor.Stack as Stack
+import Factor.Parser.Token
 
 import Text.Parsec hiding (many, (<|>))
 import Data.Char
@@ -14,12 +15,6 @@ import Control.Applicative
 import Control.Monad
 
 type Parser = Parsec String ()
-
-semiSpecialChars :: [Char]
-semiSpecialChars = ":;()'[]\""
-
-specialChars :: [Char]
-specialChars = "" -- TBA
 
 spaces1 :: Parser ()
 spaces1 = skipMany1 space
