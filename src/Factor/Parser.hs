@@ -55,7 +55,7 @@ functionLit :: Parser Function
 functionLit = Function Nothing <$> (char '[' *> spaces *> seq_ <* spaces <* char ']')
 
 literal :: Parser Data
-literal = (Int <$> (option id sign <*> (read <$> many1 digit)) <?> "integer literal") <|>
+literal = (Int <$> (try (option id sign <*> (read <$> many1 digit)) <?> "integer literal")) <|>
           (FunctionValue <$> functionLit <?> "function literal")
 
 seq_ :: Parser Sequence
