@@ -40,14 +40,15 @@ liftAssumptions (Assumptions m m') = AssumptionsAll (fmap (\x -> [x]) m) (fmap (
 removeSynonyms :: Assumptions -> Assumptions
 removeSynonyms (Assumptions m0 m1) = Assumptions (removeSynonyms0 m0) (removeSynonyms1 m1)
     where removeSynonyms0 m =
-              let classify k (QuantVar k') | k < k' = True
+              let classify k (QuantVar k') | k < k' && Map.lookup k' m == Just (QuantVar k) = True
                   classify _ _ = False
                   (removals, keeps) = Map.partitionWithKey classify m
                   keeps' = fmap (substituteUntilDone removals) keeps
               in keeps'
           removeSynonyms1 :: Map Id StackDesc -> Map Id StackDesc
           removeSynonyms1 m =
-              let classify k (StackDesc (Stack []) (RestQuant k')) | k < k' = True
+              let classify k (StackDesc (Stack []) (RestQuant k'))
+                      | k < k' && Map.lookup k' m == Just (StackDesc (Stack []) (RestQuant k)) = True
                   classify _ _ = False
                   (removals, keeps) = Map.partitionWithKey classify m
                   keeps' = fmap (substituteStackUntilDone' removals) keeps

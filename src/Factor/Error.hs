@@ -15,6 +15,7 @@ data FactorError = NoSuchFunction Id
                  | InternalError String
                  | ParseError ParseError
                  | TypeError TypeError
+                 | NotAFunction
                    deriving (Eq)
 
 instance Show FactorError where
@@ -27,6 +28,7 @@ instance Show FactorError where
               ("Internal error " ++) . shows str . (" (this message should not appear)" ++)
           ParseError p -> shows p
           TypeError t -> shows t
+          NotAFunction -> ("Attempt to call non-function" ++)
 
 instance FromTypeError FactorError where
     fromTypeError = TypeError

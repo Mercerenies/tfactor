@@ -16,13 +16,14 @@ import Control.Monad.Reader
 import Control.Monad.State
 import Control.Monad.Except
 
-import Debug.Trace
-
 monomorphize :: MonadState (Set Id) m => PolyFunctionType -> m FunctionType
 monomorphize (PolyFunctionType ids fn) = do
   knowns <- get
-  let isConflicting v = traceShow (v, knowns) $ traceShowId $ v `elem` ids && v `elem` knowns
+  let isConflicting v = v `elem` ids && v `elem` knowns
   return $ renameToAvoidConflicts' isConflicting fn
+
+monomorphize' :: Set Id -> PolyFunctionType -> FunctionType
+monomorphize' v p = evalState (monomorphize p) v
 
 knownVars :: MonadState (Set Id) m => [Id] -> m ()
 knownVars vs = modify $ (Set.fromList vs `Set.union`)
