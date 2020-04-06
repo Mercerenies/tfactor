@@ -13,6 +13,7 @@ import Factor.Eval
 
 import Control.Monad
 import Control.Monad.Except
+import Control.Monad.State
 import Data.Map(Map)
 import qualified Data.Map as Map
 
@@ -22,6 +23,31 @@ import qualified Data.Map as Map
 -- which is backwards from the way they're displayed. Thus, the stack
 -- types here will look backward to how they would look if written in
 -- the language.
+
+popStack1 :: (MonadState EvalState m, MonadError FactorError m) => m Data
+popStack1 = popStack 1 >>= \case
+            Stack [x] -> pure x
+            _ -> error "Internal error in popStack1"
+
+_popStack2 :: (MonadState EvalState m, MonadError FactorError m) => m (Data, Data)
+_popStack2 = popStack 2 >>= \case
+            Stack [x, y] -> pure (x, y)
+            _ -> error "Internal error in popStack2"
+
+popStack3 :: (MonadState EvalState m, MonadError FactorError m) => m (Data, Data, Data)
+popStack3 = popStack 3 >>= \case
+            Stack [x, y, z] -> pure (x, y, z)
+            _ -> error "Internal error in popStack3"
+
+_popStack4 :: (MonadState EvalState m, MonadError FactorError m) => m (Data, Data, Data, Data)
+_popStack4 = popStack 4 >>= \case
+            Stack [x, y, z, t] -> pure (x, y, z, t)
+            _ -> error "Internal error in popStack4"
+
+_popStack5 :: (MonadState EvalState m, MonadError FactorError m) => m (Data, Data, Data, Data, Data)
+_popStack5 = popStack 5 >>= \case
+            Stack [x, y, z, t, u] -> pure (x, y, z, t, u)
+            _ -> error "Internal error in popStack5"
 
 -- ( Any -- )
 drop_ :: BuiltIn ()
@@ -39,10 +65,9 @@ swap = BuiltIn $ popStack 2 >>= (pushStack . Stack.reverse)
 
 -- ( 'S ( 'S -- 'T ) -- 'T )
 call :: BuiltIn ()
-call = BuiltIn $ popStack 1 >>= \case
-       Stack [FunctionValue (Function _ ss)] -> evalSeq ss
-       Stack [_] -> throwError NotAFunction
-       _ -> error "Internal error in call (from popStack)"
+call = BuiltIn $ popStack1 >>= \case
+       FunctionValue (Function _ ss) -> evalSeq ss
+       _ -> throwError NotAFunction
 
 -- ( 'R -- 'R Bool )
 true :: BuiltIn ()
@@ -54,13 +79,11 @@ false = BuiltIn $ pushStack (Stack.singleton (Bool False))
 
 -- ( 'S Bool ( 'S -- 'T ) ( 'S -- 'T ) -- 'T )
 if_ :: BuiltIn ()
-if_ = BuiltIn $ popStack 3 >>= \case
-      Stack [f, t, cond] -> do
+if_ = BuiltIn $ popStack3 >>= \(f, t, cond) -> do
         cond' <- assertBool cond
         Function _ t' <- assertFunction t
         Function _ f' <- assertFunction f
         evalSeq (if cond' then t' else f')
-      _ -> error "Internal error in if_ (from popStack)"
 
 builtins :: Map Id ReaderFunction
 builtins = Map.fromList [
