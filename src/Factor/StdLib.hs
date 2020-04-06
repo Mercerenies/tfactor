@@ -42,14 +42,35 @@ call :: BuiltIn ()
 call = BuiltIn $ popStack 1 >>= \case
        Stack [FunctionValue (Function _ ss)] -> evalSeq ss
        Stack [_] -> throwError NotAFunction
-       _ -> error "Internal error in apply (from popStack)"
+       _ -> error "Internal error in call (from popStack)"
+
+-- ( 'R -- 'R Bool )
+true :: BuiltIn ()
+true = BuiltIn $ pushStack (Stack.singleton (Bool True))
+
+-- ( 'R -- 'R Bool )
+false :: BuiltIn ()
+false = BuiltIn $ pushStack (Stack.singleton (Bool False))
+
+-- ( 'S Bool ( 'S -- 'T ) ( 'S -- 'T ) -- 'T )
+if_ :: BuiltIn ()
+if_ = BuiltIn $ popStack 3 >>= \case
+      Stack [f, t, cond] -> do
+        cond' <- assertBool cond
+        Function _ t' <- assertFunction t
+        Function _ f' <- assertFunction f
+        evalSeq (if cond' then t' else f')
+      _ -> error "Internal error in if_ (from popStack)"
 
 builtins :: Map Id ReaderFunction
 builtins = Map.fromList [
             (Id "drop", BIFunction (polyFunctionType [Id "R"] [PrimType TAny] (RestQuant $ Id "R") [] (RestQuant $ Id "R")) drop_),
             (Id "id", BIFunction (polyFunctionType [Id "R"] [] (RestQuant $ Id "R") [] (RestQuant $ Id "R")) id_),
             (Id "swap", BIFunction (polyFunctionType [Id "R", Id "a", Id "b"] [QuantVar (Id "b"), QuantVar (Id "a")] (RestQuant $ Id "R") [QuantVar (Id "a"), QuantVar (Id "b")] (RestQuant $ Id "R")) swap),
-            (Id "call", BIFunction (polyFunctionType [Id "S", Id "T"] [FunType (functionType [] (RestQuant (Id "S")) [] (RestQuant (Id "T")))] (RestQuant $ Id "S") [] (RestQuant $ Id "T")) call)
+            (Id "call", BIFunction (polyFunctionType [Id "S", Id "T"] [FunType (functionType [] (RestQuant (Id "S")) [] (RestQuant (Id "T")))] (RestQuant $ Id "S") [] (RestQuant $ Id "T")) call),
+            (Id "if", BIFunction (polyFunctionType [Id "S", Id "T"] [FunType (functionType [] (RestQuant (Id "S")) [] (RestQuant (Id "T"))), FunType (functionType [] (RestQuant (Id "S")) [] (RestQuant (Id "T"))), PrimType TBool] (RestQuant $ Id "S") [] (RestQuant $ Id "T")) if_),
+            (Id "true", BIFunction (polyFunctionType [Id "R"] [] (RestQuant $ Id "R") [PrimType TBool] (RestQuant $ Id "R")) true),
+            (Id "false", BIFunction (polyFunctionType [Id "R"] [] (RestQuant $ Id "R") [PrimType TBool] (RestQuant $ Id "R")) false)
            ]
 
 stdlibs :: ReadOnlyState
