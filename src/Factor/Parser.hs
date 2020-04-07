@@ -6,7 +6,7 @@ import Factor.Code
 import Factor.Type hiding (functionType)
 import Factor.Stack(Stack)
 import qualified Factor.Stack as Stack
-import Factor.Parser.Token
+import Factor.Parser.Token hiding (satisfy)
 
 import Text.Parsec hiding (many, (<|>))
 import Data.Char

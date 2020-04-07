@@ -1,12 +1,12 @@
+{-# LANGUAGE FlexibleContexts #-}
 
 module Factor.Parser.Token(Token(..),
-                           semiSpecialChars, specialChars,
-                           token, stringToken, intToken, symbolToken) where
+                           semiSpecialChars, specialChars, isSpecialSymbol,
+                           token, stringToken, intToken, symbolToken,
+                           parseToken, parseManyTokens, satisfy) where
 
--- Note: Probably won't export the specific parsers later. Just
--- exporting them now for testing.
-
-import Text.Parsec hiding (token)
+import Text.Parsec hiding (token, tokens, satisfy)
+import qualified Text.Parsec as P
 import Data.Char
 
 type Parser = Parsec String ()
@@ -21,6 +21,10 @@ semiSpecialChars = ":;()'[]\""
 
 specialChars :: [Char]
 specialChars = "" -- TBA
+
+isSpecialSymbol :: String -> Bool
+isSpecialSymbol [] = True -- Just by default, we'll consider this one special.
+isSpecialSymbol xs = head xs `elem` semiSpecialChars || any (`elem` specialChars) xs
 
 token :: Parser Token
 token = StringToken <$> stringToken <|>
@@ -40,5 +44,16 @@ intToken :: Parser Integer
 intToken = try $ option id sign <*> (read <$> many1 digit)
 
 symbolToken :: Parser String
-symbolToken = many (satisfy isValid)
+symbolToken = many (P.satisfy isValid)
     where isValid ch = not (isSpace ch) && not (isControl ch)
+
+parseToken :: SourceName -> String -> Either ParseError Token
+parseToken = parse token
+
+parseManyTokens :: SourceName -> String -> Either ParseError [Token]
+parseManyTokens = parse tokens
+    where tokens = many (spaces *> token <* spaces) <* eof
+
+satisfy :: Stream s m Token => (Token -> Maybe a) -> ParsecT s u m a
+satisfy predicate = tokenPrim show nextPos predicate
+    where nextPos p _ _ = incSourceColumn p 1 -- TODO
