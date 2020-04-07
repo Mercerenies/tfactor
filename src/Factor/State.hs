@@ -3,7 +3,7 @@
 
 module Factor.State(EvalState(..), ReadOnlyState(ReadOnlyState), ReaderValue(..),
                     BuiltIn(..), BuiltInConstraints,
-                    readerNames, readerAliases,
+                    readerNames,
                     newState, newReader,
                     pushStack, peekStackMaybe, peekStack, popStackMaybe, popStack,
                     declsToReadOnly, lookupFn,
@@ -28,8 +28,7 @@ data EvalState = EvalState {
     } deriving (Show)
 
 data ReadOnlyState = ReadOnlyState {
-      _readerNames :: Map Id ReaderValue,
-      _readerAliases :: Map Id QId
+      _readerNames :: Map Id ReaderValue
     }
 
 data ReaderValue = UDFunction PolyFunctionType  Function    -- User-defined function
@@ -46,7 +45,7 @@ newState :: EvalState
 newState = EvalState Stack.empty
 
 newReader :: ReadOnlyState
-newReader = ReadOnlyState Map.empty Map.empty
+newReader = ReadOnlyState Map.empty
 
 pushStack :: MonadState EvalState m => Stack Data -> m ()
 pushStack xs = modify $ \s -> s { stateStack = Stack.appendStack xs (stateStack s) }
@@ -90,14 +89,11 @@ defineModule :: Id -> Map Id ReaderValue -> Map Id ReaderValue -> Map Id ReaderV
 defineModule v def = Map.insert v (Module def)
 
 lookupFn :: MonadError FactorError m => QId -> ReadOnlyState -> m ReaderValue
-lookupFn (QId []) _ = throwError (NoSuchFunction $ QId []) -- The empty QId makes no sense.
-lookupFn (QId (x:xs)) reader =
-    -- Lookup the top-level name in the alias table first.
-    let x' = maybe (QId [x]) id (Map.lookup x (view readerAliases reader))
-        QId ids = x' <> QId xs
-        go (Module names) i = maybe (throwError $ NoSuchFunction (QId ids)) pure $ Map.lookup i names
-        go _ _ = throwError $ NoSuchModule (QId ids)
-    in foldM go (Module $ view readerNames reader) ids
+lookupFn (QId ids) reader =
+  -- Lookup the top-level name in the alias table first.
+  let go (Module names) i = maybe (throwError $ NoSuchFunction (QId ids)) pure $ Map.lookup i names
+      go _ _ = throwError $ NoSuchModule (QId ids)
+  in foldM go (Module $ view readerNames reader) ids
 
 readerFunctionType :: ReaderValue -> Maybe PolyFunctionType
 readerFunctionType (UDFunction t _) = Just t

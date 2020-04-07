@@ -1,7 +1,9 @@
 
-module Factor.Util(sepBy, padLeft, foldM1) where
+module Factor.Util(sepBy, padLeft, foldM1, insertOrUpdate) where
 
 import Control.Monad
+import Data.Map(Map)
+import qualified Data.Map as Map
 
 sepBy :: Foldable t => ShowS -> t ShowS -> ShowS
 sepBy delim = maybe id id . foldr go Nothing
@@ -18,3 +20,5 @@ foldM1 f = fmap (maybe (error "foldM1 on empty foldable") id) . foldM go Nothing
     where go Nothing y = pure (Just y)
           go (Just x) y = Just <$> f x y
 
+insertOrUpdate :: Ord k => (Maybe a -> a) -> k -> Map k a -> Map k a
+insertOrUpdate f = Map.alter (Just . f)

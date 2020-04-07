@@ -29,6 +29,7 @@ data FactorError = NoSuchFunction QId
                  | NotAFunction
                  | NotAModule
                  | RuntimeTypeError Data Type
+                 | AmbiguousName Id [QId]
                    deriving (Eq)
 
 instance Show FactorError where
@@ -45,6 +46,8 @@ instance Show FactorError where
           NotAFunction -> ("Attempt to call non-function" ++)
           NotAModule -> ("Attempt to subscript non-module" ++)
           RuntimeTypeError d t -> ("Expected value of type " ++) . shows t . (", got " ++) . shows d
+          AmbiguousName n xs ->
+              ("Ambiguous name " ++) . shows n . (" could refer to any of " ++) . shows xs
 
 instance FromTypeError FactorError where
     fromTypeError = TypeError
