@@ -10,36 +10,31 @@ import Factor.Parser.Token
 
 import Text.Parsec hiding (many, (<|>), string, satisfy)
 import Data.Char
-import Data.Maybe(listToMaybe)
 import Control.Applicative
 import Control.Monad
 
 type Parser = Parsec [Token] ()
 
-id_ :: Parser Id
-id_ = ordinarySymbol
+-- (Unused right now)
+_id_ :: Parser Id
+_id_ = ordinarySymbol
 
--- (lowerId and upperId not currently used)
+unqualifiedId :: Parser Id
+unqualifiedId = try $ do
+  Id s <- ordinarySymbol
+  when ('.' `elem` s) $ unexpected "qualified identifier"
+  return $ Id s
 
-_lowerId :: Parser Id
-_lowerId = go <?> "lowercase identifier"
-    where go = do
-            Id i <- id_
-            unless (maybe False isLower (listToMaybe i))
-                   (unexpected "identifier" <?> "lowercase identifier")
-            return (Id i)
-
-_upperId :: Parser Id
-_upperId = go <?> "uppercase identifier"
-    where go = do
-            Id i <- id_
-            unless (maybe False isUpper (listToMaybe i))
-                   (unexpected "identifier" <?> "uppercase identifier")
-            return (Id i)
+qualifiedId :: Parser QId
+qualifiedId = try $ do
+  s <- ordinarySymbol
+  let QId names = splitQualified s
+  when (any (null . unId) names) $ fail "not a valid qualified identifier"
+  return $ QId names
 
 statement :: Parser Statement
 statement = Literal <$> literal <|>
-            Call <$> id_
+            Call <$> qualifiedId
 
 functionLit :: Parser Function
 functionLit = Function Nothing <$> (symbol "[" *> seq_ <* symbol "]")
@@ -56,7 +51,7 @@ decl :: Parser Declaration
 decl = (\(t, s) -> FunctionDecl t s) <$> functionDecl
     where functionDecl = do
             _ <- symbol ":fun"
-            name <- id_
+            name <- unqualifiedId
             ty <- functionType
             def <- seq_
             _ <- symbol ";"

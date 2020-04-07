@@ -4,7 +4,7 @@ cabal-version: 1.12
 --
 -- see: https://github.com/sol/hpack
 --
--- hash: 8c6bdc65f6c1cdb999b4f8ecbbbe0de353bb9e83ab13f453674db7342be61f8b
+-- hash: 5d1e8dc77822ce1fd317755c0899dc80502a0b625f764a75f963c29dcd831a4a
 
 name:           tfactor
 version:        0.1.0.0
@@ -51,6 +51,7 @@ library
     , mmorph >=1 && <2
     , mtl >=2.2.2 && <3
     , parsec >=3 && <4
+    , split >=0 && <1
     , transformers >=0 && <1
   default-language: Haskell2010
 
@@ -67,6 +68,7 @@ executable tfactor-exe
     , mmorph >=1 && <2
     , mtl >=2.2.2 && <3
     , parsec >=3 && <4
+    , split >=0 && <1
     , tfactor
     , transformers >=0 && <1
   default-language: Haskell2010
@@ -85,6 +87,7 @@ test-suite tfactor-test
     , mmorph >=1 && <2
     , mtl >=2.2.2 && <3
     , parsec >=3 && <4
+    , split >=0 && <1
     , tfactor
     , transformers >=0 && <1
   default-language: Haskell2010

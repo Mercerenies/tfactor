@@ -103,7 +103,7 @@ binmathcmp f = BuiltIn $ popStack2 >>= \(b, a) -> do
                 a' <- assertInt a
                 pushStack (Stack.singleton (Bool $ f a' b'))
 
-builtins :: Map Id ReaderFunction
+builtins :: Map Id ReaderValue
 builtins = Map.fromList [
             (Id "drop", BIFunction (polyFunctionType [Id "R"] [PrimType TAny] (RestQuant $ Id "R") [] (RestQuant $ Id "R")) drop_),
             (Id "dup", BIFunction (polyFunctionType [Id "R", Id "a"] [QuantVar (Id "a")] (RestQuant $ Id "R") [QuantVar (Id "a"), QuantVar (Id "a")] (RestQuant $ Id "R")) dup),

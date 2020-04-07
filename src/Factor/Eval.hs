@@ -43,7 +43,7 @@ evalSeq :: (MonadReader ReadOnlyState m, MonadState EvalState m, MonadError Fact
 evalSeq (Sequence xs) = mapM_ evalStmt xs
 
 callFunction :: (MonadReader ReadOnlyState m, MonadState EvalState m, MonadError FactorError m) =>
-                Id -> m ()
+                QId -> m ()
 callFunction v = ask >>= lookupFn' v >>= go
     where go (UDFunction _ (Function _ ss)) = evalSeq ss
           go (BIFunction _ (BuiltIn f)) = f

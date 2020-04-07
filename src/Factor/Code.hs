@@ -15,7 +15,7 @@ data Data = Int Integer
           | String String
             deriving (Show, Eq)
 
-data Statement = Call Id
+data Statement = Call QId
                | Literal Data
                  deriving (Show, Eq)
 

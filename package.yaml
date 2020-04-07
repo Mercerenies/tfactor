@@ -26,6 +26,7 @@ dependencies:
 - transformers >= 0 && < 1
 - containers >= 0 && < 1
 - mmorph >= 1 && < 2
+- split >= 0 && < 1
 
 library:
   source-dirs: src

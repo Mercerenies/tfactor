@@ -1,6 +1,6 @@
 {-# LANGUAGE FlexibleContexts, ViewPatterns, RankNTypes, ConstraintKinds, KindSignatures #-}
 
-module Factor.State(EvalState(..), ReadOnlyState(..), ReaderFunction(..),
+module Factor.State(EvalState(..), ReadOnlyState(..), ReaderValue(..),
                     BuiltIn(..), BuiltInConstraints,
                     newState, newReader,
                     pushStack, peekStackMaybe, peekStack, popStackMaybe, popStack,
@@ -25,11 +25,11 @@ data EvalState = EvalState {
     } deriving (Show)
 
 data ReadOnlyState = ReadOnlyState {
-      readerFunctions :: Map Id ReaderFunction
+      readerNames :: Map Id ReaderValue
     }
 
-data ReaderFunction = UDFunction PolyFunctionType  Function    -- User-defined function
-                    | BIFunction PolyFunctionType (BuiltIn ()) -- Built-in function
+data ReaderValue = UDFunction PolyFunctionType  Function    -- User-defined function
+                 | BIFunction PolyFunctionType (BuiltIn ()) -- Built-in function
 
 type BuiltInConstraints m = (MonadReader ReadOnlyState m, MonadState EvalState m, MonadError FactorError m)
 
@@ -67,19 +67,21 @@ declsToReadOnly ds r = foldM go r ds
                 FunctionDecl _ (Function Nothing _) ->
                     throwError (InternalError "Unnamed top-level function")
                 FunctionDecl t (Function (Just v) def)
-                 | Map.member v (readerFunctions reader) -> throwError (DuplicateFunctionDecl v)
+                 | Map.member v (readerNames reader) -> throwError (DuplicateDecl v)
                  | otherwise -> pure $ defineFunction v t def reader
           defineFunction v t def reader =
-              reader { readerFunctions =
+              reader { readerNames =
                            Map.insert v (UDFunction t $ Function (Just v) def)
-                                  (readerFunctions reader) }
+                                  (readerNames reader) }
 
-lookupFn :: Id -> ReadOnlyState -> Maybe ReaderFunction
-lookupFn v (readerFunctions -> fns) = Map.lookup v fns
+-- //// Rewrite these correctly once we have modules
 
-lookupFn' :: MonadError FactorError m => Id -> ReadOnlyState -> m ReaderFunction
+lookupFn :: QId -> ReadOnlyState -> Maybe ReaderValue
+lookupFn (QId (last -> v)) (readerNames -> fns) = Map.lookup v fns
+
+lookupFn' :: MonadError FactorError m => QId -> ReadOnlyState -> m ReaderValue
 lookupFn' v r = maybe (throwError $ NoSuchFunction v) pure $ lookupFn v r
 
-readerFunctionType :: ReaderFunction -> PolyFunctionType
+readerFunctionType :: ReaderValue -> PolyFunctionType
 readerFunctionType (UDFunction t _) = t
 readerFunctionType (BIFunction t _) = t

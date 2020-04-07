@@ -13,9 +13,9 @@ import Text.Parsec(ParseError)
 import Control.Monad.Except
 import Control.Arrow
 
-data FactorError = NoSuchFunction Id
+data FactorError = NoSuchFunction QId
                  | StackUnderflow
-                 | DuplicateFunctionDecl Id
+                 | DuplicateDecl Id
                  | InternalError String
                  | ParseError ParseError
                  | TypeError TypeError
@@ -28,7 +28,7 @@ instance Show FactorError where
         case err of
           NoSuchFunction v -> ("No such function " ++) . shows v
           StackUnderflow -> ("Stack underflow" ++)
-          DuplicateFunctionDecl v -> ("Duplicate function declaration " ++) . shows v
+          DuplicateDecl v -> ("Duplicate declaration " ++) . shows v
           InternalError str ->
               ("Internal error " ++) . shows str . (" (this message should not appear)" ++)
           ParseError p -> shows p
