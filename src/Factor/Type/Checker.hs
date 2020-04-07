@@ -61,7 +61,7 @@ typeOf :: (MonadError FactorError m, MonadReader ReadOnlyState m, MonadWriter As
           Statement -> StateT (Set Id) m PolyFunctionType
 typeOf stmt = case stmt of
                 Call v -> do
-                          fn <- ask >>= lookupFn' v
+                          fn <- ask >>= lookupFn v
                           case readerFunctionType fn of
                             Just x -> return x
                             Nothing -> throwError NotAFunction

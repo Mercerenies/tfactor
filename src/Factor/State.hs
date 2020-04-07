@@ -6,7 +6,7 @@ module Factor.State(EvalState(..), ReadOnlyState(ReadOnlyState), ReaderValue(..)
                     readerNames, readerAliases,
                     newState, newReader,
                     pushStack, peekStackMaybe, peekStack, popStackMaybe, popStack,
-                    declsToReadOnly, lookupFn, lookupFn',
+                    declsToReadOnly, lookupFn,
                     readerFunctionType) where
 
 import Factor.Error
@@ -89,18 +89,15 @@ defineFunction v t def = Map.insert v (UDFunction t $ Function (Just v) def)
 defineModule :: Id -> Map Id ReaderValue -> Map Id ReaderValue -> Map Id ReaderValue
 defineModule v def = Map.insert v (Module def)
 
-lookupFn :: QId -> ReadOnlyState -> Maybe ReaderValue
-lookupFn (QId []) _ = Nothing -- The empty (qualified) name makes no sense.
+lookupFn :: MonadError FactorError m => QId -> ReadOnlyState -> m ReaderValue
+lookupFn (QId []) _ = throwError (NoSuchFunction $ QId []) -- The empty QId makes no sense.
 lookupFn (QId (x:xs)) reader =
     -- Lookup the top-level name in the alias table first.
     let x' = maybe (QId [x]) id (Map.lookup x (view readerAliases reader))
         QId ids = x' <> QId xs
-        go (Module names) i = Map.lookup i names
-        go _ _ = Nothing
+        go (Module names) i = maybe (throwError $ NoSuchFunction (QId ids)) pure $ Map.lookup i names
+        go _ _ = throwError $ NoSuchModule (QId ids)
     in foldM go (Module $ view readerNames reader) ids
-
-lookupFn' :: MonadError FactorError m => QId -> ReadOnlyState -> m ReaderValue
-lookupFn' v r = maybe (throwError $ NoSuchFunction v) pure $ lookupFn v r
 
 readerFunctionType :: ReaderValue -> Maybe PolyFunctionType
 readerFunctionType (UDFunction t _) = Just t
