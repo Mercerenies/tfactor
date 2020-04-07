@@ -30,6 +30,7 @@ data ReadOnlyState = ReadOnlyState {
 
 data ReaderValue = UDFunction PolyFunctionType  Function    -- User-defined function
                  | BIFunction PolyFunctionType (BuiltIn ()) -- Built-in function
+                 | Module (Map Id ReaderValue)
 
 type BuiltInConstraints m = (MonadReader ReadOnlyState m, MonadState EvalState m, MonadError FactorError m)
 
@@ -69,19 +70,29 @@ declsToReadOnly ds r = foldM go r ds
                 FunctionDecl t (Function (Just v) def)
                  | Map.member v (readerNames reader) -> throwError (DuplicateDecl v)
                  | otherwise -> pure $ defineFunction v t def reader
-          defineFunction v t def reader =
-              reader { readerNames =
-                           Map.insert v (UDFunction t $ Function (Just v) def)
-                                  (readerNames reader) }
+                ModuleDecl v def
+                 | Map.member v (readerNames reader) -> throwError (DuplicateDecl v)
+                 | otherwise -> do
+                          ReadOnlyState inner <- foldM go newReader def
+                          pure $ defineModule v inner reader
 
--- //// Rewrite these correctly once we have modules
+defineFunction :: Id -> PolyFunctionType -> Sequence -> ReadOnlyState -> ReadOnlyState
+defineFunction v t def reader =
+    reader { readerNames = Map.insert v (UDFunction t $ Function (Just v) def) (readerNames reader) }
+
+defineModule :: Id -> Map Id ReaderValue -> ReadOnlyState -> ReadOnlyState
+defineModule v def reader =
+    reader { readerNames = Map.insert v (Module def) (readerNames reader) }
 
 lookupFn :: QId -> ReadOnlyState -> Maybe ReaderValue
-lookupFn (QId (last -> v)) (readerNames -> fns) = Map.lookup v fns
+lookupFn (QId ids) (readerNames -> names0) = foldM go (Module names0) ids
+    where go (Module names) i = Map.lookup i names
+          go _ _ = Nothing
 
 lookupFn' :: MonadError FactorError m => QId -> ReadOnlyState -> m ReaderValue
 lookupFn' v r = maybe (throwError $ NoSuchFunction v) pure $ lookupFn v r
 
-readerFunctionType :: ReaderValue -> PolyFunctionType
-readerFunctionType (UDFunction t _) = t
-readerFunctionType (BIFunction t _) = t
+readerFunctionType :: ReaderValue -> Maybe PolyFunctionType
+readerFunctionType (UDFunction t _) = Just t
+readerFunctionType (BIFunction t _) = Just t
+readerFunctionType (Module _) = Nothing

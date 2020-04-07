@@ -11,6 +11,7 @@ import Factor.Id
 
 import Data.Set(Set)
 import qualified Data.Set as Set
+import Data.Map(Map)
 import qualified Data.Map as Map
 import Control.Monad.Writer
 import Control.Monad.Reader
@@ -58,7 +59,11 @@ typeOfValue value = case value of
 typeOf :: (MonadError FactorError m, MonadReader ReadOnlyState m, MonadWriter AssumptionsAll m) =>
           Statement -> StateT (Set Id) m PolyFunctionType
 typeOf stmt = case stmt of
-                Call v -> ask >>= lookupFn' v >>= return . readerFunctionType
+                Call v -> do
+                          fn <- ask >>= lookupFn' v
+                          case readerFunctionType fn of
+                            Just x -> return x
+                            Nothing -> throwError NotAFunction
                 Literal d -> do
                           d' <- typeOfValue d
                           let quants = allQuantVars d'
@@ -95,3 +100,14 @@ checkDeclaredType (PolyFunctionType ids declared) (Function _ ss) = runWriterT g
           doSub ((), w) = do
                  Assumptions _ _ <- consolidateUntilDone w
                  pure ()
+
+checkTypeOf :: (MonadError FactorError m, MonadReader ReadOnlyState m) => Id -> ReaderValue -> m ()
+checkTypeOf _ (UDFunction t f) = checkDeclaredType t f
+checkTypeOf _ (BIFunction _ _) = pure () -- We don't typecheck primitives.
+checkTypeOf _ (Module m) = checkTypes m -- Nothing to do with the module as a whole (yet).
+
+checkTypes :: (MonadError FactorError m, MonadReader ReadOnlyState m) => Map Id ReaderValue -> m ()
+checkTypes = void . Map.traverseWithKey checkTypeOf
+
+checkAllTypes :: (MonadError FactorError m, MonadReader ReadOnlyState m) => m ()
+checkAllTypes = asks readerNames >>= checkTypes

@@ -15,12 +15,6 @@ import System.Environment
 import System.Exit
 import Control.Monad.Except
 import Control.Monad.Reader hiding (reader)
-import qualified Data.Map as Map
-
--- The ID will be for better error messages later
-checkTypeOf :: (MonadError FactorError m, MonadReader ReadOnlyState m) => Id -> ReaderValue -> m ()
-checkTypeOf _ (UDFunction t f) = checkDeclaredType t f
-checkTypeOf _ (BIFunction _ _) = pure () -- We don't typecheck primitives.
 
 run :: FilePath -> ExceptT FactorError IO ()
 run filename = do
@@ -28,8 +22,7 @@ run filename = do
   contents' <- liftParseError $ parseManyTokens filename contents
   decls <- liftParseError $ parseFile filename contents'
   reader <- declsToReadOnly decls stdlibs
-  _ <- runReaderT (Map.traverseWithKey checkTypeOf $ readerNames reader)
-                  reader
+  _ <- runReaderT checkAllTypes reader
   (_, state) <- liftEither $ runEval (callFunction (QId [Id "main"])) reader newState
   liftIO $ print state
 

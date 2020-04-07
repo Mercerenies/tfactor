@@ -48,14 +48,25 @@ seq_ :: Parser Sequence
 seq_ = Sequence <$> many statement
 
 decl :: Parser Declaration
-decl = (\(t, s) -> FunctionDecl t s) <$> functionDecl
-    where functionDecl = do
-            _ <- symbol ":fun"
-            name <- unqualifiedId
-            ty <- functionType
-            def <- seq_
-            _ <- symbol ";"
-            return $ (PolyFunctionType (allQuantVars $ FunType ty) ty, Function (Just name) def)
+decl = (\(t, s) -> FunctionDecl t s) <$> functionDecl <|>
+       (\(i, m) -> ModuleDecl i m) <$> moduleDecl
+
+functionDecl :: Parser (PolyFunctionType, Function)
+functionDecl = do
+  _ <- symbol ":fun"
+  name <- unqualifiedId
+  ty <- functionType
+  def <- seq_
+  _ <- symbol ";"
+  return $ (PolyFunctionType (allQuantVars $ FunType ty) ty, Function (Just name) def)
+
+moduleDecl :: Parser (Id, [Declaration])
+moduleDecl = do
+  _ <- symbol ":mod"
+  name <- unqualifiedId
+  decls <- many decl
+  _ <- symbol ";"
+  return (name, decls)
 
 primType :: Parser PrimType
 primType = TInt <$ symbol "Int" <|>

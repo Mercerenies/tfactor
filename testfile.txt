@@ -1,4 +1,20 @@
 
+:mod MyModule
+
+  :fun drop2 ( Any Any -- )
+    drop drop
+  ;
+
+  :mod MyNestedModule
+
+    :fun drop2-again ( Any Any -- )
+      MyModule.drop2
+    ;
+
+  ;
+
+;
+
 :fun my-swap ( 'd 'c -- 'c 'd )
   swap
 ;
@@ -6,9 +22,11 @@
 :fun string-output ( -- String )
   "Hello, world!"
 ;
-:fun main ( -- Int Int Int String )
+
+:fun main ( -- Int Int Int String Int )
   2 1
   true [ my-swap ] [ ] if
   [ 3 4 / ] call
   string-output
+  100 200 300 400 500 MyModule.drop2 MyModule.MyNestedModule.drop2-again
 ;
