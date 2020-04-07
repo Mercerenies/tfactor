@@ -60,7 +60,8 @@ resolveAliasesSeq m (Sequence xs) = Sequence <$> mapM (resolveAliasesStmt m) xs
 -- TODO Aliases in types...
 resolveAliasesMod :: MonadError FactorError m =>
                      Map Id Alias -> QId -> Map Id ReaderValue -> m (Map Id ReaderValue)
-resolveAliasesMod m name = Map.traverseWithKey go
-    where go _ (UDFunction t (Function v ss)) = UDFunction t . Function v <$> resolveAliasesSeq m ss
+resolveAliasesMod m name modl = Map.traverseWithKey go modl
+    where m' = openModule name modl m
+          go _ (UDFunction t (Function v ss)) = UDFunction t . Function v <$> resolveAliasesSeq m' ss
           go _ (bif @ BIFunction {}) = pure bif
-          go k (Module inner) = Module <$> resolveAliasesMod m (name <> QId [k]) inner
+          go k (Module inner) = Module <$> resolveAliasesMod m' (name <> QId [k]) inner

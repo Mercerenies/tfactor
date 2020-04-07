@@ -8,7 +8,7 @@
   :mod MyNestedModule
 
     :fun drop2-again ( Any Any -- )
-      MyModule.drop2
+      drop2
     ;
 
   ;
