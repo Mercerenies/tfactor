@@ -24,9 +24,10 @@ run filename = do
   contents <- liftIO $ readFile filename
   contents' <- liftParseError $ parseManyTokens filename contents
   decls <- liftParseError $ parseFile filename contents'
-  definednames <- declsToReadOnly decls builtins
-  let reader = ReadOnlyState definednames
-  reader' <- forOf readerNames reader $ resolveAliasesMod Map.empty (QId [])
+  definednames <- declsToReadOnly decls Map.empty
+  let reader = bindStdlibModule $ ReadOnlyState definednames
+  aliases <- lookupAndOpenModule (QId [stdlibModuleName]) reader Map.empty
+  reader' <- forOf readerNames reader $ resolveAliasesMod aliases (QId [])
   _ <- runReaderT checkAllTypes reader'
   (_, state) <- liftEither $ runEval (callFunction (QId [Id "main"])) reader' newState
   liftIO $ print state

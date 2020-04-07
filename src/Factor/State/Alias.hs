@@ -1,4 +1,4 @@
-{-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE FlexibleContexts, LambdaCase #-}
 
 module Factor.State.Alias where
 
@@ -27,6 +27,12 @@ defAlias v q = insertOrUpdate go v
 openModule :: QId -> Map Id ReaderValue -> Map Id Alias -> Map Id Alias
 openModule mname modl aliases0 = Map.foldlWithKey' go aliases0 modl
     where go aliases k _ = defAlias k (mname <> QId [k]) aliases
+
+lookupAndOpenModule :: MonadError FactorError m =>
+                       QId -> ReadOnlyState -> Map Id Alias -> m (Map Id Alias)
+lookupAndOpenModule mname reader aliases = lookupFn mname reader >>= \case
+                                           Module m -> return $ openModule mname m aliases
+                                           _ -> throwError (NoSuchModule mname)
 
 -- Looking up an alias that doesn't exist is not an error; it simply
 -- means we're not using an alias. Looking up an ambiguous alias is a
@@ -61,7 +67,7 @@ resolveAliasesSeq m (Sequence xs) = Sequence <$> mapM (resolveAliasesStmt m) xs
 resolveAliasesMod :: MonadError FactorError m =>
                      Map Id Alias -> QId -> Map Id ReaderValue -> m (Map Id ReaderValue)
 resolveAliasesMod m name modl = Map.traverseWithKey go modl
-    where m' = openModule name modl m
+    where m' = openModule name modl $ m
           go _ (UDFunction t (Function v ss)) = UDFunction t . Function v <$> resolveAliasesSeq m' ss
           go _ (bif @ BIFunction {}) = pure bif
           go k (Module inner) = Module <$> resolveAliasesMod m' (name <> QId [k]) inner

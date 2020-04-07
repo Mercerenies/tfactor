@@ -1,6 +1,6 @@
 {-# LANGUAGE FlexibleContexts, LambdaCase #-}
 
-module Factor.StdLib(builtins, stdlibs) where
+module Factor.StdLib(builtins, stdlibs, stdlibModuleName, bindStdlibModule) where
 
 import Factor.Stack(Stack(..))
 import qualified Factor.Stack as Stack
@@ -14,6 +14,7 @@ import Factor.Eval
 import Control.Monad
 import Control.Monad.Except
 import Control.Monad.State
+import Control.Lens
 import Data.Map(Map)
 import qualified Data.Map as Map
 
@@ -127,3 +128,9 @@ builtins = Map.fromList [
 
 stdlibs :: ReadOnlyState
 stdlibs = ReadOnlyState builtins
+
+stdlibModuleName :: Id
+stdlibModuleName = Id "Prelude"
+
+bindStdlibModule :: ReadOnlyState -> ReadOnlyState
+bindStdlibModule = over readerNames (Map.insert stdlibModuleName (Module builtins))
