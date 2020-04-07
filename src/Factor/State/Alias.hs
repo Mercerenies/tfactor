@@ -6,6 +6,7 @@ import Factor.State
 import Factor.Id
 import Factor.Util
 import Factor.Error
+import Factor.Code
 
 import Data.Map(Map)
 import qualified Data.Map as Map
@@ -35,3 +36,23 @@ lookupAlias v m = case Map.lookup v m of
                     Nothing -> pure $ QId [v]
                     Just (AliasValue x) -> pure x
                     Just (AmbiguousAlias xs) -> throwError (AmbiguousName v xs)
+
+resolveAlias :: MonadError FactorError m => Map Id Alias -> QId -> m QId
+resolveAlias _ (QId []) = pure (QId [])
+resolveAlias m (QId (x:xs)) =
+    -- Lookup the first component of a qualified identifier.
+    lookupAlias x m >>= \x' -> pure (x' <> QId xs)
+
+resolveAliasesData :: MonadError FactorError m => Map Id Alias -> Data -> m Data
+resolveAliasesData _ (Int n) = pure $ Int n
+resolveAliasesData _ (Bool b) = pure $ Bool b
+resolveAliasesData _ (String s) = pure $ String s
+resolveAliasesData m (FunctionValue (Function v seq_)) =
+    FunctionValue . Function v <$> resolveAliasesSeq m seq_
+
+resolveAliasesStmt :: MonadError FactorError m => Map Id Alias -> Statement -> m Statement
+resolveAliasesStmt m (Call qid) = Call <$> resolveAlias m qid
+resolveAliasesStmt m (Literal d) = Literal <$> resolveAliasesData m d
+
+resolveAliasesSeq :: MonadError FactorError m => Map Id Alias -> Sequence -> m Sequence
+resolveAliasesSeq m (Sequence xs) = Sequence <$> mapM (resolveAliasesStmt m) xs
