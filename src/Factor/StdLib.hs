@@ -126,4 +126,4 @@ builtins = Map.fromList [
            ]
 
 stdlibs :: ReadOnlyState
-stdlibs = ReadOnlyState builtins
+stdlibs = ReadOnlyState builtins Map.empty

@@ -1,9 +1,9 @@
 {-# LANGUAGE FlexibleContexts, ViewPatterns, RankNTypes,
   ConstraintKinds, KindSignatures, TemplateHaskell #-}
 
-module Factor.State(EvalState(..), ReadOnlyState(..), ReaderValue(..),
+module Factor.State(EvalState(..), ReadOnlyState(ReadOnlyState), ReaderValue(..),
                     BuiltIn(..), BuiltInConstraints,
-                    readerNames,
+                    readerNames, readerAliases,
                     newState, newReader,
                     pushStack, peekStackMaybe, peekStack, popStackMaybe, popStack,
                     declsToReadOnly, lookupFn, lookupFn',
@@ -28,7 +28,8 @@ data EvalState = EvalState {
     } deriving (Show)
 
 data ReadOnlyState = ReadOnlyState {
-      _readerNames :: Map Id ReaderValue
+      _readerNames :: Map Id ReaderValue,
+      _readerAliases :: Map Id QId
     }
 
 data ReaderValue = UDFunction PolyFunctionType  Function    -- User-defined function
@@ -45,7 +46,7 @@ newState :: EvalState
 newState = EvalState Stack.empty
 
 newReader :: ReadOnlyState
-newReader = ReadOnlyState Map.empty
+newReader = ReadOnlyState Map.empty Map.empty
 
 pushStack :: MonadState EvalState m => Stack Data -> m ()
 pushStack xs = modify $ \s -> s { stateStack = Stack.appendStack xs (stateStack s) }
@@ -89,9 +90,14 @@ defineModule :: Id -> Map Id ReaderValue -> Map Id ReaderValue -> Map Id ReaderV
 defineModule v def = Map.insert v (Module def)
 
 lookupFn :: QId -> ReadOnlyState -> Maybe ReaderValue
-lookupFn (QId ids) (view readerNames -> names0) = foldM go (Module names0) ids
-    where go (Module names) i = Map.lookup i names
-          go _ _ = Nothing
+lookupFn (QId []) _ = Nothing -- The empty (qualified) name makes no sense.
+lookupFn (QId (x:xs)) reader =
+    -- Lookup the top-level name in the alias table first.
+    let x' = maybe (QId [x]) id (Map.lookup x (view readerAliases reader))
+        QId ids = x' <> QId xs
+        go (Module names) i = Map.lookup i names
+        go _ _ = Nothing
+    in foldM go (Module $ view readerNames reader) ids
 
 lookupFn' :: MonadError FactorError m => QId -> ReadOnlyState -> m ReaderValue
 lookupFn' v r = maybe (throwError $ NoSuchFunction v) pure $ lookupFn v r
