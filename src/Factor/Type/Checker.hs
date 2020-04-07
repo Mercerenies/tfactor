@@ -17,6 +17,7 @@ import Control.Monad.Writer
 import Control.Monad.Reader
 import Control.Monad.State
 import Control.Monad.Except
+import Control.Lens
 
 monomorphize :: MonadState (Set Id) m => PolyFunctionType -> m FunctionType
 monomorphize (PolyFunctionType ids fn) = do
@@ -110,4 +111,4 @@ checkTypes :: (MonadError FactorError m, MonadReader ReadOnlyState m) => Map Id 
 checkTypes = void . Map.traverseWithKey checkTypeOf
 
 checkAllTypes :: (MonadError FactorError m, MonadReader ReadOnlyState m) => m ()
-checkAllTypes = asks readerNames >>= checkTypes
+checkAllTypes = asks (view readerNames) >>= checkTypes

@@ -1,7 +1,9 @@
-{-# LANGUAGE FlexibleContexts, ViewPatterns, RankNTypes, ConstraintKinds, KindSignatures #-}
+{-# LANGUAGE FlexibleContexts, ViewPatterns, RankNTypes,
+  ConstraintKinds, KindSignatures, TemplateHaskell #-}
 
 module Factor.State(EvalState(..), ReadOnlyState(..), ReaderValue(..),
                     BuiltIn(..), BuiltInConstraints,
+                    readerNames,
                     newState, newReader,
                     pushStack, peekStackMaybe, peekStack, popStackMaybe, popStack,
                     declsToReadOnly, lookupFn, lookupFn',
@@ -19,13 +21,14 @@ import qualified Data.Map as Map
 import Control.Monad.Reader hiding (reader)
 import Control.Monad.State
 import Control.Monad.Except
+import Control.Lens
 
 data EvalState = EvalState {
       stateStack :: Stack Data
     } deriving (Show)
 
 data ReadOnlyState = ReadOnlyState {
-      readerNames :: Map Id ReaderValue
+      _readerNames :: Map Id ReaderValue
     }
 
 data ReaderValue = UDFunction PolyFunctionType  Function    -- User-defined function
@@ -35,6 +38,8 @@ data ReaderValue = UDFunction PolyFunctionType  Function    -- User-defined func
 type BuiltInConstraints m = (MonadReader ReadOnlyState m, MonadState EvalState m, MonadError FactorError m)
 
 newtype BuiltIn a = BuiltIn { unBuiltIn :: forall m. BuiltInConstraints m => m a }
+
+makeLenses ''ReadOnlyState
 
 newState :: EvalState
 newState = EvalState Stack.empty
@@ -68,24 +73,22 @@ declsToReadOnly ds r = foldM go r ds
                 FunctionDecl _ (Function Nothing _) ->
                     throwError (InternalError "Unnamed top-level function")
                 FunctionDecl t (Function (Just v) def)
-                 | Map.member v (readerNames reader) -> throwError (DuplicateDecl v)
+                 | Map.member v (view readerNames reader) -> throwError (DuplicateDecl v)
                  | otherwise -> pure $ defineFunction v t def reader
                 ModuleDecl v def
-                 | Map.member v (readerNames reader) -> throwError (DuplicateDecl v)
+                 | Map.member v (view readerNames reader) -> throwError (DuplicateDecl v)
                  | otherwise -> do
                           ReadOnlyState inner <- foldM go newReader def
                           pure $ defineModule v inner reader
 
 defineFunction :: Id -> PolyFunctionType -> Sequence -> ReadOnlyState -> ReadOnlyState
-defineFunction v t def reader =
-    reader { readerNames = Map.insert v (UDFunction t $ Function (Just v) def) (readerNames reader) }
+defineFunction v t def = over readerNames $ Map.insert v (UDFunction t $ Function (Just v) def)
 
 defineModule :: Id -> Map Id ReaderValue -> ReadOnlyState -> ReadOnlyState
-defineModule v def reader =
-    reader { readerNames = Map.insert v (Module def) (readerNames reader) }
+defineModule v def = over readerNames $ Map.insert v (Module def)
 
 lookupFn :: QId -> ReadOnlyState -> Maybe ReaderValue
-lookupFn (QId ids) (readerNames -> names0) = foldM go (Module names0) ids
+lookupFn (QId ids) (view readerNames -> names0) = foldM go (Module names0) ids
     where go (Module names) i = Map.lookup i names
           go _ _ = Nothing
 
