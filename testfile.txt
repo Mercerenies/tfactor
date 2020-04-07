@@ -1,3 +1,14 @@
-: my-swap ( 'd 'c -- 'c 'd ) swap ;
-: string-output ( -- String ) "Hello, world!" ;
-: main ( -- Int Int Int String ) 2 1 true [ my-swap ] [ ] if [ 3 4 / ] call string-output ;
+
+:fun my-swap ( 'd 'c -- 'c 'd )
+  swap
+;
+
+:fun string-output ( -- String )
+  "Hello, world!"
+;
+:fun main ( -- Int Int Int String )
+  2 1
+  true [ my-swap ] [ ] if
+  [ 3 4 / ] call
+  string-output
+;

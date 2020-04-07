@@ -55,7 +55,7 @@ seq_ = Sequence <$> many statement
 decl :: Parser Declaration
 decl = (\(t, s) -> FunctionDecl t s) <$> functionDecl
     where functionDecl = do
-            _ <- symbol ":"
+            _ <- symbol ":fun"
             name <- id_
             ty <- functionType
             def <- seq_

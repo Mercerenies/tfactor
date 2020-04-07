@@ -1,2 +1,12 @@
-: factorial ( Int -- Int ) dup 0 <= [ drop 1 ] [ dup 1 - factorial * ] if ;
-: main ( -- Int ) 5 factorial ;
+
+:fun factorial ( Int -- Int )
+  dup 0 <= [
+    drop 1
+  ] [
+    dup 1 - factorial *
+  ] if
+;
+
+:fun main ( -- Int )
+  5 factorial
+;
