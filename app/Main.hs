@@ -21,7 +21,8 @@ run filename = do
   contents <- liftIO $ readFile filename
   contents' <- liftParseError $ parseManyTokens filename contents
   decls <- liftParseError $ parseFile filename contents'
-  reader <- declsToReadOnly decls stdlibs
+  definednames <- declsToReadOnly decls builtins
+  let reader = ReadOnlyState definednames
   _ <- runReaderT checkAllTypes reader
   (_, state) <- liftEither $ runEval (callFunction (QId [Id "main"])) reader newState
   liftIO $ print state

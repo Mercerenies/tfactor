@@ -66,26 +66,27 @@ popStackMaybe n = gets stateStack >>= go
 popStack :: (MonadState EvalState m, MonadError FactorError m) => Int -> m (Stack Data)
 popStack n = popStackMaybe n >>= maybe (throwError StackUnderflow) return
 
-declsToReadOnly :: MonadError FactorError m => [Declaration] -> ReadOnlyState -> m ReadOnlyState
+declsToReadOnly :: MonadError FactorError m =>
+                   [Declaration] -> Map Id ReaderValue -> m (Map Id ReaderValue)
 declsToReadOnly ds r = foldM go r ds
     where go reader decl =
               case decl of
                 FunctionDecl _ (Function Nothing _) ->
                     throwError (InternalError "Unnamed top-level function")
                 FunctionDecl t (Function (Just v) def)
-                 | Map.member v (view readerNames reader) -> throwError (DuplicateDecl v)
+                 | Map.member v reader -> throwError (DuplicateDecl v)
                  | otherwise -> pure $ defineFunction v t def reader
                 ModuleDecl v def
-                 | Map.member v (view readerNames reader) -> throwError (DuplicateDecl v)
+                 | Map.member v reader -> throwError (DuplicateDecl v)
                  | otherwise -> do
-                          ReadOnlyState inner <- foldM go newReader def
+                          inner <- foldM go Map.empty def
                           pure $ defineModule v inner reader
 
-defineFunction :: Id -> PolyFunctionType -> Sequence -> ReadOnlyState -> ReadOnlyState
-defineFunction v t def = over readerNames $ Map.insert v (UDFunction t $ Function (Just v) def)
+defineFunction :: Id -> PolyFunctionType -> Sequence -> Map Id ReaderValue -> Map Id ReaderValue
+defineFunction v t def = Map.insert v (UDFunction t $ Function (Just v) def)
 
-defineModule :: Id -> Map Id ReaderValue -> ReadOnlyState -> ReadOnlyState
-defineModule v def = over readerNames $ Map.insert v (Module def)
+defineModule :: Id -> Map Id ReaderValue -> Map Id ReaderValue -> Map Id ReaderValue
+defineModule v def = Map.insert v (Module def)
 
 lookupFn :: QId -> ReadOnlyState -> Maybe ReaderValue
 lookupFn (QId ids) (view readerNames -> names0) = foldM go (Module names0) ids
