@@ -6,34 +6,31 @@ import Factor.Code
 import Factor.Type hiding (functionType)
 import Factor.Stack(Stack)
 import qualified Factor.Stack as Stack
-import Factor.Parser.Token hiding (satisfy)
+import Factor.Parser.Token
 
-import Text.Parsec hiding (many, (<|>))
+import Text.Parsec hiding (many, (<|>), string, satisfy)
 import Data.Char
 import Data.Maybe(listToMaybe)
 import Control.Applicative
 import Control.Monad
 
-type Parser = Parsec String ()
-
-spaces1 :: Parser ()
-spaces1 = skipMany1 space
+type Parser = Parsec [Token] ()
 
 id_ :: Parser Id
-id_ = Id <$> ((:) <$> (satisfy isStartingChar) <*> many (satisfy isStandardChar)) <?> "identifier"
-    where isStartingChar ch = isStandardChar ch && not (isDigit ch) && ch `notElem` semiSpecialChars
-          isStandardChar ch = not (isSpace ch) && not (isControl ch) && ch `notElem` specialChars
+id_ = ordinarySymbol
 
-lowerId :: Parser Id
-lowerId = go <?> "lowercase identifier"
+-- (lowerId and upperId not currently used)
+
+_lowerId :: Parser Id
+_lowerId = go <?> "lowercase identifier"
     where go = do
             Id i <- id_
             unless (maybe False isLower (listToMaybe i))
                    (unexpected "identifier" <?> "lowercase identifier")
             return (Id i)
 
-upperId :: Parser Id
-upperId = go <?> "uppercase identifier"
+_upperId :: Parser Id
+_upperId = go <?> "uppercase identifier"
     where go = do
             Id i <- id_
             unless (maybe False isUpper (listToMaybe i))
@@ -44,41 +41,43 @@ statement :: Parser Statement
 statement = Literal <$> literal <|>
             Call <$> id_
 
-sign :: Num a => Parser (a -> a)
-sign = id <$ char '+' <|>
-       negate <$ char '-'
-
 functionLit :: Parser Function
-functionLit = Function Nothing <$> (char '[' *> spaces *> seq_ <* spaces <* char ']')
+functionLit = Function Nothing <$> (symbol "[" *> seq_ <* symbol "]")
 
 literal :: Parser Data
-literal = (Int <$> (try (option id sign <*> (read <$> many1 digit)) <?> "integer literal")) <|>
+literal = (Int <$> int) <|>
           (FunctionValue <$> functionLit <?> "function literal") <|>
-          (String <$> string_)
-    where string_ = char '"' *> many (noneOf ['"']) <* char '"' -- TODO Escape sequences
+          (String <$> string)
 
 seq_ :: Parser Sequence
-seq_ = Sequence <$> (many . try $ spaces *> statement <* spaces)
+seq_ = Sequence <$> many statement
 
 decl :: Parser Declaration
 decl = (\(t, s) -> FunctionDecl t s) <$> functionDecl
     where functionDecl = do
-            try (char ':' *> spaces1)
-            name <- id_ <* spaces
-            ty <- functionType <* spaces1
-            def <- seq_ <* spaces
-            char ';' *> spaces
+            _ <- symbol ":"
+            name <- id_
+            ty <- functionType
+            def <- seq_
+            _ <- symbol ";"
             return $ (PolyFunctionType (allQuantVars $ FunType ty) ty, Function (Just name) def)
 
 primType :: Parser PrimType
-primType = TInt <$ string "Int" <|>
-           TAny <$ string "Any" <|>
-           TNothing <$ string "Nothing" <|>
-           TBool <$ string "Bool" <|>
-           TString <$ string "String"
+primType = TInt <$ symbol "Int" <|>
+           TAny <$ symbol "Any" <|>
+           TNothing <$ symbol "Nothing" <|>
+           TBool <$ symbol "Bool" <|>
+           TString <$ symbol "String"
 
 quantType :: Parser Id
-quantType = char '\'' *> lowerId
+quantType = satisfy go
+    where go (SymbolToken _ ('\'':x:xs)) | isLower x = Just (Id ('\'':x:xs))
+          go _ = Nothing
+
+restQuantType :: Parser Id
+restQuantType = satisfy go
+    where go (SymbolToken _ ('\'':x:xs)) | isUpper x = Just (Id ('\'':x:xs))
+          go _ = Nothing
 
 type_ :: Parser Type
 type_ = (PrimType <$> primType <?> "primitive type") <|>
@@ -88,8 +87,8 @@ type_ = (PrimType <$> primType <?> "primitive type") <|>
 stackDesc :: Parser (Either (Stack Type) StackDesc)
 stackDesc = go <?> "stack descriptor"
     where go = do
-            r <- optionMaybe . try $ char '\'' *> upperId
-            args <- many $ try (spaces *> type_ <* spaces)
+            r <- optionMaybe restQuantType
+            args <- many type_
             return $ case r of
                        Nothing -> Left . Stack.fromList $ reverse args
                        Just r' -> Right $ StackDesc (Stack.fromList $ reverse args) (RestQuant r')
@@ -99,11 +98,11 @@ freshVar vs = head [v | n <- [0 :: Int ..], let v = Id ("R" <> show n), v `notEl
 
 functionType :: Parser FunctionType
 functionType = do
-  try (char '(' *> spaces1)
+  _ <- symbol "("
   args <- stackDesc
-  spaces *> string "--" *> spaces
+  _ <- symbol "--"
   rets <- stackDesc
-  spaces <* char ')'
+  _ <- symbol ")"
   case (args, rets) of
     (Right args', Right rets') -> return $ FunctionType args' rets'
     (Left args', Left rets') ->
@@ -115,15 +114,15 @@ functionType = do
         in return $ FunctionType args'' rets''
     (_, _) -> fail "stack var asymmetry in function type"
 
-parseStmt :: SourceName -> String -> Either ParseError Statement
+parseStmt :: SourceName -> [Token] -> Either ParseError Statement
 parseStmt = parse statement
 
-parseSeq :: SourceName -> String -> Either ParseError Sequence
+parseSeq :: SourceName -> [Token] -> Either ParseError Sequence
 parseSeq = parse seq_
 
-parseDecl :: SourceName -> String -> Either ParseError Declaration
+parseDecl :: SourceName -> [Token] -> Either ParseError Declaration
 parseDecl = parse decl
 
-parseFile :: SourceName -> String -> Either ParseError [Declaration]
+parseFile :: SourceName -> [Token] -> Either ParseError [Declaration]
 parseFile = parse decls
-    where decls = many (spaces *> decl <* spaces) <* eof
+    where decls = many decl <* eof

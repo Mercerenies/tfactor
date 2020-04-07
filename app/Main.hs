@@ -3,6 +3,7 @@
 module Main where
 
 import Factor.Parser
+import Factor.Parser.Token
 import Factor.Eval
 import Factor.State
 import Factor.Error
@@ -16,17 +17,6 @@ import Control.Monad.Except
 import Control.Monad.Reader hiding (reader)
 import qualified Data.Map as Map
 
-main' :: IO ()
-main' = do
-  line <- getLine
-  case parseSeq "(stdin)" line of
-    Left err -> print err
-    Right ss ->
-        case runEval (evalSeq ss) newReader newState of
-          Left err -> print err
-          Right ((), state) -> print (stateStack state)
-  putStrLn "Hi :)"
-
 -- The ID will be for better error messages later
 checkTypeOf :: (MonadError FactorError m, MonadReader ReadOnlyState m) => Id -> ReaderFunction -> m ()
 checkTypeOf _ (UDFunction t f) = checkDeclaredType t f
@@ -35,7 +25,8 @@ checkTypeOf _ (BIFunction _ _) = pure () -- We don't typecheck primitives.
 run :: FilePath -> ExceptT FactorError IO ()
 run filename = do
   contents <- liftIO $ readFile filename
-  decls <- liftParseError $ parseFile filename contents
+  contents' <- liftParseError $ parseManyTokens filename contents
+  decls <- liftParseError $ parseFile filename contents'
   reader <- declsToReadOnly decls stdlibs
   _ <- runReaderT (Map.traverseWithKey checkTypeOf $ readerFunctions reader)
                   reader
