@@ -107,21 +107,21 @@ checkDeclaredType (PolyFunctionType ids declared) ss = runWriterT go >>= doSub
                  pure ()
 
 checkTypeOf :: (MonadError FactorError m, MonadReader ReadOnlyState m) =>
-               TypeCheckerPass -> Id -> ReaderValue -> m ()
-checkTypeOf tpass _ (UDFunction t (Function _ ss))
+               TypeCheckerPass -> ReaderValue -> m ()
+checkTypeOf tpass (UDFunction t (Function _ ss))
     | tpass == FunctionPass = checkDeclaredType t ss
     -- TODO In a macro pass, we want to check that this doesn't
     -- underflow the stack, using the macro typeOf rules.
     | otherwise = pure ()
-checkTypeOf _ _ (BIFunction _ _) = pure () -- We don't typecheck primitives.
-checkTypeOf tpass _ (UDMacro t (Macro _ ss))
+checkTypeOf _ (BIFunction _ _) = pure () -- We don't typecheck primitives.
+checkTypeOf tpass (UDMacro t (Macro _ ss))
     | tpass == MacroPass = checkDeclaredType t ss
     | otherwise = pure ()
-checkTypeOf tpass _ (Module m) = checkTypes tpass m -- Nothing to do with the module as a whole (yet).
+checkTypeOf tpass (Module m) = checkTypes tpass m -- Nothing to do with the module as a whole (yet).
 
 checkTypes :: (MonadError FactorError m, MonadReader ReadOnlyState m) =>
               TypeCheckerPass -> Map Id ReaderValue -> m ()
-checkTypes tpass = void . Map.traverseWithKey (checkTypeOf tpass)
+checkTypes tpass = void . Map.traverseWithKey (\_ -> checkTypeOf tpass)
 
 checkAllTypes :: (MonadError FactorError m, MonadReader ReadOnlyState m) => TypeCheckerPass -> m ()
 checkAllTypes tpass = asks (view readerNames) >>= checkTypes tpass
