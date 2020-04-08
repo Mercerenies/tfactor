@@ -27,6 +27,14 @@ import qualified Data.Map as Map
 -- TODO Also, macros only expand once. We probably want to do
 -- recursive expansion.
 
+-- TODO There's some awkwardness in macro types with symbol literals
+-- vs symbols that represent function calls. Ideally, I'd like to make
+-- literals all fall under some umbrella type, so we can distinguish
+-- at the type level.
+
+-- TODO Some form of "quoted" functions that are always treated as
+-- data and don't contribute to recursion checks.
+
 run :: FilePath -> ExceptT FactorError IO ()
 run filename = do
   contents <- liftIO $ readFile filename

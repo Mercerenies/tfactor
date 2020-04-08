@@ -24,6 +24,9 @@ valueToTerm v = Literal v
 evalMacrosStmt :: (MonadReader ReadOnlyState m, MonadState EvalState m, MonadError FactorError m) =>
                   Statement -> m ()
 evalMacrosStmt (Literal (Symbol s)) = pushStack (Stack.singleton $ Symbol (':':s))
+evalMacrosStmt (Literal (FunctionValue (Function v ss))) = do
+  ss' <- augmentSeqWithMacros ss
+  pushStack (Stack.singleton $ FunctionValue (Function v ss'))
 evalMacrosStmt (Literal d) = pushStack (Stack.singleton d)
 evalMacrosStmt (Call v) = do
   -- We convert lookup errors into Maybe here, since we want macros to

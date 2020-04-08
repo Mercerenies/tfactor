@@ -30,7 +30,7 @@ end
 fun main ( -- Int Int Int Int String Int Symbol Symbol )
   2 1
   true [ my-swap ] [ ] if
-  [ 3 4 + ] call
+  [ 3 4 5 + do-it-twice ] call
   [ 3 4 + ] Prelude.call
   string-output
   100 200 300 400 500 MyModule.drop2 MyModule.MyNestedModule.drop2-again
