@@ -74,14 +74,6 @@ call = BuiltIn $ popStack1 >>= \case
        FunctionValue (Function _ ss) -> evalSeq ss
        _ -> throwError NotAFunction
 
--- ( 'R -- 'R Bool )
-true :: BuiltIn ()
-true = BuiltIn $ pushStack (Stack.singleton (Bool True))
-
--- ( 'R -- 'R Bool )
-false :: BuiltIn ()
-false = BuiltIn $ pushStack (Stack.singleton (Bool False))
-
 -- ( 'S Bool ( 'S -- 'T ) ( 'S -- 'T ) -- 'T )
 if_ :: BuiltIn ()
 if_ = BuiltIn $ popStack3 >>= \(f, t, cond) -> do
@@ -112,8 +104,6 @@ builtins = Map.fromList [
             (Id "swap", BIFunction (polyFunctionType [Id "R", Id "a", Id "b"] [QuantVar (Id "b"), QuantVar (Id "a")] (RestQuant $ Id "R") [QuantVar (Id "a"), QuantVar (Id "b")] (RestQuant $ Id "R")) swap),
             (Id "call", BIFunction (polyFunctionType [Id "S", Id "T"] [FunType (functionType [] (RestQuant (Id "S")) [] (RestQuant (Id "T")))] (RestQuant $ Id "S") [] (RestQuant $ Id "T")) call),
             (Id "if", BIFunction (polyFunctionType [Id "S", Id "T"] [FunType (functionType [] (RestQuant (Id "S")) [] (RestQuant (Id "T"))), FunType (functionType [] (RestQuant (Id "S")) [] (RestQuant (Id "T"))), PrimType TBool] (RestQuant $ Id "S") [] (RestQuant $ Id "T")) if_),
-            (Id "true", BIFunction (polyFunctionType [Id "R"] [] (RestQuant $ Id "R") [PrimType TBool] (RestQuant $ Id "R")) true),
-            (Id "false", BIFunction (polyFunctionType [Id "R"] [] (RestQuant $ Id "R") [PrimType TBool] (RestQuant $ Id "R")) false),
             (Id "+", BIFunction (polyFunctionType [Id "R"] [PrimType TInt, PrimType TInt] (RestQuant $ Id "R") [PrimType TInt] (RestQuant $ Id "R")) (binmathop (+))),
             (Id "-", BIFunction (polyFunctionType [Id "R"] [PrimType TInt, PrimType TInt] (RestQuant $ Id "R") [PrimType TInt] (RestQuant $ Id "R")) (binmathop (-))),
             (Id "*", BIFunction (polyFunctionType [Id "R"] [PrimType TInt, PrimType TInt] (RestQuant $ Id "R") [PrimType TInt] (RestQuant $ Id "R")) (binmathop (*))),

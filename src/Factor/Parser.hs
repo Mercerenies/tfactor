@@ -41,6 +41,8 @@ functionLit = Function Nothing <$> (symbol "[" *> seq_ <* symbol "]")
 
 literal :: Parser Data
 literal = (Int <$> int) <|>
+          (Bool True <$ symbol "true") <|>
+          (Bool False <$ symbol "false") <|>
           (FunctionValue <$> functionLit <?> "function literal") <|>
           (String <$> string)
 
