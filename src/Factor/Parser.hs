@@ -15,6 +15,9 @@ import Control.Monad
 
 type Parser = Parsec [Token] ()
 
+keywords :: [String]
+keywords = ["true", "false", "fun", "mod", "end"]
+
 -- (Unused right now)
 _id_ :: Parser Id
 _id_ = ordinarySymbol
@@ -32,9 +35,17 @@ qualifiedId = try $ do
   when (any (null . unId) names) $ fail "not a valid qualified identifier"
   return $ QId names
 
+nonKeywordQId :: Parser QId
+nonKeywordQId = try $ do
+  QId xs <- qualifiedId
+  case xs of
+    [Id x] -> when (x `elem` keywords) $ unexpected $ "keyword " ++ x
+    _ -> pure ()
+  return $ QId xs
+
 statement :: Parser Statement
 statement = Literal <$> literal <|>
-            Call <$> qualifiedId
+            Call <$> nonKeywordQId
 
 functionLit :: Parser Function
 functionLit = Function Nothing <$> (symbol "[" *> seq_ <* symbol "]")
@@ -55,19 +66,19 @@ decl = (\(t, s) -> FunctionDecl t s) <$> functionDecl <|>
 
 functionDecl :: Parser (PolyFunctionType, Function)
 functionDecl = do
-  _ <- symbol ":fun"
+  _ <- symbol "fun"
   name <- unqualifiedId
   ty <- functionType
   def <- seq_
-  _ <- symbol ";"
+  _ <- symbol "end"
   return $ (PolyFunctionType (allQuantVars $ FunType ty) ty, Function (Just name) def)
 
 moduleDecl :: Parser (Id, [Declaration])
 moduleDecl = do
-  _ <- symbol ":mod"
+  _ <- symbol "mod"
   name <- unqualifiedId
   decls <- many decl
-  _ <- symbol ";"
+  _ <- symbol "end"
   return (name, decls)
 
 primType :: Parser PrimType
