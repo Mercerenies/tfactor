@@ -28,7 +28,8 @@ run filename = do
   let reader = bindStdlibModule $ ReadOnlyState definednames
   aliases <- lookupAndOpenModule (QId [stdlibModuleName]) reader Map.empty
   reader' <- forOf readerNames reader $ resolveAliasesMod aliases (QId [])
-  _ <- runReaderT checkAllTypes reader'
+  _ <- runReaderT (checkAllTypes MacroPass) reader'
+  _ <- runReaderT (checkAllTypes FunctionPass) reader'
   (_, state) <- liftEither $ runEval (callFunction (QId [Id "main"])) reader' newState
   liftIO $ print state
 

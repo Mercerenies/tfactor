@@ -19,6 +19,9 @@ import Control.Monad.State
 import Control.Monad.Except
 import Control.Lens
 
+data TypeCheckerPass = MacroPass | FunctionPass
+                       deriving (Show, Read, Eq, Ord)
+
 monomorphize :: MonadState (Set Id) m => PolyFunctionType -> m FunctionType
 monomorphize (PolyFunctionType ids fn) = do
   knowns <- get
@@ -103,14 +106,20 @@ checkDeclaredType (PolyFunctionType ids declared) ss = runWriterT go >>= doSub
                  Assumptions _ _ <- consolidateUntilDone w
                  pure ()
 
-checkTypeOf :: (MonadError FactorError m, MonadReader ReadOnlyState m) => Id -> ReaderValue -> m ()
-checkTypeOf _ (UDFunction t (Function _ ss)) = checkDeclaredType t ss
-checkTypeOf _ (BIFunction _ _) = pure () -- We don't typecheck primitives.
-checkTypeOf _ (UDMacro t (Macro _ ss)) = checkDeclaredType t ss
-checkTypeOf _ (Module m) = checkTypes m -- Nothing to do with the module as a whole (yet).
+checkTypeOf :: (MonadError FactorError m, MonadReader ReadOnlyState m) =>
+               TypeCheckerPass -> Id -> ReaderValue -> m ()
+checkTypeOf tpass _ (UDFunction t (Function _ ss))
+    | tpass == FunctionPass = checkDeclaredType t ss
+    | otherwise = pure ()
+checkTypeOf _ _ (BIFunction _ _) = pure () -- We don't typecheck primitives.
+checkTypeOf tpass _ (UDMacro t (Macro _ ss))
+    | tpass == MacroPass = checkDeclaredType t ss
+    | otherwise = pure ()
+checkTypeOf tpass _ (Module m) = checkTypes tpass m -- Nothing to do with the module as a whole (yet).
 
-checkTypes :: (MonadError FactorError m, MonadReader ReadOnlyState m) => Map Id ReaderValue -> m ()
-checkTypes = void . Map.traverseWithKey checkTypeOf
+checkTypes :: (MonadError FactorError m, MonadReader ReadOnlyState m) =>
+              TypeCheckerPass -> Map Id ReaderValue -> m ()
+checkTypes tpass = void . Map.traverseWithKey (checkTypeOf tpass)
 
-checkAllTypes :: (MonadError FactorError m, MonadReader ReadOnlyState m) => m ()
-checkAllTypes = asks (view readerNames) >>= checkTypes
+checkAllTypes :: (MonadError FactorError m, MonadReader ReadOnlyState m) => TypeCheckerPass -> m ()
+checkAllTypes tpass = asks (view readerNames) >>= checkTypes tpass
