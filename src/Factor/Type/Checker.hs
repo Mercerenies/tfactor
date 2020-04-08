@@ -110,6 +110,8 @@ checkTypeOf :: (MonadError FactorError m, MonadReader ReadOnlyState m) =>
                TypeCheckerPass -> Id -> ReaderValue -> m ()
 checkTypeOf tpass _ (UDFunction t (Function _ ss))
     | tpass == FunctionPass = checkDeclaredType t ss
+    -- TODO In a macro pass, we want to check that this doesn't
+    -- underflow the stack, using the macro typeOf rules.
     | otherwise = pure ()
 checkTypeOf _ _ (BIFunction _ _) = pure () -- We don't typecheck primitives.
 checkTypeOf tpass _ (UDMacro t (Macro _ ss))

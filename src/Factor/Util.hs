@@ -1,7 +1,8 @@
 
-module Factor.Util(sepBy, padLeft, foldM1, insertOrUpdate) where
+module Factor.Util(sepBy, padLeft, foldM1, insertOrUpdate, errorToMaybe) where
 
 import Control.Monad
+import Control.Monad.Except
 import Data.Map(Map)
 import qualified Data.Map as Map
 
@@ -22,3 +23,6 @@ foldM1 f = fmap (maybe (error "foldM1 on empty foldable") id) . foldM go Nothing
 
 insertOrUpdate :: Ord k => (Maybe a -> a) -> k -> Map k a -> Map k a
 insertOrUpdate f = Map.alter (Just . f)
+
+errorToMaybe :: MonadError e m => m a -> m (Maybe a)
+errorToMaybe a = catchError (fmap Just a) (const (pure Nothing))

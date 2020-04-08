@@ -1,9 +1,10 @@
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 
-module Factor.Id(Id(..), QId(..), splitQualified) where
+module Factor.Id(Id(..), QId(..), splitQualified, idName, qidName) where
 
 import Factor.Util
 
+import qualified Data.List as List
 import Data.List.Split hiding (sepBy)
 
 newtype Id = Id { unId :: String }
@@ -20,3 +21,9 @@ instance Show QId where
 
 splitQualified :: Id -> QId
 splitQualified (Id ss) = QId . fmap Id $ splitOn "." ss
+
+idName :: Id -> String
+idName = unId
+
+qidName :: QId -> String
+qidName (QId xs) = List.intercalate "." $ fmap idName xs
