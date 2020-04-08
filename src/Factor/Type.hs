@@ -38,7 +38,7 @@ data RestVar = RestGround Id
              | RestQuant Id
                deriving (Eq)
 
-data PrimType = TInt | TAny | TNothing | TBool | TString
+data PrimType = TInt | TAny | TNothing | TBool | TString | TSymbol
                 deriving (Eq, Ord, Enum)
 
 instance Show PrimType where
@@ -49,6 +49,7 @@ instance Show PrimType where
           TNothing -> ("Nothing" ++)
           TBool -> ("Bool" ++)
           TString -> ("String" ++)
+          TSymbol -> ("Symbol" ++)
 
 instance Show RestVar where
     showsPrec n (RestGround t) = ("'" ++) . showsPrec n t

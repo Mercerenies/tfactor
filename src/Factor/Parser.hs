@@ -52,6 +52,7 @@ functionLit = Function Nothing <$> (symbol "[" *> seq_ <* symbol "]")
 
 literal :: Parser Data
 literal = (Int <$> int) <|>
+          (Symbol <$> symbolLiteral) <|>
           (Bool True <$ symbol "true") <|>
           (Bool False <$ symbol "false") <|>
           (FunctionValue <$> functionLit <?> "function literal") <|>
@@ -86,7 +87,8 @@ primType = TInt <$ symbol "Int" <|>
            TAny <$ symbol "Any" <|>
            TNothing <$ symbol "Nothing" <|>
            TBool <$ symbol "Bool" <|>
-           TString <$ symbol "String"
+           TString <$ symbol "String" <|>
+           TSymbol <$ symbol "Symbol"
 
 quantType :: Parser Id
 quantType = satisfy go

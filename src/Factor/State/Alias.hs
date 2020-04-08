@@ -53,6 +53,7 @@ resolveAliasesData :: MonadError FactorError m => Map Id Alias -> Data -> m Data
 resolveAliasesData _ (Int n) = pure $ Int n
 resolveAliasesData _ (Bool b) = pure $ Bool b
 resolveAliasesData _ (String s) = pure $ String s
+resolveAliasesData _ (Symbol s) = pure $ Symbol s
 resolveAliasesData m (FunctionValue (Function v seq_)) =
     FunctionValue . Function v <$> resolveAliasesSeq m seq_
 

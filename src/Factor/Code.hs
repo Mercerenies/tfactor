@@ -13,6 +13,7 @@ data Data = Int Integer
           | FunctionValue Function
           | Bool Bool
           | String String
+          | Symbol String -- TODO Actually implement these things in some kind of efficient way
             deriving (Show, Eq)
 
 data Statement = Call QId

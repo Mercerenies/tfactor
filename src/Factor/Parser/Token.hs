@@ -4,7 +4,8 @@ module Factor.Parser.Token(Token(..),
                            semiSpecialChars, specialChars, isSpecialSymbol,
                            token, stringToken, intToken, symbolToken,
                            parseToken, parseManyTokens, satisfy,
-                           string, int, symbol, ordinarySymbol, specialSymbol) where
+                           string, int, symbol,
+                           ordinarySymbol, specialSymbol, symbolLiteral) where
 
 import Factor.Id
 
@@ -89,4 +90,9 @@ ordinarySymbol = satisfy go
 specialSymbol :: Stream s m Token => ParsecT s u m Id
 specialSymbol = satisfy go
     where go (SymbolToken _ s) | isSpecialSymbol s = Just $ Id s
+          go _ = Nothing
+
+symbolLiteral :: Stream s m Token => ParsecT s u m String
+symbolLiteral = satisfy go
+    where go (SymbolToken _ (':':ss)) = Just ss
           go _ = Nothing
