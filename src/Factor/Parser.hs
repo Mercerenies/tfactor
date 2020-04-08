@@ -16,7 +16,7 @@ import Control.Monad
 type Parser = Parsec [Token] ()
 
 keywords :: [String]
-keywords = ["true", "false", "fun", "mod", "end"]
+keywords = ["true", "false", "fun", "mod", "end", "macro"]
 
 -- (Unused right now)
 _id_ :: Parser Id
@@ -63,6 +63,7 @@ seq_ = Sequence <$> many statement
 
 decl :: Parser Declaration
 decl = (\(t, s) -> FunctionDecl t s) <$> functionDecl <|>
+       (\(t, s) -> MacroDecl t s) <$> macroDecl <|>
        (\(i, m) -> ModuleDecl i m) <$> moduleDecl
 
 functionDecl :: Parser (PolyFunctionType, Function)
@@ -73,6 +74,15 @@ functionDecl = do
   def <- seq_
   _ <- symbol "end"
   return $ (PolyFunctionType (allQuantVars $ FunType ty) ty, Function (Just name) def)
+
+macroDecl :: Parser (PolyFunctionType, Macro)
+macroDecl = do
+  _ <- symbol "macro"
+  name <- unqualifiedId
+  ty <- functionType
+  def <- seq_
+  _ <- symbol "end"
+  return $ (PolyFunctionType (allQuantVars $ FunType ty) ty, Macro name def)
 
 moduleDecl :: Parser (Id, [Declaration])
 moduleDecl = do

@@ -71,4 +71,5 @@ resolveAliasesMod m name modl = Map.traverseWithKey go modl
     where m' = openModule name modl $ m
           go _ (UDFunction t (Function v ss)) = UDFunction t . Function v <$> resolveAliasesSeq m' ss
           go _ (bif @ BIFunction {}) = pure bif
+          go _ (UDMacro t (Macro v ss)) = UDMacro t . Macro v <$> resolveAliasesSeq m' ss
           go k (Module inner) = Module <$> resolveAliasesMod m' (name <> QId [k]) inner

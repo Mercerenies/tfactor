@@ -7,7 +7,7 @@ module Factor.State(EvalState(..), ReadOnlyState(ReadOnlyState), ReaderValue(..)
                     newState, newReader,
                     pushStack, peekStackMaybe, peekStack, popStackMaybe, popStack,
                     declsToReadOnly, lookupFn,
-                    readerFunctionType) where
+                    readerFunctionType, readerMacroType) where
 
 import Factor.Error
 import Factor.Code
@@ -33,6 +33,7 @@ data ReadOnlyState = ReadOnlyState {
 
 data ReaderValue = UDFunction PolyFunctionType  Function    -- User-defined function
                  | BIFunction PolyFunctionType (BuiltIn ()) -- Built-in function
+                 | UDMacro PolyFunctionType  Macro       -- User-defined macro
                  | Module (Map Id ReaderValue)
 
 type BuiltInConstraints m = (MonadReader ReadOnlyState m, MonadState EvalState m, MonadError FactorError m)
@@ -76,6 +77,9 @@ declsToReadOnly ds r = foldM go r ds
                 FunctionDecl t (Function (Just v) def)
                  | Map.member v reader -> throwError (DuplicateDecl v)
                  | otherwise -> pure $ defineFunction v t def reader
+                MacroDecl t (Macro v def)
+                 | Map.member v reader -> throwError (DuplicateDecl v)
+                 | otherwise -> pure $ defineMacro v t def reader
                 ModuleDecl v def
                  | Map.member v reader -> throwError (DuplicateDecl v)
                  | otherwise -> do
@@ -84,6 +88,9 @@ declsToReadOnly ds r = foldM go r ds
 
 defineFunction :: Id -> PolyFunctionType -> Sequence -> Map Id ReaderValue -> Map Id ReaderValue
 defineFunction v t def = Map.insert v (UDFunction t $ Function (Just v) def)
+
+defineMacro :: Id -> PolyFunctionType -> Sequence -> Map Id ReaderValue -> Map Id ReaderValue
+defineMacro v t def = Map.insert v (UDMacro t $ Macro v def)
 
 defineModule :: Id -> Map Id ReaderValue -> Map Id ReaderValue -> Map Id ReaderValue
 defineModule v def = Map.insert v (Module def)
@@ -98,4 +105,11 @@ lookupFn (QId ids) reader =
 readerFunctionType :: ReaderValue -> Maybe PolyFunctionType
 readerFunctionType (UDFunction t _) = Just t
 readerFunctionType (BIFunction t _) = Just t
+readerFunctionType (UDMacro _ _) = Nothing
 readerFunctionType (Module _) = Nothing
+
+readerMacroType :: ReaderValue -> Maybe PolyFunctionType
+readerMacroType (UDFunction _ _) = Nothing
+readerMacroType (BIFunction _ _) = Nothing
+readerMacroType (UDMacro t _) = Just t
+readerMacroType (Module _) = Nothing

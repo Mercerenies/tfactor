@@ -90,8 +90,8 @@ typeOfSeq (Sequence xs) = foldM go emptyPolyFnType xs
 -- that the types line up. The assumptions we used to get there are
 -- irrelevant.
 checkDeclaredType :: (MonadError FactorError m, MonadReader ReadOnlyState m) =>
-                     PolyFunctionType -> Function -> m ()
-checkDeclaredType (PolyFunctionType ids declared) (Function _ ss) = runWriterT go >>= doSub
+                     PolyFunctionType -> Sequence -> m ()
+checkDeclaredType (PolyFunctionType ids declared) ss = runWriterT go >>= doSub
     where go = do
             ss' <- evalStateT (typeOfSeq ss) mempty
             let inferred = underlyingFnType ss'
@@ -104,8 +104,9 @@ checkDeclaredType (PolyFunctionType ids declared) (Function _ ss) = runWriterT g
                  pure ()
 
 checkTypeOf :: (MonadError FactorError m, MonadReader ReadOnlyState m) => Id -> ReaderValue -> m ()
-checkTypeOf _ (UDFunction t f) = checkDeclaredType t f
+checkTypeOf _ (UDFunction t (Function _ ss)) = checkDeclaredType t ss
 checkTypeOf _ (BIFunction _ _) = pure () -- We don't typecheck primitives.
+checkTypeOf _ (UDMacro t (Macro _ ss)) = checkDeclaredType t ss
 checkTypeOf _ (Module m) = checkTypes m -- Nothing to do with the module as a whole (yet).
 
 checkTypes :: (MonadError FactorError m, MonadReader ReadOnlyState m) => Map Id ReaderValue -> m ()

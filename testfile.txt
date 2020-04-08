@@ -23,6 +23,10 @@ fun string-output ( -- String )
   "Hello, world!"
 end
 
+macro do-it-twice ( Symbol -- Symbol Symbol )
+  dup
+end
+
 fun main ( -- Int Int Int Int String Int Symbol )
   2 1
   true [ my-swap ] [ ] if
