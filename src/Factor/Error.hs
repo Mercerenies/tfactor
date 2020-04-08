@@ -30,6 +30,7 @@ data FactorError = NoSuchFunction QId
                  | NotAModule
                  | RuntimeTypeError Data Type
                  | AmbiguousName Id [QId]
+                 | MacroRecursionLimit Sequence
                    deriving (Eq)
 
 instance Show FactorError where
@@ -48,6 +49,8 @@ instance Show FactorError where
           RuntimeTypeError d t -> ("Expected value of type " ++) . shows t . (", got " ++) . shows d
           AmbiguousName n xs ->
               ("Ambiguous name " ++) . shows n . (" could refer to any of " ++) . shows xs
+          MacroRecursionLimit _ ->
+              ("Macro recursion limit" ++) -- TODO We don't use the argument right now
 
 instance FromTypeError FactorError where
     fromTypeError = TypeError

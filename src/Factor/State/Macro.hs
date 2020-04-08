@@ -15,6 +15,11 @@ import Control.Monad.Reader
 import Control.Monad.State
 import Control.Monad.Except
 
+-- TODO We'll make this customizable from the command line. Just a
+-- default for right now.
+defaultRecursionLimit :: Int
+defaultRecursionLimit = 1000
+
 valueToTerm :: Data -> Statement
 valueToTerm (Symbol s) = case s of
                            (':':s') -> Literal (Symbol s')
@@ -25,7 +30,7 @@ evalMacrosStmt :: (MonadReader ReadOnlyState m, MonadState EvalState m, MonadErr
                   Statement -> m ()
 evalMacrosStmt (Literal (Symbol s)) = pushStack (Stack.singleton $ Symbol (':':s))
 evalMacrosStmt (Literal (FunctionValue (Function v ss))) = do
-  ss' <- augmentSeqWithMacros ss
+  ss' <- recursivelyAugmentSeq (Just defaultRecursionLimit) ss
   pushStack (Stack.singleton $ FunctionValue (Function v ss'))
 evalMacrosStmt (Literal d) = pushStack (Stack.singleton d)
 evalMacrosStmt (Call v) = do
@@ -53,11 +58,29 @@ augmentSeqWithMacros ss = do
   let newseq = toList $ Stack.FromBottom (stateStack result)
   return $ Sequence (fmap valueToTerm newseq)
 
+recursivelyAugmentSeq :: (MonadReader ReadOnlyState m, MonadError FactorError m) =>
+                         Maybe Int -> Sequence -> m Sequence
+recursivelyAugmentSeq Nothing ss = augmentSeqWithMacros ss >>=
+                                   \ss' -> if ss' == ss then
+                                               pure ss'
+                                           else
+                                               recursivelyAugmentSeq Nothing ss'
+recursivelyAugmentSeq (Just n) ss =
+    if n < 0 then
+        throwError $ MacroRecursionLimit ss
+    else
+        augmentSeqWithMacros ss >>=
+        \ss' -> if ss' == ss then
+                    pure ss'
+                else
+                    recursivelyAugmentSeq (Just $ n - 1) ss'
+
 augmentWithMacros :: (MonadReader ReadOnlyState m, MonadError FactorError m) =>
                      ReaderValue -> m ReaderValue
 augmentWithMacros rv =
     case rv of
-      UDFunction p (Function v ss) -> (UDFunction p . Function v) <$> augmentSeqWithMacros ss
+      UDFunction p (Function v ss) -> (UDFunction p . Function v) <$>
+                                      recursivelyAugmentSeq (Just defaultRecursionLimit) ss
       BIFunction {} -> pure rv
       UDMacro {} -> pure rv
       Module terms -> Module <$> traverse augmentWithMacros terms
