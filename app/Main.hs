@@ -46,7 +46,9 @@ run filename = do
       fullbindings = bindStdlibModule newbindings
   aliases <- lookupAndOpenModule (QId [stdlibModuleName]) fullbindings Map.empty
   newbindings' <- forOf readerNames newbindings $ resolveAliasesMod aliases (QId [])
-  liftIO $ print $ produceDependencyGraph newbindings'
+  -- DEBUG CODE
+  determineLoadOrderFor newbindings' >>= (liftIO . print)
+  --
   let reader'' = bindStdlibModule newbindings'
   _ <- runReaderT (checkAllTypes MacroPass) reader''
   -- TODO We expose some names that are dangerous and not fully loaded yet here.

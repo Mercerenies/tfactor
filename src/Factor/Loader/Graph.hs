@@ -6,14 +6,16 @@ import Factor.State
 import Factor.Code
 import Factor.Id
 import Factor.Util
-import Factor.Util.Graph(Graph)
+import Factor.Util.Graph(Graph, Cycle(..))
 import qualified Factor.Util.Graph as Graph
+import Factor.Error
 
 import Data.Set(Set)
 import qualified Data.Set as Set
 --import Data.Map(Map)
 import qualified Data.Map as Map
 import Data.Foldable
+import Control.Monad.Except
 
 data DependencyStrength = WeakDependency | StrongDependency
                           deriving (Show, Read, Eq, Ord, Enum)
@@ -53,3 +55,24 @@ produceDependencyGraph (reader @ (ReadOnlyState modl)) =
                                      Module m -> fold (Map.mapWithKey (go k) m)
                                      _ -> []
                        in map ((,) k) edges ++ inner
+
+collapseCycles :: MonadError FactorError m =>
+                  Graph QId GraphEdge -> m (Graph (Set QId) GraphEdge)
+collapseCycles g0 = Graph.removeLoops <$> foldM handleCycle (Graph.liftToSet g0) (Graph.findCycles g0)
+    where handleCycle g (Cycle vs es)
+              | any (\(GraphEdge _ dep) -> dep == StrongDependency) es = throwError (LoadCycle vs)
+              | otherwise = pure (Graph.collapseVertices (Set.fromList vs) g)
+
+-- We reverse the topological sort since the top sort is based on
+-- dependencies, and we want to load the dependencies BEFORE the
+-- things that depend on them, not after.
+determineValidLoadOrder :: Graph (Set QId) GraphEdge -> Maybe [QId]
+determineValidLoadOrder = fmap (reverse . flattenCycles) . Graph.topSort
+    where flattenCycles = concatMap Set.toList
+
+determineLoadOrderFor :: MonadError FactorError m => ReadOnlyState -> m [QId]
+determineLoadOrderFor reader = do
+  let graph = produceDependencyGraph reader
+  graph' <- collapseCycles graph
+  maybe (throwError $ InternalError "Error in determineLoadOrderFor") pure $
+        determineValidLoadOrder graph'

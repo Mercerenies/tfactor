@@ -23,6 +23,14 @@ fun string-output ( -- String )
   "Hello, world!"
 end
 
+fun a-silly-loop-2 ( -- )
+  a-silly-loop-1
+end
+
+fun a-silly-loop-1 ( -- )
+  a-silly-loop-2
+end
+
 macro do-it-twice ( Symbol -- Symbol Symbol )
   dup
 end
