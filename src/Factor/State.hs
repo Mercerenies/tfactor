@@ -6,7 +6,7 @@ module Factor.State(EvalState(..), ReadOnlyState(ReadOnlyState), ReaderValue(..)
                     readerNames,
                     newState, newReader,
                     pushStack, peekStackMaybe, peekStack, popStackMaybe, popStack,
-                    declsToReadOnly, lookupFn,
+                    declsToReadOnly, atQId, lookupFn,
                     allNamesInModule, allNames,
                     readerFunctionType, readerMacroType) where
 
@@ -96,6 +96,18 @@ defineMacro v t def = Map.insert v (UDMacro t $ Macro v def)
 
 defineModule :: Id -> Map Id ReaderValue -> Map Id ReaderValue -> Map Id ReaderValue
 defineModule v def = Map.insert v (Module def)
+
+atQId :: QId -> Traversal' ReadOnlyState (Maybe ReaderValue)
+atQId (QId xs0) = readerNames . go xs0
+    where go :: [Id] -> Traversal' (Map Id ReaderValue) (Maybe ReaderValue)
+          go [] = error "Empty identifier in atQId"
+          go [x] = at x
+          go (x:xs) = at x . shim . go xs
+          -- TODO This follows the first Traversal law. Does it follow
+          -- the second? I think so but I'm not 100% certain.
+          shim _ Nothing = pure Nothing
+          shim f (Just (Module m)) = Just . Module <$> f m
+          shim _ (Just x) = pure $ Just x
 
 lookupFn :: MonadError FactorError m => QId -> ReadOnlyState -> m ReaderValue
 lookupFn (QId ids) reader =

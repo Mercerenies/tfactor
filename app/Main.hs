@@ -7,17 +7,14 @@ import Factor.Parser.Token
 import Factor.Eval
 import Factor.State
 import Factor.State.Alias
-import Factor.State.Macro
 import Factor.Error
 import Factor.Id
 import Factor.StdLib
-import Factor.Type.Checker
-import Factor.Loader.Graph
+import Factor.Loader
 
 import System.Environment
 import System.Exit
 import Control.Monad.Except
-import Control.Monad.Reader hiding (reader)
 import Control.Lens
 import qualified Data.Map as Map
 
@@ -46,14 +43,12 @@ run filename = do
       fullbindings = bindStdlibModule newbindings
   aliases <- lookupAndOpenModule (QId [stdlibModuleName]) fullbindings Map.empty
   newbindings' <- forOf readerNames newbindings $ resolveAliasesMod aliases (QId [])
-  -- DEBUG CODE
-  determineLoadOrderFor newbindings' >>= (liftIO . print)
-  --
   let reader'' = bindStdlibModule newbindings'
-  _ <- runReaderT (checkAllTypes MacroPass) reader''
+  reader''' <- loadEntities (allNames newbindings') reader''
+  --_ <- runReaderT (checkAllTypes MacroPass) reader''
   -- TODO We expose some names that are dangerous and not fully loaded yet here.
-  reader''' <- forOf readerNames reader'' $ \r -> runReaderT (traverse augmentWithMacros r) reader''
-  _ <- runReaderT (checkAllTypes FunctionPass) reader'''
+  --reader''' <- forOf readerNames reader'' $ \r -> runReaderT (traverse augmentWithMacros r) reader''
+  --_ <- runReaderT (checkAllTypes FunctionPass) reader'''
   (_, state) <- liftEither $ runEval (callFunction (QId [Id "main"])) reader''' newState
   liftIO $ print state
 

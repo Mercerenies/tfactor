@@ -90,8 +90,8 @@ findCycles g = Set.toList $ Set.unions [search v [] [] | v <- allVertices g]
     where search v vs es
               | Just i <- v `List.elemIndex` vs =
                           -- Found a cycle
-                          let vs' = take (i + 1) vs
-                              es' = take i es
+                          let vs' = v : take (i + 1) vs
+                              es' = take (i + 1) es
                           in Set.singleton (Cycle vs' es')
               | otherwise = Set.unions [search v' (v:vs) (e:es) | e <- outEdges g v
                                                                 , let v' = incidence g e]

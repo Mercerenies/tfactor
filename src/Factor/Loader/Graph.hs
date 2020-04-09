@@ -31,20 +31,21 @@ findDependenciesStmt (Call qid) = Set.singleton qid
 findDependenciesSeq :: Sequence -> Set QId
 findDependenciesSeq (Sequence ss) = foldMap findDependenciesStmt ss
 
-filterAndClassify :: ReadOnlyState -> Set QId -> Set GraphEdge
-filterAndClassify r = setFilterMap go
+filterAndClassify :: [QId] -> ReadOnlyState -> Set QId -> Set GraphEdge
+filterAndClassify qids r = setFilterMap go
     where go qid = case lookupFn qid r of
+                     _ | qid `notElem` qids -> Nothing -- Ignore elements we don't care about.
                      Left _ -> Nothing
                      Right (UDFunction {}) -> Just $ GraphEdge qid WeakDependency
                      Right (BIFunction {}) -> Just $ GraphEdge qid WeakDependency
                      Right (UDMacro {}) -> Just $ GraphEdge qid StrongDependency
                      Right (Module {}) -> Just $ GraphEdge qid WeakDependency -- TODO Not sure about this one?
 
-produceDependencyGraph :: ReadOnlyState -> Graph QId GraphEdge
-produceDependencyGraph (reader @ (ReadOnlyState modl)) =
-    Graph.fromEdges (allNames reader) (fold $ Map.mapWithKey (go (QId [])) modl) proj1
+produceDependencyGraph :: [QId] -> ReadOnlyState -> Graph QId GraphEdge
+produceDependencyGraph qids (reader @ (ReadOnlyState modl)) =
+    Graph.fromEdges qids (fold $ Map.mapWithKey (go (QId [])) modl) proj1
     where proj1 (GraphEdge qid _) = qid
-          namesToEdges = toList . filterAndClassify reader
+          namesToEdges = toList . filterAndClassify qids reader
           go k0 k1 v = let k = k0 <> QId [k1]
                            edges = case v of
                                      UDFunction _ (Function _ ss) -> namesToEdges $ findDependenciesSeq ss
@@ -70,9 +71,9 @@ determineValidLoadOrder :: Graph (Set QId) GraphEdge -> Maybe [QId]
 determineValidLoadOrder = fmap (reverse . flattenCycles) . Graph.topSort
     where flattenCycles = concatMap Set.toList
 
-determineLoadOrderFor :: MonadError FactorError m => ReadOnlyState -> m [QId]
-determineLoadOrderFor reader = do
-  let graph = produceDependencyGraph reader
+determineLoadOrderFor :: MonadError FactorError m => [QId] -> ReadOnlyState -> m [QId]
+determineLoadOrderFor qids reader = do
+  let graph = produceDependencyGraph qids reader
   graph' <- collapseCycles graph
   maybe (throwError $ InternalError "Error in determineLoadOrderFor") pure $
         determineValidLoadOrder graph'
