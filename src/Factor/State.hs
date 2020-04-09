@@ -7,6 +7,7 @@ module Factor.State(EvalState(..), ReadOnlyState(ReadOnlyState), ReaderValue(..)
                     newState, newReader,
                     pushStack, peekStackMaybe, peekStack, popStackMaybe, popStack,
                     declsToReadOnly, lookupFn,
+                    allNamesInModule, allNames,
                     readerFunctionType, readerMacroType) where
 
 import Factor.Error
@@ -18,6 +19,7 @@ import qualified Factor.Stack as Stack
 
 import Data.Map(Map)
 import qualified Data.Map as Map
+import Data.Foldable
 import Control.Monad.Reader hiding (reader)
 import Control.Monad.State
 import Control.Monad.Except
@@ -101,6 +103,20 @@ lookupFn (QId ids) reader =
   let go (Module names) i = maybe (throwError $ NoSuchFunction (QId ids)) pure $ Map.lookup i names
       go _ _ = throwError $ NoSuchModule (QId ids)
   in foldM go (Module $ view readerNames reader) ids
+
+allNamesInModule :: QId -> Map Id ReaderValue -> [QId]
+allNamesInModule k0 = fold . Map.mapWithKey go
+    where go k1 v =
+              let k = k0 <> QId [k1]
+                  innernames = case v of
+                                 UDFunction {} -> []
+                                 BIFunction {} -> []
+                                 UDMacro {} -> []
+                                 Module m' -> allNamesInModule k m'
+              in k : innernames
+
+allNames :: ReadOnlyState -> [QId]
+allNames (view readerNames -> r) = allNamesInModule (QId []) r
 
 readerFunctionType :: ReaderValue -> Maybe PolyFunctionType
 readerFunctionType (UDFunction t _) = Just t

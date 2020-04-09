@@ -12,6 +12,7 @@ import Factor.Error
 import Factor.Id
 import Factor.StdLib
 import Factor.Type.Checker
+import Factor.Loader.Graph
 
 import System.Environment
 import System.Exit
@@ -41,14 +42,17 @@ run filename = do
   contents' <- liftParseError $ parseManyTokens filename contents
   decls <- liftParseError $ parseFile filename contents'
   definednames <- declsToReadOnly decls Map.empty
-  let reader = bindStdlibModule $ ReadOnlyState definednames
-  aliases <- lookupAndOpenModule (QId [stdlibModuleName]) reader Map.empty
-  reader' <- forOf readerNames reader $ resolveAliasesMod aliases (QId [])
-  _ <- runReaderT (checkAllTypes MacroPass) reader'
+  let newbindings = ReadOnlyState definednames
+      fullbindings = bindStdlibModule newbindings
+  aliases <- lookupAndOpenModule (QId [stdlibModuleName]) fullbindings Map.empty
+  newbindings' <- forOf readerNames newbindings $ resolveAliasesMod aliases (QId [])
+  liftIO $ print $ produceDependencyGraph newbindings'
+  let reader'' = bindStdlibModule newbindings'
+  _ <- runReaderT (checkAllTypes MacroPass) reader''
   -- TODO We expose some names that are dangerous and not fully loaded yet here.
-  reader'' <- forOf readerNames reader' $ \r -> runReaderT (traverse augmentWithMacros r) reader'
-  _ <- runReaderT (checkAllTypes FunctionPass) reader''
-  (_, state) <- liftEither $ runEval (callFunction (QId [Id "main"])) reader'' newState
+  reader''' <- forOf readerNames reader'' $ \r -> runReaderT (traverse augmentWithMacros r) reader''
+  _ <- runReaderT (checkAllTypes FunctionPass) reader'''
+  (_, state) <- liftEither $ runEval (callFunction (QId [Id "main"])) reader''' newState
   liftIO $ print state
 
 main :: IO ()
