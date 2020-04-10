@@ -6,9 +6,10 @@ import Factor.Util
 
 import qualified Data.List as List
 import Data.List.Split hiding (sepBy)
+import Data.String
 
 newtype Id = Id { unId :: String }
-    deriving (Eq, Ord, Semigroup, Monoid)
+    deriving (Eq, Ord, Semigroup, Monoid, IsString)
 
 newtype QId = QId { unQId :: [Id] }
     deriving (Eq, Ord, Semigroup, Monoid)

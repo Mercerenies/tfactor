@@ -1,4 +1,4 @@
-{-# LANGUAGE FlexibleContexts, LambdaCase #-}
+{-# LANGUAGE FlexibleContexts, LambdaCase, OverloadedStrings #-}
 
 module Factor.StdLib(builtins, stdlibs, stdlibModuleName, bindStdlibModule) where
 
@@ -96,24 +96,29 @@ binmathcmp f = BuiltIn $ popStack2 >>= \(b, a) -> do
                 a' <- assertInt a
                 pushStack (Stack.singleton (Bool $ f a' b'))
 
+polyFn :: [Type] -> Id -> [Type] -> Id -> BuiltIn () -> ReaderValue
+polyFn args arg rets ret =
+    let fn = functionType args (RestQuant arg) rets (RestQuant ret)
+    in BIFunction (PolyFunctionType (allQuantVars $ FunType fn) fn)
+
 builtins :: Map Id ReaderValue
 builtins = Map.fromList [
-            (Id "drop", BIFunction (polyFunctionType [Id "R"] [PrimType TAny] (RestQuant $ Id "R") [] (RestQuant $ Id "R")) drop_),
-            (Id "dup", BIFunction (polyFunctionType [Id "R", Id "a"] [QuantVar (Id "a")] (RestQuant $ Id "R") [QuantVar (Id "a"), QuantVar (Id "a")] (RestQuant $ Id "R")) dup),
-            (Id "id", BIFunction (polyFunctionType [Id "R"] [] (RestQuant $ Id "R") [] (RestQuant $ Id "R")) id_),
-            (Id "swap", BIFunction (polyFunctionType [Id "R", Id "a", Id "b"] [QuantVar (Id "b"), QuantVar (Id "a")] (RestQuant $ Id "R") [QuantVar (Id "a"), QuantVar (Id "b")] (RestQuant $ Id "R")) swap),
-            (Id "call", BIFunction (polyFunctionType [Id "S", Id "T"] [FunType (functionType [] (RestQuant (Id "S")) [] (RestQuant (Id "T")))] (RestQuant $ Id "S") [] (RestQuant $ Id "T")) call),
-            (Id "if", BIFunction (polyFunctionType [Id "S", Id "T"] [FunType (functionType [] (RestQuant (Id "S")) [] (RestQuant (Id "T"))), FunType (functionType [] (RestQuant (Id "S")) [] (RestQuant (Id "T"))), PrimType TBool] (RestQuant $ Id "S") [] (RestQuant $ Id "T")) if_),
-            (Id "+", BIFunction (polyFunctionType [Id "R"] [PrimType TInt, PrimType TInt] (RestQuant $ Id "R") [PrimType TInt] (RestQuant $ Id "R")) (binmathop (+))),
-            (Id "-", BIFunction (polyFunctionType [Id "R"] [PrimType TInt, PrimType TInt] (RestQuant $ Id "R") [PrimType TInt] (RestQuant $ Id "R")) (binmathop (-))),
-            (Id "*", BIFunction (polyFunctionType [Id "R"] [PrimType TInt, PrimType TInt] (RestQuant $ Id "R") [PrimType TInt] (RestQuant $ Id "R")) (binmathop (*))),
-            (Id "/", BIFunction (polyFunctionType [Id "R"] [PrimType TInt, PrimType TInt] (RestQuant $ Id "R") [PrimType TInt] (RestQuant $ Id "R")) (binmathop div)),
-            (Id "=", BIFunction (polyFunctionType [Id "R"] [PrimType TInt, PrimType TInt] (RestQuant $ Id "R") [PrimType TBool] (RestQuant $ Id "R")) (binmathcmp (==))),
-            (Id "!=", BIFunction (polyFunctionType [Id "R"] [PrimType TInt, PrimType TInt] (RestQuant $ Id "R") [PrimType TBool] (RestQuant $ Id "R")) (binmathcmp (/=))),
-            (Id "<", BIFunction (polyFunctionType [Id "R"] [PrimType TInt, PrimType TInt] (RestQuant $ Id "R") [PrimType TBool] (RestQuant $ Id "R")) (binmathcmp (<))),
-            (Id ">", BIFunction (polyFunctionType [Id "R"] [PrimType TInt, PrimType TInt] (RestQuant $ Id "R") [PrimType TBool] (RestQuant $ Id "R")) (binmathcmp (>))),
-            (Id "<=", BIFunction (polyFunctionType [Id "R"] [PrimType TInt, PrimType TInt] (RestQuant $ Id "R") [PrimType TBool] (RestQuant $ Id "R")) (binmathcmp (<=))),
-            (Id ">=", BIFunction (polyFunctionType [Id "R"] [PrimType TInt, PrimType TInt] (RestQuant $ Id "R") [PrimType TBool] (RestQuant $ Id "R")) (binmathcmp (>=)))
+            ("drop", polyFn [PrimType TAny] "R" [] "R" drop_),
+            ("dup", polyFn [QuantVar "a"] "R" [QuantVar "a", QuantVar "a"] "R" dup),
+            ("id", polyFn [] "R" [] "R" id_),
+            ("swap", polyFn [QuantVar "b", QuantVar "a"] "R" [QuantVar "a", QuantVar "b"] "R" swap),
+            ("call", polyFn [FunType (functionType [] (RestQuant "S") [] (RestQuant "T"))] "S" [] "T" call),
+            ("if", polyFn [FunType (functionType [] (RestQuant "S") [] (RestQuant "T")), FunType (functionType [] (RestQuant "S") [] (RestQuant "T")), PrimType TBool] "S" [] "T" if_),
+            ("+", polyFn [PrimType TInt, PrimType TInt] "R" [PrimType TInt] "R" $ binmathop (+)),
+            ("-", polyFn [PrimType TInt, PrimType TInt] "R" [PrimType TInt] "R" $ binmathop (-)),
+            ("*", polyFn [PrimType TInt, PrimType TInt] "R" [PrimType TInt] "R" $ binmathop (*)),
+            ("/", polyFn [PrimType TInt, PrimType TInt] "R" [PrimType TInt] "R" $ binmathop div),
+            ("=", polyFn [PrimType TInt, PrimType TInt] "R" [PrimType TBool] "R" $ binmathcmp (==)),
+            ("!=", polyFn [PrimType TInt, PrimType TInt] "R" [PrimType TBool] "R" $ binmathcmp (/=)),
+            ("<", polyFn [PrimType TInt, PrimType TInt] "R" [PrimType TBool] "R" $ binmathcmp (<)),
+            (">", polyFn [PrimType TInt, PrimType TInt] "R" [PrimType TBool] "R" $ binmathcmp (>)),
+            ("<=", polyFn [PrimType TInt, PrimType TInt] "R" [PrimType TBool] "R" $ binmathcmp (<=)),
+            (">=", polyFn [PrimType TInt, PrimType TInt] "R" [PrimType TBool] "R" $ binmathcmp (>=))
            ]
 
 stdlibs :: ReadOnlyState

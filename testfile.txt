@@ -41,7 +41,7 @@ end
 # Here's a comment before main.
 
 fun main ( -- Int Int Int Int String Int Symbol Symbol )
-  2 1
+  2 1 id id id id id # Because why not?
   true [ my-swap ] [ ] if
   [ 3 4 5 + do-it-twice ] call
   [ 3 4 + ] Prelude.call
