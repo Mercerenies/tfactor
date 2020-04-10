@@ -11,7 +11,7 @@ mod MyModule
   mod MyNestedModule
 
     fun drop2-again ( Any Any -- )
-      drop2
+      MyModule.drop2
     end
 
   end
@@ -41,7 +41,12 @@ end
 # Here's a comment before main.
 
 fun main ( -- Int Int Int Int String Int Symbol Symbol )
-  2 1 id id id id id # Because why not?
+  500 2 nip
+  500 500 1 nip2
+  id id id id id # Because why not?
+  "A" drop
+  "B" "C" drop2
+  "D" "E" "F" drop3
   true [ my-swap ] [ ] if
   [ 3 4 5 + do-it-twice ] call
   [ 3 4 + ] Prelude.call

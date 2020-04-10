@@ -54,6 +54,22 @@ _popStack5 = popStack 5 >>= \case
 drop_ :: BuiltIn ()
 drop_ = BuiltIn $ void (popStack 1)
 
+-- ( 'R Any Any -- 'R )
+drop2 :: BuiltIn ()
+drop2 = BuiltIn $ void (popStack 2)
+
+-- ( 'R Any Any Any -- 'R )
+drop3 :: BuiltIn ()
+drop3 = BuiltIn $ void (popStack 3)
+
+-- ( 'R Any 'a -- 'R 'a )
+nip :: BuiltIn ()
+nip = BuiltIn $ popStack2 >>= (\(x, _) -> pushStack (Stack.fromList [x]))
+
+-- ( 'R Any Any 'a -- 'R 'a )
+nip2 :: BuiltIn ()
+nip2 = BuiltIn $ popStack3 >>= (\(x, _, _) -> pushStack (Stack.fromList [x]))
+
 -- ( 'R 'a -- 'R 'a 'a )
 dup :: BuiltIn ()
 dup = BuiltIn $ popStack1 >>= \x -> pushStack (Stack.fromList [x, x])
@@ -104,6 +120,10 @@ polyFn args arg rets ret =
 builtins :: Map Id ReaderValue
 builtins = Map.fromList [
             ("drop", polyFn [PrimType TAny] "R" [] "R" drop_),
+            ("drop2", polyFn [PrimType TAny, PrimType TAny] "R" [] "R" drop2),
+            ("drop3", polyFn [PrimType TAny, PrimType TAny, PrimType TAny] "R" [] "R" drop3),
+            ("nip", polyFn [QuantVar "a", PrimType TAny] "R" [QuantVar "a"] "R" nip),
+            ("nip2", polyFn [QuantVar "a", PrimType TAny, PrimType TAny] "R" [QuantVar "a"] "R" nip2),
             ("dup", polyFn [QuantVar "a"] "R" [QuantVar "a", QuantVar "a"] "R" dup),
             ("id", polyFn [] "R" [] "R" id_),
             ("swap", polyFn [QuantVar "b", QuantVar "a"] "R" [QuantVar "a", QuantVar "b"] "R" swap),
