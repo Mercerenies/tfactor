@@ -39,51 +39,58 @@ capture = censor (const mempty) . listen
 
 typeOfValue :: (MonadError FactorError m, MonadReader ReadOnlyState m,
                 MonadWriter AssumptionsAll m) =>
-               Data -> StateT (Set Id) m Type
-typeOfValue value = case value of
-                      Int _ -> return (PrimType TInt)
-                      Bool _ -> return (PrimType TBool)
-                      String _ -> return (PrimType TString)
-                      Symbol _ -> return (PrimType TSymbol)
-                      FunctionValue (Function _ ss) -> do
-                         (PolyFunctionType ids ss', AssumptionsAll w w') <- capture (typeOfSeq ss)
-                         let (univ , assum ) = Map.partitionWithKey (\k _ -> k `elem` ids) w
-                         let (univ', assum') = Map.partitionWithKey (\k _ -> k `elem` ids) w'
-                         tell $ AssumptionsAll assum assum'
-                         let asm = AssumptionsAll univ univ'
-                         casm <- consolidateUntilDone asm
-                         let ss'' = case substituteBoth casm (FunType ss') of
-                                      FunType x -> x
-                                      _ -> error "Substitution changed type in typeOfValue"
-                         ss''' <- monomorphize (PolyFunctionType ids ss'')
-                         return $ FunType ss'''
+               TypeCheckerPass -> Data -> StateT (Set Id) m Type
+typeOfValue tpass value = case value of
+                             Int _ -> return (PrimType TInt)
+                             Bool _ -> return (PrimType TBool)
+                             String _ -> return (PrimType TString)
+                             Symbol _ -> return (PrimType TSymbol)
+                             FunctionValue (Function _ ss) -> do
+                                (PolyFunctionType ids ss', AssumptionsAll w w') <-
+                                   capture (typeOfSeq tpass ss)
+                                let (univ , assum ) = Map.partitionWithKey (\k _ -> k `elem` ids) w
+                                let (univ', assum') = Map.partitionWithKey (\k _ -> k `elem` ids) w'
+                                tell $ AssumptionsAll assum assum'
+                                let asm = AssumptionsAll univ univ'
+                                casm <- consolidateUntilDone asm
+                                let ss'' = case substituteBoth casm (FunType ss') of
+                                             FunType x -> x
+                                             _ -> error "Substitution changed type in typeOfValue"
+                                ss''' <- monomorphize (PolyFunctionType ids ss'')
+                                return $ FunType ss'''
     where substituteBoth (Assumptions a b) = substituteUntilDone a . substituteStackUntilDone b
 
 -- A single statement always carries an effect on the stack, hence we
 -- treat its type as a function type.
 typeOf :: (MonadError FactorError m, MonadReader ReadOnlyState m, MonadWriter AssumptionsAll m) =>
-          Statement -> StateT (Set Id) m PolyFunctionType
-typeOf stmt = case stmt of
-                Call v -> do
-                          fn <- ask >>= lookupFn v
-                          case readerFunctionType fn of
-                            Just x -> return x
-                            Nothing -> throwError NotAFunction
-                Literal d -> do
-                          d' <- typeOfValue d
-                          let quants = allQuantVars d'
-                              r' = head [v | n <- [0 :: Int ..]
-                                           , let v = Id "R" <> Id (show n)
-                                           , not (v `elem` quants)]
-                              fn = functionType [] (RestQuant r') [d'] (RestQuant r')
-                          return $ PolyFunctionType (allQuantVars $ FunType fn) fn
+          TypeCheckerPass -> Statement -> StateT (Set Id) m PolyFunctionType
+typeOf tpass stmt = case stmt of
+                      Call v -> do
+                                fn <- ask >>= lookupFn v
+                                case tpass of
+                                  FunctionPass ->
+                                           case readerFunctionType fn of
+                                             Just x -> return x
+                                             Nothing -> throwError NotAFunction
+                                  MacroPass ->
+                                           case readerMacroType fn of
+                                             Just x -> return x
+                                             Nothing -> typeOf tpass (Literal $ Symbol (qidName v))
+                      Literal d -> do
+                                d' <- typeOfValue tpass d
+                                let quants = allQuantVars d'
+                                    r' = head [v | n <- [0 :: Int ..]
+                                                 , let v = Id "R" <> Id (show n)
+                                                 , not (v `elem` quants)]
+                                    fn = functionType [] (RestQuant r') [d'] (RestQuant r')
+                                return $ PolyFunctionType (allQuantVars $ FunType fn) fn
 
 typeOfSeq :: (MonadError FactorError m, MonadReader ReadOnlyState m, MonadWriter AssumptionsAll m) =>
-             Sequence -> StateT (Set Id) m PolyFunctionType
-typeOfSeq (Sequence xs) = foldM go emptyPolyFnType xs
+             TypeCheckerPass -> Sequence -> StateT (Set Id) m PolyFunctionType
+typeOfSeq tpass (Sequence xs) = foldM go emptyPolyFnType xs
     where go acc z = do
             knownVars $ quantifiedVars acc
-            z' <- typeOf z
+            z' <- typeOf tpass z
             knownVars $ quantifiedVars z'
             res <- composePFunctions acc z'
             knownVars $ quantifiedVars res
@@ -93,10 +100,10 @@ typeOfSeq (Sequence xs) = foldM go emptyPolyFnType xs
 -- that the types line up. The assumptions we used to get there are
 -- irrelevant.
 checkDeclaredType :: (MonadError FactorError m, MonadReader ReadOnlyState m) =>
-                     PolyFunctionType -> Sequence -> m ()
-checkDeclaredType (PolyFunctionType ids declared) ss = runWriterT go >>= doSub
+                     TypeCheckerPass -> PolyFunctionType -> Sequence -> m ()
+checkDeclaredType tpass (PolyFunctionType ids declared) ss = runWriterT go >>= doSub
     where go = do
-            ss' <- evalStateT (typeOfSeq ss) mempty
+            ss' <- evalStateT (typeOfSeq tpass ss) mempty
             let inferred = underlyingFnType ss'
             inferred `isFnSubtypeOf` toGround' ids declared
           toGround' i fn = case toGround i (FunType fn) of
@@ -106,22 +113,36 @@ checkDeclaredType (PolyFunctionType ids declared) ss = runWriterT go >>= doSub
                  Assumptions _ _ <- consolidateUntilDone w
                  pure ()
 
+-- TODO We make up some variables here. It's safe right now, but once
+-- modules start taking type arguments, it will cease to be safe.
 checkTypeOf :: (MonadError FactorError m, MonadReader ReadOnlyState m) =>
                TypeCheckerPass -> ReaderValue -> m ()
-checkTypeOf tpass (UDFunction t (Function _ ss))
-    | tpass == FunctionPass = checkDeclaredType t ss
-    -- TODO In a macro pass, we want to check that this doesn't
-    -- underflow the stack, using the macro typeOf rules.
-    | otherwise = pure ()
+checkTypeOf tpass (UDFunction t (Function _ ss)) =
+    case tpass of
+      FunctionPass -> checkDeclaredType tpass t ss
+      MacroPass ->
+          -- "Declared" type is ( 'R -- ''S ) with no quantifiers.
+          -- This means that the 'R can't be unified to anything, but
+          -- ''S can, so our function must be able to expand macros
+          -- starting from an empty stack.
+          let t0 = polyFunctionType [] [] (RestGround (Id "R")) [] (RestQuant (Id "S"))
+          in checkDeclaredType tpass t0 ss
 checkTypeOf _ (BIFunction _ _) = pure () -- We don't typecheck primitives.
-checkTypeOf tpass (UDMacro t (Macro _ ss))
-    | tpass == MacroPass = checkDeclaredType t ss
-    | otherwise = pure ()
+checkTypeOf tpass (UDMacro t (Macro _ ss)) =
+    case tpass of
+      FunctionPass -> checkDeclaredType tpass t ss
+      MacroPass ->
+          -- "Declared" type is ( 'R -- ''S ) with no quantifiers.
+          -- This means that the 'R can't be unified to anything, but
+          -- ''S can, so our function must be able to expand macros
+          -- starting from an empty stack.
+          let t0 = polyFunctionType [] [] (RestGround (Id "R")) [] (RestQuant (Id "S"))
+          in checkDeclaredType tpass t0 ss
 checkTypeOf tpass (Module m) = checkTypes tpass m -- Nothing to do with the module as a whole (yet).
 
 checkTypes :: (MonadError FactorError m, MonadReader ReadOnlyState m) =>
               TypeCheckerPass -> Map Id ReaderValue -> m ()
-checkTypes tpass = void . Map.traverseWithKey (\_ -> checkTypeOf tpass)
+checkTypes tpass = void . traverse (checkTypeOf tpass)
 
 checkAllTypes :: (MonadError FactorError m, MonadReader ReadOnlyState m) => TypeCheckerPass -> m ()
 checkAllTypes tpass = asks (view readerNames) >>= checkTypes tpass
