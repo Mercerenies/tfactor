@@ -40,8 +40,8 @@ popStack3 = popStack 3 >>= \case
             Stack [x, y, z] -> pure (x, y, z)
             _ -> error "Internal error in popStack3"
 
-_popStack4 :: (MonadState EvalState m, MonadError FactorError m) => m (Data, Data, Data, Data)
-_popStack4 = popStack 4 >>= \case
+popStack4 :: (MonadState EvalState m, MonadError FactorError m) => m (Data, Data, Data, Data)
+popStack4 = popStack 4 >>= \case
             Stack [x, y, z, t] -> pure (x, y, z, t)
             _ -> error "Internal error in popStack4"
 
@@ -70,9 +70,33 @@ nip = BuiltIn $ popStack2 >>= (\(x, _) -> pushStack (Stack.fromList [x]))
 nip2 :: BuiltIn ()
 nip2 = BuiltIn $ popStack3 >>= (\(x, _, _) -> pushStack (Stack.fromList [x]))
 
+-- ( 'R Any Any Any 'a -- 'R 'a )
+nip3 :: BuiltIn ()
+nip3 = BuiltIn $ popStack4 >>= (\(x, _, _, _) -> pushStack (Stack.fromList [x]))
+
 -- ( 'R 'a -- 'R 'a 'a )
 dup :: BuiltIn ()
 dup = BuiltIn $ popStack1 >>= \x -> pushStack (Stack.fromList [x, x])
+
+-- ( 'R 'a 'b -- 'R 'a 'b 'a 'b )
+dup2 :: BuiltIn ()
+dup2 = BuiltIn $ popStack2 >>= \(x, y) -> pushStack (Stack.fromList [x, y, x, y])
+
+-- ( 'R 'a 'b 'c -- 'R 'a 'b 'a 'b 'c )
+dup3 :: BuiltIn ()
+dup3 = BuiltIn $ popStack3 >>= \(x, y, z) -> pushStack (Stack.fromList [x, y, z, x, y, z])
+
+-- ( 'R 'a 'b -- 'R 'a 'b 'a )
+over_ :: BuiltIn ()
+over_ = BuiltIn $ popStack2 >>= \(x, y) -> pushStack (Stack.fromList [y, x, y])
+
+-- ( 'R 'a 'b 'c -- 'R 'a 'b 'c 'a 'b )
+over2 :: BuiltIn ()
+over2 = BuiltIn $ popStack3 >>= \(x, y, z) -> pushStack (Stack.fromList [y, z, x, y, z])
+
+-- ( 'R 'a 'b 'c 'd -- 'R 'a 'b 'c 'd 'a 'b 'c )
+over3 :: BuiltIn ()
+over3 = BuiltIn $ popStack4 >>= \(x, y, z, t) -> pushStack (Stack.fromList [y, z, t, x, y, z, t])
 
 -- This one can be written in the language as simply a no-op. But
 -- sometimes explicit is better than implicit.
@@ -124,7 +148,13 @@ builtins = Map.fromList [
             ("drop3", polyFn [PrimType TAny, PrimType TAny, PrimType TAny] "R" [] "R" drop3),
             ("nip", polyFn [QuantVar "a", PrimType TAny] "R" [QuantVar "a"] "R" nip),
             ("nip2", polyFn [QuantVar "a", PrimType TAny, PrimType TAny] "R" [QuantVar "a"] "R" nip2),
+            ("nip3", polyFn [QuantVar "a", PrimType TAny, PrimType TAny, PrimType TAny] "R" [QuantVar "a"] "R" nip3),
             ("dup", polyFn [QuantVar "a"] "R" [QuantVar "a", QuantVar "a"] "R" dup),
+            ("dup2", polyFn [QuantVar "b", QuantVar "a"] "R" [QuantVar "b", QuantVar "a", QuantVar "b", QuantVar "a"] "R" dup2),
+            ("dup3", polyFn [QuantVar "c", QuantVar "b", QuantVar "a"] "R" [QuantVar "c", QuantVar "b", QuantVar "a", QuantVar "c", QuantVar "b", QuantVar "a"] "R" dup3),
+            ("over", polyFn [QuantVar "b", QuantVar "a"] "R" [QuantVar "a", QuantVar "b", QuantVar "a"] "R" over_),
+            ("over2", polyFn [QuantVar "c", QuantVar "b", QuantVar "a"] "R" [QuantVar "b", QuantVar "a", QuantVar "c", QuantVar "b", QuantVar "a"] "R" over2),
+            ("over3", polyFn [QuantVar "d", QuantVar "c", QuantVar "b", QuantVar "a"] "R" [QuantVar "c", QuantVar "b", QuantVar "a", QuantVar "d", QuantVar "c", QuantVar "b", QuantVar "a"] "R" over3),
             ("id", polyFn [] "R" [] "R" id_),
             ("swap", polyFn [QuantVar "b", QuantVar "a"] "R" [QuantVar "a", QuantVar "b"] "R" swap),
             ("call", polyFn [FunType (functionType [] (RestQuant "S") [] (RestQuant "T"))] "S" [] "T" call),

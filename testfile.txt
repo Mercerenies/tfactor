@@ -38,19 +38,29 @@ macro do-it-twice ( Symbol -- Symbol Symbol )
   dup
 end
 
-# Here's a comment before main.
-
-fun main ( -- Int Int Int Int String Int Symbol Symbol )
-  500 2 nip
-  500 500 1 nip2
-  id id id id id # Because why not?
+fun doesn't-actually-do-anything ( -- )
   "A" drop
   "B" "C" drop2
   "D" "E" "F" drop3
+end
+
+# Here's a comment before main.
+
+fun main ( -- Int Int Int Int Int String Int Symbol Symbol Symbol Symbol Symbol Symbol Int Int Int Int Int Int Int Int Int Int Int Int Int Int Int Int Int Int Int Int Int )
+  500 3 nip
+  500 500 2 nip2
+  500 500 500 1 nip3
+  id id id id id # Because why not?
+  doesn't-actually-do-anything
   true [ my-swap ] [ ] if
   [ 3 4 5 + do-it-twice ] call
   [ 3 4 + ] Prelude.call
   string-output # Here's a comment at the end of a line.
   100 200 300 400 500 MyModule.drop2 MyModule.MyNestedModule.drop2-again
   :abc :def :ghi :jkl drop do-it-twice
+  :first :second dup2
+  600 700 800 dup3
+  1000 2000 over
+  1000 2000 3000 over2
+  1000 2000 3000 4000 over3
 end
