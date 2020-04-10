@@ -12,6 +12,7 @@ import Factor.Id
 import Text.Parsec hiding (token, tokens, satisfy, string)
 import qualified Text.Parsec as P
 import Data.Char
+import Control.Monad
 
 type Parser = Parsec String ()
 
@@ -26,14 +27,18 @@ tokenPos (IntToken s _) = s
 tokenPos (SymbolToken s _) = s
 
 semiSpecialChars :: [Char]
-semiSpecialChars = ":;()'[]\""
+semiSpecialChars = ":;()'[]"
 
 specialChars :: [Char]
-specialChars = "" -- TBA
+specialChars = "#\""
 
 isSpecialSymbol :: String -> Bool
 isSpecialSymbol [] = True -- Just by default, we'll consider this one special.
 isSpecialSymbol xs = head xs `elem` semiSpecialChars || any (`elem` specialChars) xs
+
+spacesOrComments :: Parser ()
+spacesOrComments = void $ many (space <|> lineComment)
+    where lineComment = char '#' *> many (noneOf "\r\n") *> newline
 
 token :: Parser Token
 token = StringToken <$> getPosition <*> stringToken <|>
@@ -61,7 +66,7 @@ parseToken = parse token
 
 parseManyTokens :: SourceName -> String -> Either ParseError [Token]
 parseManyTokens = parse tokens
-    where tokens = many (spaces *> token <* spaces) <* eof
+    where tokens = many (spacesOrComments *> token <* spacesOrComments) <* eof
 
 satisfy :: Stream s m Token => (Token -> Maybe a) -> ParsecT s u m a
 satisfy predicate = tokenPrim show nextPos predicate
