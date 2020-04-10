@@ -64,6 +64,7 @@ peekStack = fmap fst . popStack
 
 splitStack :: Int -> Stack a -> Maybe (Stack a, Stack a)
 splitStack n (Stack xs)
+    | n < 0           = Nothing
     | F.length xs < n = Nothing
     |   otherwise     = Just (Stack $ take n xs, Stack $ drop n xs)
 
