@@ -4,7 +4,7 @@ cabal-version: 1.12
 --
 -- see: https://github.com/sol/hpack
 --
--- hash: 7cc1564dbef5938e52142bb50f1ce47b4325c853fec687feaa46c644525b65a8
+-- hash: e9156203d921665fd16f10dad4e4b0949a3417b47ed9c72401a943783c5e655a
 
 name:           tfactor
 version:        0.1.0.0
@@ -84,12 +84,15 @@ test-suite tfactor-test
   type: exitcode-stdio-1.0
   main-is: Spec.hs
   other-modules:
+      Factor.Test.Id
+      Factor.Test.Stack
       Paths_tfactor
   hs-source-dirs:
       test
   ghc-options: -threaded -rtsopts -with-rtsopts=-N -Wall -Wextra -Werror -Wincomplete-uni-patterns
   build-depends:
-      base >=4.9 && <5
+      HUnit >=1 && <2
+    , base >=4.9 && <5
     , containers >=0 && <1
     , lens >=4 && <5
     , mmorph >=1 && <2

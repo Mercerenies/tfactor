@@ -1,2 +1,13 @@
+
+module Main where
+
+import qualified Factor.Test.Id
+import qualified Factor.Test.Stack
+
+import Test.HUnit
+
+tests :: Test
+tests = TestList [Factor.Test.Id.tests, Factor.Test.Stack.tests]
+
 main :: IO ()
-main = putStrLn "Test suite not yet implemented"
+main = runTestTT tests >>= print
