@@ -4,7 +4,7 @@ cabal-version: 1.12
 --
 -- see: https://github.com/sol/hpack
 --
--- hash: beca493de98223f1deb462cd78c0cc19b6b1eec26ac2f4f0d9cc112d5e7b4059
+-- hash: 3a7513f05f062116938f9021d94261c43c2b2cf81fefc8941c0705eb603a4bfc
 
 name:           tfactor
 version:        0.1.0.0
@@ -86,6 +86,7 @@ test-suite tfactor-test
   other-modules:
       Factor.Test.Id
       Factor.Test.Stack
+      Factor.Test.StdLib
       Factor.Test.Util
       Paths_tfactor
   hs-source-dirs:

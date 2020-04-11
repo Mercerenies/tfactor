@@ -27,7 +27,7 @@ import Control.Lens
 
 data EvalState = EvalState {
       stateStack :: Stack Data
-    } deriving (Show)
+    } deriving (Show, Eq)
 
 data ReadOnlyState = ReadOnlyState {
       _readerNames :: Map Id ReaderValue
