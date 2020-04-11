@@ -1,4 +1,3 @@
-{-# LANGUAGE OverloadedStrings #-}
 {-# OPTIONS_GHC -Wno-type-defaults #-}
 
 module Factor.Test.Stack where
@@ -7,13 +6,14 @@ import Factor.Stack
 
 import Test.HUnit
 import qualified Data.Foldable as Fold
+import Data.Functor.Identity
 import Prelude hiding (length, reverse)
 
 tests :: Test
 tests = TestLabel "Factor.Test.Stack" $
         TestList [testStackInstances, testStackFolds, testStackTraversals,
                   testStackConstructors, testStackModifiers, testSplitStack,
-                  testStackTake, testStackHelpers]
+                  testStackTake, testStackHelpers, testStackZipWithM]
 
 testStackInstances :: Test
 testStackInstances = TestLabel "testStackInstances" $ TestList [
@@ -105,4 +105,16 @@ testStackHelpers =
         TestCase (reverse (Stack [] :: Stack Int) @?= Stack [])
     ]
 
--- ///// testStackZipWithM
+testStackZipWithM :: Test
+testStackZipWithM =
+    TestLabel "testStackZipWithM" $ TestList [
+        TestCase (zipWithM helper1 (Stack []) (Stack []) @?= Identity (Stack [] :: Stack (Int, Int))),
+        TestCase (zipWithM helper1 (Stack [1, 2]) (Stack [3, 4]) @?=
+                           Identity (Stack [(1, 3), (2, 4)])),
+        TestCase (zipWithM helper1 (Stack [1]) (Stack [3, 4]) @?= Identity (Stack [(1, 3)])),
+        TestCase (zipWithM helper1 (Stack [1, 2]) (Stack [3]) @?= Identity (Stack [(1, 3)])),
+        TestCase (zipWithM helper2 (Stack [1, 2, 3]) (Stack [4, 5, 6]) @?=
+                               ([1, 4, 2, 5, 3, 6], Stack [(1, 4), (2, 5), (3, 6)]))
+    ]
+        where helper1 a b = Identity (a, b)
+              helper2 a b = ([a, b], (a, b))
