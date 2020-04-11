@@ -108,6 +108,22 @@ id_ = BuiltIn $ pure ()
 swap :: BuiltIn ()
 swap = BuiltIn $ popStack 2 >>= (pushStack . Stack.reverse)
 
+-- ( 'R 'a 'b -- 'R 'a 'a 'b )
+dupd :: BuiltIn ()
+dupd = BuiltIn $ popStack2 >>= \(x, y) -> pushStack (Stack.fromList [x, y, y])
+
+-- ( 'R 'a 'b 'c -- 'R 'b 'a 'c )
+swapd :: BuiltIn ()
+swapd = BuiltIn $ popStack3 >>= \(x, y, z) -> pushStack (Stack.fromList [x, z, y])
+
+-- ( 'R 'a 'b 'c -- 'R 'b 'c 'a )
+rot :: BuiltIn ()
+rot = BuiltIn $ popStack3 >>= \(x, y, z) -> pushStack (Stack.fromList [z, x, y])
+
+-- ( 'R 'a 'b 'c -- 'R 'c 'a 'b )
+unrot :: BuiltIn ()
+unrot = BuiltIn $ popStack3 >>= \(x, y, z) -> pushStack (Stack.fromList [y, z, x])
+
 -- ( 'S ( 'S -- 'T ) -- 'T )
 call :: BuiltIn ()
 call = BuiltIn $ popStack1 >>= \case
@@ -157,6 +173,10 @@ builtins = Map.fromList [
             ("over3", polyFn [QuantVar "d", QuantVar "c", QuantVar "b", QuantVar "a"] "R" [QuantVar "c", QuantVar "b", QuantVar "a", QuantVar "d", QuantVar "c", QuantVar "b", QuantVar "a"] "R" over3),
             ("id", polyFn [] "R" [] "R" id_),
             ("swap", polyFn [QuantVar "b", QuantVar "a"] "R" [QuantVar "a", QuantVar "b"] "R" swap),
+            ("dupd", polyFn [QuantVar "b", QuantVar "a"] "R" [QuantVar "b", QuantVar "a", QuantVar "a"] "R" dupd),
+            ("swapd", polyFn [QuantVar "c", QuantVar "b", QuantVar "a"] "R" [QuantVar "c", QuantVar "a", QuantVar "b"] "R" swapd),
+            ("rot", polyFn [QuantVar "c", QuantVar "b", QuantVar "a"] "R" [QuantVar "a", QuantVar "c", QuantVar "b"] "R" rot),
+            ("unrot", polyFn [QuantVar "c", QuantVar "b", QuantVar "a"] "R" [QuantVar "b", QuantVar "a", QuantVar "c"] "R" unrot),
             ("call", polyFn [FunType (functionType [] (RestQuant "S") [] (RestQuant "T"))] "S" [] "T" call),
             ("if", polyFn [FunType (functionType [] (RestQuant "S") [] (RestQuant "T")), FunType (functionType [] (RestQuant "S") [] (RestQuant "T")), PrimType TBool] "S" [] "T" if_),
             ("+", polyFn [PrimType TInt, PrimType TInt] "R" [PrimType TInt] "R" $ binmathop (+)),

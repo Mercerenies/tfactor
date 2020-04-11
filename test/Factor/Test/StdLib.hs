@@ -80,7 +80,13 @@ testShuffles = TestLabel "testShuffles" $ TestList [
                 TestCase (runAndMatch "100 id" "100"),
                 TestCase (runAndMatch "id 100 id 200 id id id id" "100 200"),
                 TestCase (runAndMatch "100 200 300 swap" "100 300 200"),
-                TestCase (runAndMatch ":a :b swap" ":b :a")
+                TestCase (runAndMatch ":a :b swap" ":b :a"),
+                TestCase (runAndMatch "1 2 3 4 dupd" "1 2 3 3 4"),
+                TestCase (runAndMatch "1 2 3 4 swapd" "1 3 2 4"),
+                TestCase (runAndMatch "1 2 3 4 rot" "1 3 4 2"),
+                TestCase (runAndMatch "1 2 3 4 unrot" "1 4 2 3"),
+                TestCase (runAndMatch ":foo :bar :baz rot unrot" ":foo :bar :baz"),
+                TestCase (runAndMatch ":foo :bar :baz unrot rot" ":foo :bar :baz")
                ]
 
 testBranching :: Test
