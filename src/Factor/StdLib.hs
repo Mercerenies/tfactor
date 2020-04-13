@@ -247,7 +247,7 @@ builtins = Map.fromList [
            ]
 
 stdlibs :: ReadOnlyState
-stdlibs = ReadOnlyState (Module builtins)
+stdlibs = ReadOnlyState (Module builtins [])
 
 preludeFileName :: FilePath
 preludeFileName = "std/Prelude"
@@ -256,7 +256,7 @@ preludeModuleName :: Id
 preludeModuleName = Id "Prelude"
 
 bindPrimitives :: ReadOnlyState -> ReadOnlyState
-bindPrimitives = over readerNames (Map.insert primitivesModuleName (ModuleValue $ Module builtins))
+bindPrimitives = over readerNames (Map.insert primitivesModuleName (ModuleValue $ Module builtins []))
 
 loadPreludeImpl :: (MonadError FactorError m, MonadIO m) => m ReadOnlyState
 loadPreludeImpl = do

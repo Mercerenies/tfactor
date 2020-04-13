@@ -2,8 +2,8 @@
   ConstraintKinds, KindSignatures, TemplateHaskell #-}
 
 module Factor.State(EvalState(..), ReadOnlyState(ReadOnlyState), ReaderValue(..),
-                    Module(Module), BuiltIn(..), BuiltInConstraints,
-                    readerModule, readerNames, moduleNames,
+                    Module(Module), AliasDecl(..), BuiltIn(..), BuiltInConstraints,
+                    readerModule, readerNames, moduleNames, moduleAliases,
                     newState, newReader, emptyModule,
                     pushStack, peekStackMaybe, peekStack, popStackMaybe, popStack,
                     declsToReadOnly, atQId, lookupFn,
@@ -41,8 +41,13 @@ data ReaderValue = UDFunction PolyFunctionType  Function    -- User-defined func
                  | ModuleValue Module
 
 data Module = Module {
-      _moduleNames :: Map Id ReaderValue
+      _moduleNames :: Map Id ReaderValue,
+      _moduleAliases :: [AliasDecl]
     }
+
+data AliasDecl = Alias Id QId
+               | Open QId
+                 deriving (Show, Eq)
 
 type BuiltInConstraints m = (MonadReader ReadOnlyState m, MonadState EvalState m, MonadError FactorError m)
 
@@ -61,7 +66,7 @@ newReader :: ReadOnlyState
 newReader = ReadOnlyState emptyModule
 
 emptyModule :: Module
-emptyModule = Module Map.empty
+emptyModule = Module Map.empty []
 
 pushStack :: MonadState EvalState m => Stack Data -> m ()
 pushStack xs = modify $ \s -> s { stateStack = Stack.appendStack xs (stateStack s) }
@@ -119,7 +124,7 @@ atQId (QId xs0) = readerNames . go xs0
           -- TODO This follows the first Traversal law. Does it follow
           -- the second? I think so but I'm not 100% certain.
           shim _ Nothing = pure Nothing
-          shim f (Just (ModuleValue (Module m))) = Just . ModuleValue . Module <$> f m
+          shim f (Just (ModuleValue m)) = Just . ModuleValue <$> traverseOf moduleNames f m
           shim _ (Just x) = pure $ Just x
 
 lookupFn :: MonadError FactorError m => QId -> ReadOnlyState -> m ReaderValue
@@ -157,7 +162,7 @@ readerMacroType (UDMacro t _) = Just t
 readerMacroType (ModuleValue _) = Nothing
 
 merge :: MonadError FactorError m => ReadOnlyState -> ReadOnlyState -> m ReadOnlyState
-merge (ReadOnlyState (Module m)) (ReadOnlyState (Module m')) =
-    ReadOnlyState . Module <$> merged
+merge (ReadOnlyState (Module m a)) (ReadOnlyState (Module m' a')) =
+    fmap ReadOnlyState (Module <$> merged <*> pure (a ++ a'))
         where failure = Merge.zipWithAMatched $ \k _ _ -> throwError (DuplicateDecl k)
               merged = Merge.mergeA Merge.preserveMissing Merge.preserveMissing failure m m'
