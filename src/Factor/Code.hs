@@ -30,6 +30,7 @@ newtype Sequence = Sequence { unSequence :: [Statement] }
 data Declaration = FunctionDecl PolyFunctionType Function
                  | MacroDecl PolyFunctionType Macro
                  | ModuleDecl Id [Declaration]
+                 | AliasDecl Id QId
                    deriving (Show, Eq)
 
 functionName :: Function -> Maybe Id

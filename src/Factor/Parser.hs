@@ -16,7 +16,7 @@ import Control.Monad
 type Parser = Parsec [Token] ()
 
 keywords :: [String]
-keywords = ["true", "false", "fun", "mod", "end", "macro"]
+keywords = ["true", "false", "fun", "mod", "end", "macro", "alias"]
 
 -- (Unused right now)
 _id_ :: Parser Id
@@ -64,7 +64,8 @@ seq_ = Sequence <$> many statement
 decl :: Parser Declaration
 decl = (\(t, s) -> FunctionDecl t s) <$> functionDecl <|>
        (\(t, s) -> MacroDecl t s) <$> macroDecl <|>
-       (\(i, m) -> ModuleDecl i m) <$> moduleDecl
+       (\(i, m) -> ModuleDecl i m) <$> moduleDecl <|>
+       (\(i, j) -> AliasDecl i j) <$> aliasDecl
 
 functionDecl :: Parser (PolyFunctionType, Function)
 functionDecl = do
@@ -91,6 +92,14 @@ moduleDecl = do
   decls <- many decl
   _ <- symbol "end"
   return (name, decls)
+
+aliasDecl :: Parser (Id, QId)
+aliasDecl = do
+  _ <- symbol "alias"
+  name <- unqualifiedId
+  _ <- symbol "="
+  name' <- qualifiedId
+  return (name, name')
 
 primType :: Parser PrimType
 primType = TInt <$ symbol "Int" <|>

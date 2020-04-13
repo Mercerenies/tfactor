@@ -18,6 +18,10 @@ mod MyModule
 
 end
 
+# My module likes to go by "Joe" :)
+alias Joe = MyModule
+alias charlie = Joe.drop2
+
 fun my-swap ( 'd 'c -- 'c 'd )
   swap
 end
@@ -57,6 +61,8 @@ fun main ( -- Int Int Int Int Int String Int Symbol Symbol Symbol Symbol Symbol 
   [ 3 4 + ] Prelude.call
   string-output # Here's a comment at the end of a line.
   100 200 300 400 500 MyModule.drop2 MyModule.MyNestedModule.drop2-again
+  999999 999999 Joe.drop2
+  999999 999999 charlie
   :abc :def :ghi :jkl drop do-it-twice
   :first :second dup2
   600 700 800 dup3
