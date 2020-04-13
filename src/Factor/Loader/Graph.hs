@@ -39,7 +39,7 @@ filterAndClassify qids r = setFilterMap go
                      Right (UDFunction {}) -> Just $ GraphEdge qid WeakDependency
                      Right (BIFunction {}) -> Just $ GraphEdge qid WeakDependency
                      Right (UDMacro {}) -> Just $ GraphEdge qid StrongDependency
-                     Right (Module {}) -> Just $ GraphEdge qid WeakDependency -- TODO Not sure about this one?
+                     Right (ModuleValue {}) -> Just $ GraphEdge qid WeakDependency -- TODO Not sure about this one?
 
 produceDependencyGraph :: [QId] -> ReadOnlyState -> Graph QId GraphEdge
 produceDependencyGraph qids (reader @ (ReadOnlyState modl)) =
@@ -51,9 +51,9 @@ produceDependencyGraph qids (reader @ (ReadOnlyState modl)) =
                                      UDFunction _ (Function _ ss) -> namesToEdges $ findDependenciesSeq ss
                                      BIFunction {} -> []
                                      UDMacro _ (Macro _ ss) -> namesToEdges $ findDependenciesSeq ss
-                                     Module {} -> [] -- TODO Right now, modules have no dependencies because they have no load phase
+                                     ModuleValue {} -> [] -- TODO Right now, modules have no dependencies because they have no load phase
                            inner = case v of
-                                     Module m -> fold (Map.mapWithKey (go k) m)
+                                     ModuleValue m -> fold (Map.mapWithKey (go k) m)
                                      _ -> []
                        in map ((,) k) edges ++ inner
 

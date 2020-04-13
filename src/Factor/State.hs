@@ -38,7 +38,7 @@ data ReadOnlyState = ReadOnlyState {
 data ReaderValue = UDFunction PolyFunctionType  Function    -- User-defined function
                  | BIFunction PolyFunctionType (BuiltIn ()) -- Built-in function
                  | UDMacro PolyFunctionType  Macro       -- User-defined macro
-                 | Module (Map Id ReaderValue)
+                 | ModuleValue (Map Id ReaderValue)
 
 type BuiltInConstraints m = (MonadReader ReadOnlyState m, MonadState EvalState m, MonadError FactorError m)
 
@@ -97,7 +97,7 @@ defineMacro :: Id -> PolyFunctionType -> Sequence -> Map Id ReaderValue -> Map I
 defineMacro v t def = Map.insert v (UDMacro t $ Macro v def)
 
 defineModule :: Id -> Map Id ReaderValue -> Map Id ReaderValue -> Map Id ReaderValue
-defineModule v def = Map.insert v (Module def)
+defineModule v def = Map.insert v (ModuleValue def)
 
 atQId :: QId -> Traversal' ReadOnlyState (Maybe ReaderValue)
 atQId (QId xs0) = readerNames . go xs0
@@ -108,15 +108,16 @@ atQId (QId xs0) = readerNames . go xs0
           -- TODO This follows the first Traversal law. Does it follow
           -- the second? I think so but I'm not 100% certain.
           shim _ Nothing = pure Nothing
-          shim f (Just (Module m)) = Just . Module <$> f m
+          shim f (Just (ModuleValue m)) = Just . ModuleValue <$> f m
           shim _ (Just x) = pure $ Just x
 
 lookupFn :: MonadError FactorError m => QId -> ReadOnlyState -> m ReaderValue
 lookupFn (QId ids) reader =
   -- Lookup the top-level name in the alias table first.
-  let go (Module names) i = maybe (throwError $ NoSuchFunction (QId ids)) pure $ Map.lookup i names
+  let go (ModuleValue names) i =
+          maybe (throwError $ NoSuchFunction (QId ids)) pure $ Map.lookup i names
       go _ _ = throwError $ NoSuchModule (QId ids)
-  in foldM go (Module $ view readerNames reader) ids
+  in foldM go (ModuleValue $ view readerNames reader) ids
 
 allNamesInModule :: QId -> Map Id ReaderValue -> [QId]
 allNamesInModule k0 = fold . Map.mapWithKey go
@@ -126,7 +127,7 @@ allNamesInModule k0 = fold . Map.mapWithKey go
                                  UDFunction {} -> []
                                  BIFunction {} -> []
                                  UDMacro {} -> []
-                                 Module m' -> allNamesInModule k m'
+                                 ModuleValue m' -> allNamesInModule k m'
               in k : innernames
 
 allNames :: ReadOnlyState -> [QId]
@@ -136,13 +137,13 @@ readerFunctionType :: ReaderValue -> Maybe PolyFunctionType
 readerFunctionType (UDFunction t _) = Just t
 readerFunctionType (BIFunction t _) = Just t
 readerFunctionType (UDMacro _ _) = Nothing
-readerFunctionType (Module _) = Nothing
+readerFunctionType (ModuleValue _) = Nothing
 
 readerMacroType :: ReaderValue -> Maybe PolyFunctionType
 readerMacroType (UDFunction _ _) = Nothing
 readerMacroType (BIFunction _ _) = Nothing
 readerMacroType (UDMacro t _) = Just t
-readerMacroType (Module _) = Nothing
+readerMacroType (ModuleValue _) = Nothing
 
 merge :: MonadError FactorError m => ReadOnlyState -> ReadOnlyState -> m ReadOnlyState
 merge (ReadOnlyState m) (ReadOnlyState m') =

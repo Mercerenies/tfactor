@@ -256,7 +256,7 @@ preludeModuleName :: Id
 preludeModuleName = Id "Prelude"
 
 bindPrimitives :: ReadOnlyState -> ReadOnlyState
-bindPrimitives = over readerNames (Map.insert primitivesModuleName (Module builtins))
+bindPrimitives = over readerNames (Map.insert primitivesModuleName (ModuleValue builtins))
 
 loadPreludeImpl :: (MonadError FactorError m, MonadIO m) => m ReadOnlyState
 loadPreludeImpl = do

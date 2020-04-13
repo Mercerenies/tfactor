@@ -31,7 +31,7 @@ openModule mname modl aliases0 = Map.foldlWithKey' go aliases0 modl
 lookupAndOpenModule :: MonadError FactorError m =>
                        QId -> ReadOnlyState -> Map Id Alias -> m (Map Id Alias)
 lookupAndOpenModule mname reader aliases = lookupFn mname reader >>= \case
-                                           Module m -> return $ openModule mname m aliases
+                                           ModuleValue m -> return $ openModule mname m aliases
                                            _ -> throwError (NoSuchModule mname)
 
 -- Looking up an alias that doesn't exist is not an error; it simply
@@ -72,4 +72,4 @@ resolveAliasesMod m name modl = Map.traverseWithKey go modl
           go _ (UDFunction t (Function v ss)) = UDFunction t . Function v <$> resolveAliasesSeq m' ss
           go _ (bif @ BIFunction {}) = pure bif
           go _ (UDMacro t (Macro v ss)) = UDMacro t . Macro v <$> resolveAliasesSeq m' ss
-          go k (Module inner) = Module <$> resolveAliasesMod m' (name <> QId [k]) inner
+          go k (ModuleValue inner) = ModuleValue <$> resolveAliasesMod m' (name <> QId [k]) inner

@@ -48,4 +48,4 @@ callFunction v = ask >>= lookupFn v >>= go
     where go (UDFunction _ (Function _ ss)) = evalSeq ss
           go (BIFunction _ (BuiltIn f)) = f
           go (UDMacro _ _) = throwError NotAFunction
-          go (Module _) = throwError NotAFunction
+          go (ModuleValue _) = throwError NotAFunction

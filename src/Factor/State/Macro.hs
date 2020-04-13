@@ -44,7 +44,7 @@ evalMacrosStmt (Call v) = do
     Just (UDFunction {}) -> defaultBehavior
     Just (BIFunction {}) -> defaultBehavior
     Just (UDMacro _ (Macro _ ss)) -> evalSeq ss
-    Just (Module {}) -> defaultBehavior
+    Just (ModuleValue {}) -> defaultBehavior
    where defaultBehavior = pushStack (Stack.singleton $ Symbol $ qidName v)
 
 evalMacrosSeq :: (MonadReader ReadOnlyState m, MonadState EvalState m, MonadError FactorError m) =>
@@ -83,4 +83,4 @@ augmentWithMacros rv =
                                       recursivelyAugmentSeq (Just defaultRecursionLimit) ss
       BIFunction {} -> pure rv
       UDMacro {} -> pure rv
-      Module terms -> Module <$> traverse augmentWithMacros terms
+      ModuleValue terms -> ModuleValue <$> traverse augmentWithMacros terms
