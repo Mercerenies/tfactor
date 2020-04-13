@@ -1,15 +1,23 @@
 {-# LANGUAGE FlexibleContexts, LambdaCase, OverloadedStrings #-}
 
-module Factor.StdLib(builtins, stdlibs, stdlibModuleName, bindStdlibModule) where
+module Factor.StdLib(Prelude(),
+                     builtins, stdlibs, primitivesModuleName,
+                     preludeFileName, preludeModuleName,
+                     bindPrimitives, -- TODO This one will be private soon. I need it right now but I won't soon.
+                     loadPrelude, bindStdlibModule) where
 
 import Factor.Stack(Stack(..))
 import qualified Factor.Stack as Stack
 import Factor.State
+import Factor.State.Alias
 import Factor.Id
 import Factor.Type
 import Factor.Error
 import Factor.Code
 import Factor.Eval
+import Factor.Loader
+import Factor.Parser.Token
+import Factor.Parser
 
 import Control.Monad
 import Control.Monad.Except
@@ -17,6 +25,8 @@ import Control.Monad.State
 import Control.Lens
 import Data.Map(Map)
 import qualified Data.Map as Map
+
+newtype Prelude = Prelude ReadOnlyState
 
 -- I've written it in several places, but I'm writing it here again to
 -- be sure. `functionType', like `Stack.fromList' and the other
@@ -239,8 +249,33 @@ builtins = Map.fromList [
 stdlibs :: ReadOnlyState
 stdlibs = ReadOnlyState builtins
 
-stdlibModuleName :: Id
-stdlibModuleName = Id "Prelude"
+preludeFileName :: FilePath
+preludeFileName = "std/Prelude"
 
-bindStdlibModule :: ReadOnlyState -> ReadOnlyState
-bindStdlibModule = over readerNames (Map.insert stdlibModuleName (Module builtins))
+preludeModuleName :: Id
+preludeModuleName = Id "Prelude"
+
+bindPrimitives :: ReadOnlyState -> ReadOnlyState
+bindPrimitives = over readerNames (Map.insert primitivesModuleName (Module builtins))
+
+loadPreludeImpl :: (MonadError FactorError m, MonadIO m) => m ReadOnlyState
+loadPreludeImpl = do
+  contents <- liftIO $ readFile preludeFileName
+  contents' <- liftParseError $ parseManyTokens preludeFileName contents
+  decls <- liftParseError $ parseFile preludeFileName contents'
+  definednames <- declsToReadOnly [ModuleDecl preludeModuleName decls] Map.empty
+  let newbindings = ReadOnlyState definednames
+      fullbindings = bindPrimitives newbindings
+  aliases <- lookupAndOpenModule (QId [primitivesModuleName]) fullbindings Map.empty
+  newbindings' <- forOf readerNames newbindings $ resolveAliasesMod aliases (QId [])
+  let reader'' = bindPrimitives newbindings'
+  loadEntities (allNames newbindings') reader''
+
+loadPrelude :: (MonadError FactorError m, MonadIO m) => m Prelude
+loadPrelude = fmap Prelude loadPreludeImpl `catchError` (\e -> throwError (InternalError $ show e))
+
+primitivesModuleName :: Id
+primitivesModuleName = Id "Primitives"
+
+bindStdlibModule :: MonadError FactorError m => Prelude -> ReadOnlyState -> m ReadOnlyState
+bindStdlibModule (Prelude p) m = p `merge` m

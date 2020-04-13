@@ -35,15 +35,16 @@ import qualified Data.Map as Map
 
 run :: FilePath -> ExceptT FactorError IO ()
 run filename = do
+  prelude <- loadPrelude
   contents <- liftIO $ readFile filename
   contents' <- liftParseError $ parseManyTokens filename contents
   decls <- liftParseError $ parseFile filename contents'
   definednames <- declsToReadOnly decls Map.empty
   let newbindings = ReadOnlyState definednames
-      fullbindings = bindStdlibModule newbindings
-  aliases <- lookupAndOpenModule (QId [stdlibModuleName]) fullbindings Map.empty
+  fullbindings <- bindStdlibModule prelude newbindings
+  aliases <- lookupAndOpenModule (QId [primitivesModuleName]) fullbindings Map.empty
   newbindings' <- forOf readerNames newbindings $ resolveAliasesMod aliases (QId [])
-  let reader'' = bindStdlibModule newbindings'
+  reader'' <- bindStdlibModule prelude newbindings'
   reader''' <- loadEntities (allNames newbindings') reader''
   --_ <- runReaderT (checkAllTypes MacroPass) reader''
   -- TODO We expose some names that are dangerous and not fully loaded yet here.

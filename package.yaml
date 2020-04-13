@@ -36,6 +36,7 @@ library:
   - -Wextra
   - -Werror
   - -Wincomplete-uni-patterns
+  data-dir: std/
 
 executables:
   tfactor-exe:

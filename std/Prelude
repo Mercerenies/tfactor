@@ -1,0 +1,5 @@
+# -*- Text -*-
+
+fun call ( 'S ( 'S -- 'T ) -- 'T )
+  Primitives.call
+end

@@ -5,12 +5,19 @@ import qualified Factor.Test.Id
 import qualified Factor.Test.Stack
 import qualified Factor.Test.Util
 import qualified Factor.Test.StdLib
+import Factor.Test.Semaphore
 
 import Test.HUnit
 
-tests :: Test
-tests = TestList [Factor.Test.Id.tests, Factor.Test.Stack.tests, Factor.Test.Util.tests,
-                  Factor.Test.StdLib.tests]
+coreTests :: [Test]
+coreTests = [Factor.Test.Id.tests, Factor.Test.Stack.tests, Factor.Test.Util.tests]
+
+vmTests :: SharedPrelude -> [Test]
+vmTests prelude = [Factor.Test.StdLib.tests prelude]
 
 main :: IO ()
-main = runTestTT tests >>= print
+main = do
+  prelude <- newSharedPrelude
+  let tests = TestList $ coreTests ++ vmTests prelude
+  result <- runTestTT tests
+  print result
