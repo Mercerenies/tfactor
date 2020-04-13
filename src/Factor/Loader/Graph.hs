@@ -16,6 +16,7 @@ import qualified Data.Set as Set
 import qualified Data.Map as Map
 import Data.Foldable
 import Control.Monad.Except
+import Control.Lens
 
 data DependencyStrength = WeakDependency | StrongDependency
                           deriving (Show, Read, Eq, Ord, Enum)
@@ -42,7 +43,7 @@ filterAndClassify qids r = setFilterMap go
                      Right (ModuleValue {}) -> Just $ GraphEdge qid WeakDependency -- TODO Not sure about this one?
 
 produceDependencyGraph :: [QId] -> ReadOnlyState -> Graph QId GraphEdge
-produceDependencyGraph qids (reader @ (ReadOnlyState modl)) =
+produceDependencyGraph qids (reader @ (ReadOnlyState (Module modl))) =
     Graph.fromEdges qids (fold $ Map.mapWithKey (go (QId [])) modl) proj1
     where proj1 (GraphEdge qid _) = qid
           namesToEdges = toList . filterAndClassify qids reader
@@ -53,7 +54,7 @@ produceDependencyGraph qids (reader @ (ReadOnlyState modl)) =
                                      UDMacro _ (Macro _ ss) -> namesToEdges $ findDependenciesSeq ss
                                      ModuleValue {} -> [] -- TODO Right now, modules have no dependencies because they have no load phase
                            inner = case v of
-                                     ModuleValue m -> fold (Map.mapWithKey (go k) m)
+                                     ModuleValue m -> fold (Map.mapWithKey (go k) (m^.moduleNames))
                                      _ -> []
                        in map ((,) k) edges ++ inner
 

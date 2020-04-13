@@ -2,9 +2,9 @@
   ConstraintKinds, KindSignatures, TemplateHaskell #-}
 
 module Factor.State(EvalState(..), ReadOnlyState(ReadOnlyState), ReaderValue(..),
-                    BuiltIn(..), BuiltInConstraints,
-                    readerNames,
-                    newState, newReader,
+                    Module(Module), BuiltIn(..), BuiltInConstraints,
+                    readerModule, readerNames, moduleNames,
+                    newState, newReader, emptyModule,
                     pushStack, peekStackMaybe, peekStack, popStackMaybe, popStack,
                     declsToReadOnly, atQId, lookupFn,
                     allNamesInModule, allNames,
@@ -32,25 +32,36 @@ data EvalState = EvalState {
     } deriving (Show, Eq)
 
 data ReadOnlyState = ReadOnlyState {
-      _readerNames :: Map Id ReaderValue
+      _readerModule :: Module
     }
 
 data ReaderValue = UDFunction PolyFunctionType  Function    -- User-defined function
                  | BIFunction PolyFunctionType (BuiltIn ()) -- Built-in function
                  | UDMacro PolyFunctionType  Macro       -- User-defined macro
-                 | ModuleValue (Map Id ReaderValue)
+                 | ModuleValue Module
+
+data Module = Module {
+      _moduleNames :: Map Id ReaderValue
+    }
 
 type BuiltInConstraints m = (MonadReader ReadOnlyState m, MonadState EvalState m, MonadError FactorError m)
 
 newtype BuiltIn a = BuiltIn { unBuiltIn :: forall m. BuiltInConstraints m => m a }
 
 makeLenses ''ReadOnlyState
+makeLenses ''Module
+
+readerNames :: Lens' ReadOnlyState (Map Id ReaderValue)
+readerNames = readerModule . moduleNames
 
 newState :: EvalState
 newState = EvalState Stack.empty
 
 newReader :: ReadOnlyState
-newReader = ReadOnlyState Map.empty
+newReader = ReadOnlyState emptyModule
+
+emptyModule :: Module
+emptyModule = Module Map.empty
 
 pushStack :: MonadState EvalState m => Stack Data -> m ()
 pushStack xs = modify $ \s -> s { stateStack = Stack.appendStack xs (stateStack s) }
@@ -97,7 +108,7 @@ defineMacro :: Id -> PolyFunctionType -> Sequence -> Map Id ReaderValue -> Map I
 defineMacro v t def = Map.insert v (UDMacro t $ Macro v def)
 
 defineModule :: Id -> Map Id ReaderValue -> Map Id ReaderValue -> Map Id ReaderValue
-defineModule v def = Map.insert v (ModuleValue def)
+defineModule v def = Map.insert v (ModuleValue $ Module def)
 
 atQId :: QId -> Traversal' ReadOnlyState (Maybe ReaderValue)
 atQId (QId xs0) = readerNames . go xs0
@@ -108,19 +119,19 @@ atQId (QId xs0) = readerNames . go xs0
           -- TODO This follows the first Traversal law. Does it follow
           -- the second? I think so but I'm not 100% certain.
           shim _ Nothing = pure Nothing
-          shim f (Just (ModuleValue m)) = Just . ModuleValue <$> f m
+          shim f (Just (ModuleValue (Module m))) = Just . ModuleValue . Module <$> f m
           shim _ (Just x) = pure $ Just x
 
 lookupFn :: MonadError FactorError m => QId -> ReadOnlyState -> m ReaderValue
 lookupFn (QId ids) reader =
   -- Lookup the top-level name in the alias table first.
   let go (ModuleValue names) i =
-          maybe (throwError $ NoSuchFunction (QId ids)) pure $ Map.lookup i names
+          maybe (throwError $ NoSuchFunction (QId ids)) pure $ names^.moduleNames.at i
       go _ _ = throwError $ NoSuchModule (QId ids)
-  in foldM go (ModuleValue $ view readerNames reader) ids
+  in foldM go (ModuleValue $ view readerModule reader) ids
 
-allNamesInModule :: QId -> Map Id ReaderValue -> [QId]
-allNamesInModule k0 = fold . Map.mapWithKey go
+allNamesInModule :: QId -> Module -> [QId]
+allNamesInModule k0 = fold . Map.mapWithKey go . view moduleNames
     where go k1 v =
               let k = k0 <> QId [k1]
                   innernames = case v of
@@ -131,7 +142,7 @@ allNamesInModule k0 = fold . Map.mapWithKey go
               in k : innernames
 
 allNames :: ReadOnlyState -> [QId]
-allNames (view readerNames -> r) = allNamesInModule (QId []) r
+allNames (view readerModule -> m) = allNamesInModule (QId []) m
 
 readerFunctionType :: ReaderValue -> Maybe PolyFunctionType
 readerFunctionType (UDFunction t _) = Just t
@@ -146,6 +157,7 @@ readerMacroType (UDMacro t _) = Just t
 readerMacroType (ModuleValue _) = Nothing
 
 merge :: MonadError FactorError m => ReadOnlyState -> ReadOnlyState -> m ReadOnlyState
-merge (ReadOnlyState m) (ReadOnlyState m') =
-    ReadOnlyState <$> Merge.mergeA Merge.preserveMissing Merge.preserveMissing failure m m'
+merge (ReadOnlyState (Module m)) (ReadOnlyState (Module m')) =
+    ReadOnlyState . Module <$> merged
         where failure = Merge.zipWithAMatched $ \k _ _ -> throwError (DuplicateDecl k)
+              merged = Merge.mergeA Merge.preserveMissing Merge.preserveMissing failure m m'

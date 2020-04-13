@@ -247,7 +247,7 @@ builtins = Map.fromList [
            ]
 
 stdlibs :: ReadOnlyState
-stdlibs = ReadOnlyState builtins
+stdlibs = ReadOnlyState (Module builtins)
 
 preludeFileName :: FilePath
 preludeFileName = "std/Prelude"
@@ -256,7 +256,7 @@ preludeModuleName :: Id
 preludeModuleName = Id "Prelude"
 
 bindPrimitives :: ReadOnlyState -> ReadOnlyState
-bindPrimitives = over readerNames (Map.insert primitivesModuleName (ModuleValue builtins))
+bindPrimitives = over readerNames (Map.insert primitivesModuleName (ModuleValue $ Module builtins))
 
 loadPreludeImpl :: (MonadError FactorError m, MonadIO m) => m ReadOnlyState
 loadPreludeImpl = do
@@ -264,10 +264,10 @@ loadPreludeImpl = do
   contents' <- liftParseError $ parseManyTokens preludeFileName contents
   decls <- liftParseError $ parseFile preludeFileName contents'
   definednames <- declsToReadOnly [ModuleDecl preludeModuleName decls] Map.empty
-  let newbindings = ReadOnlyState definednames
+  let newbindings = ReadOnlyState (Module definednames)
       fullbindings = bindPrimitives newbindings
   aliases <- lookupAndOpenModule (QId [primitivesModuleName]) fullbindings Map.empty
-  newbindings' <- forOf readerNames newbindings $ resolveAliasesMod aliases (QId [])
+  newbindings' <- forOf readerModule newbindings $ resolveAliasesMod aliases (QId [])
   let reader'' = bindPrimitives newbindings'
   loadEntities (allNames newbindings') reader''
 

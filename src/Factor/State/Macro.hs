@@ -83,4 +83,4 @@ augmentWithMacros rv =
                                       recursivelyAugmentSeq (Just defaultRecursionLimit) ss
       BIFunction {} -> pure rv
       UDMacro {} -> pure rv
-      ModuleValue terms -> ModuleValue <$> traverse augmentWithMacros terms
+      ModuleValue terms -> ModuleValue <$> (moduleNames . traverse) augmentWithMacros terms

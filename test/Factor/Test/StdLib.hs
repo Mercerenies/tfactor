@@ -32,7 +32,7 @@ parseAndRun shared s = runExceptT go >>= eitherToFail
             prelude <- liftIO $ getSharedPrelude shared
             tokens <- liftParseError $ parseManyTokens "(test case)" s
             seq_ <- liftParseError $ parseSeq "(test case)" tokens
-            fullbindings <- bindStdlibModule prelude $ ReadOnlyState Map.empty
+            fullbindings <- bindStdlibModule prelude newReader
             aliases <- lookupAndOpenModule (QId [primitivesModuleName]) fullbindings Map.empty
             seq_' <- resolveAliasesSeq aliases seq_
 

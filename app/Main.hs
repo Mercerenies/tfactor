@@ -40,10 +40,10 @@ run filename = do
   contents' <- liftParseError $ parseManyTokens filename contents
   decls <- liftParseError $ parseFile filename contents'
   definednames <- declsToReadOnly decls Map.empty
-  let newbindings = ReadOnlyState definednames
+  let newbindings = ReadOnlyState (Module definednames)
   fullbindings <- bindStdlibModule prelude newbindings
   aliases <- lookupAndOpenModule (QId [primitivesModuleName]) fullbindings Map.empty
-  newbindings' <- forOf readerNames newbindings $ resolveAliasesMod aliases (QId [])
+  newbindings' <- forOf readerModule newbindings $ resolveAliasesMod aliases (QId [])
   reader'' <- bindStdlibModule prelude newbindings'
   reader''' <- loadEntities (allNames newbindings') reader''
   --_ <- runReaderT (checkAllTypes MacroPass) reader''

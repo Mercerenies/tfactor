@@ -1,4 +1,4 @@
-{-# LANGUAGE FlexibleContexts, LambdaCase #-}
+{-# LANGUAGE FlexibleContexts, LambdaCase, ViewPatterns #-}
 
 module Factor.State.Alias where
 
@@ -11,6 +11,7 @@ import Factor.Code
 import Data.Map(Map)
 import qualified Data.Map as Map
 import Control.Monad.Except
+import Control.Lens
 
 data Alias = AliasValue QId
            | AmbiguousAlias [QId]
@@ -24,8 +25,8 @@ defAlias v q = insertOrUpdate go v
               | otherwise = AmbiguousAlias [q, q']
           go (Just (AmbiguousAlias qs)) = AmbiguousAlias (q:qs)
 
-openModule :: QId -> Map Id ReaderValue -> Map Id Alias -> Map Id Alias
-openModule mname modl aliases0 = Map.foldlWithKey' go aliases0 modl
+openModule :: QId -> Module -> Map Id Alias -> Map Id Alias
+openModule mname (view moduleNames -> modl) aliases0 = Map.foldlWithKey' go aliases0 modl
     where go aliases k _ = defAlias k (mname <> QId [k]) aliases
 
 lookupAndOpenModule :: MonadError FactorError m =>
@@ -66,8 +67,8 @@ resolveAliasesSeq m (Sequence xs) = Sequence <$> mapM (resolveAliasesStmt m) xs
 
 -- TODO Aliases in types...
 resolveAliasesMod :: MonadError FactorError m =>
-                     Map Id Alias -> QId -> Map Id ReaderValue -> m (Map Id ReaderValue)
-resolveAliasesMod m name modl = Map.traverseWithKey go modl
+                     Map Id Alias -> QId -> Module -> m Module
+resolveAliasesMod m name modl = itraverseOf (moduleNames . itraversed) go modl
     where m' = openModule name modl $ m
           go _ (UDFunction t (Function v ss)) = UDFunction t . Function v <$> resolveAliasesSeq m' ss
           go _ (bif @ BIFunction {}) = pure bif
