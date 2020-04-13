@@ -83,23 +83,23 @@ popStack :: (MonadState EvalState m, MonadError FactorError m) => Int -> m (Stac
 popStack n = popStackMaybe n >>= maybe (throwError StackUnderflow) return
 
 declsToReadOnly :: MonadError FactorError m =>
-                   [Declaration] -> Map Id ReaderValue -> m (Map Id ReaderValue)
+                   [Declaration] -> Module -> m Module
 declsToReadOnly ds r = foldM go r ds
     where go reader decl =
               case decl of
                 FunctionDecl _ (Function Nothing _) ->
                     throwError (InternalError "Unnamed top-level function")
                 FunctionDecl t (Function (Just v) def)
-                 | Map.member v reader -> throwError (DuplicateDecl v)
-                 | otherwise -> pure $ defineFunction v t def reader
+                 | Map.member v (reader^.moduleNames) -> throwError (DuplicateDecl v)
+                 | otherwise -> pure $ over moduleNames (defineFunction v t def) reader
                 MacroDecl t (Macro v def)
-                 | Map.member v reader -> throwError (DuplicateDecl v)
-                 | otherwise -> pure $ defineMacro v t def reader
+                 | Map.member v (reader^.moduleNames) -> throwError (DuplicateDecl v)
+                 | otherwise -> pure $ over moduleNames (defineMacro v t def) reader
                 ModuleDecl v def
-                 | Map.member v reader -> throwError (DuplicateDecl v)
+                 | Map.member v (reader^.moduleNames) -> throwError (DuplicateDecl v)
                  | otherwise -> do
-                          inner <- foldM go Map.empty def
-                          pure $ defineModule v inner reader
+                          inner <- foldM go emptyModule def
+                          pure $ over moduleNames (defineModule v inner) reader
 
 defineFunction :: Id -> PolyFunctionType -> Sequence -> Map Id ReaderValue -> Map Id ReaderValue
 defineFunction v t def = Map.insert v (UDFunction t $ Function (Just v) def)
@@ -107,8 +107,8 @@ defineFunction v t def = Map.insert v (UDFunction t $ Function (Just v) def)
 defineMacro :: Id -> PolyFunctionType -> Sequence -> Map Id ReaderValue -> Map Id ReaderValue
 defineMacro v t def = Map.insert v (UDMacro t $ Macro v def)
 
-defineModule :: Id -> Map Id ReaderValue -> Map Id ReaderValue -> Map Id ReaderValue
-defineModule v def = Map.insert v (ModuleValue $ Module def)
+defineModule :: Id -> Module -> Map Id ReaderValue -> Map Id ReaderValue
+defineModule v def = Map.insert v (ModuleValue def)
 
 atQId :: QId -> Traversal' ReadOnlyState (Maybe ReaderValue)
 atQId (QId xs0) = readerNames . go xs0

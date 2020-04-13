@@ -263,8 +263,8 @@ loadPreludeImpl = do
   contents <- liftIO $ readFile preludeFileName
   contents' <- liftParseError $ parseManyTokens preludeFileName contents
   decls <- liftParseError $ parseFile preludeFileName contents'
-  definednames <- declsToReadOnly [ModuleDecl preludeModuleName decls] Map.empty
-  let newbindings = ReadOnlyState (Module definednames)
+  definednames <- declsToReadOnly [ModuleDecl preludeModuleName decls] emptyModule
+  let newbindings = ReadOnlyState definednames
       fullbindings = bindPrimitives newbindings
   aliases <- lookupAndOpenModule (QId [primitivesModuleName]) fullbindings Map.empty
   newbindings' <- forOf readerModule newbindings $ resolveAliasesMod aliases (QId [])

@@ -39,8 +39,8 @@ run filename = do
   contents <- liftIO $ readFile filename
   contents' <- liftParseError $ parseManyTokens filename contents
   decls <- liftParseError $ parseFile filename contents'
-  definednames <- declsToReadOnly decls Map.empty
-  let newbindings = ReadOnlyState (Module definednames)
+  definednames <- declsToReadOnly decls emptyModule
+  let newbindings = ReadOnlyState definednames
   fullbindings <- bindStdlibModule prelude newbindings
   aliases <- lookupAndOpenModule (QId [primitivesModuleName]) fullbindings Map.empty
   newbindings' <- forOf readerModule newbindings $ resolveAliasesMod aliases (QId [])
