@@ -115,12 +115,12 @@ primType = TInt <$ symbol "Int" <|>
 
 quantType :: Parser Id
 quantType = satisfy go
-    where go (SymbolToken _ ('\'':x:xs)) | isLower x = Just (Id ('\'':x:xs))
+    where go (SymbolToken _ ('\'':x:xs)) | isLower x = Just (Id (x:xs))
           go _ = Nothing
 
 restQuantType :: Parser Id
 restQuantType = satisfy go
-    where go (SymbolToken _ ('\'':x:xs)) | isUpper x = Just (Id ('\'':x:xs))
+    where go (SymbolToken _ ('\'':x:xs)) | isUpper x = Just (Id (x:xs))
           go _ = Nothing
 
 type_ :: Parser Type
