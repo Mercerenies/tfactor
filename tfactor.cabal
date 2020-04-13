@@ -4,7 +4,7 @@ cabal-version: 1.12
 --
 -- see: https://github.com/sol/hpack
 --
--- hash: 3b65125f7065d2481764073588924abfa39177d6cd36cdace5f692066ae7fc8e
+-- hash: bfd66f5d0dd4e7f234ae7eabca1f57cf5ba6cd90ba08a2087e5207aab596aaf1
 
 name:           tfactor
 version:        0.1.0.0
@@ -19,6 +19,7 @@ build-type:     Simple
 extra-source-files:
     README.md
     ChangeLog.md
+data-dir:       std/
 
 source-repository head
   type: git

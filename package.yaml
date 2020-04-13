@@ -10,6 +10,8 @@ extra-source-files:
 - README.md
 - ChangeLog.md
 
+data-dir: std/
+
 # Metadata used when publishing your package
 # synopsis:            Short description of your package
 # category:            Web
@@ -36,7 +38,6 @@ library:
   - -Wextra
   - -Werror
   - -Wincomplete-uni-patterns
-  data-dir: std/
 
 executables:
   tfactor-exe:
