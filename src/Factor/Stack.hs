@@ -20,7 +20,7 @@ import qualified Control.Monad(zipWithM)
 -- To be clear, the LEFT side of this is the top. But the ADT will
 -- take care of that.
 newtype Stack a = Stack { unStack :: [a] }
-    deriving (Show, Read, Eq, Functor, Semigroup, Monoid)
+    deriving (Show, Read, Eq, Ord, Functor, Semigroup, Monoid)
 
 newtype FromTop a = FromTop (Stack a)
     deriving (Show, Read, Eq, Functor)

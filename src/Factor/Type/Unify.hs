@@ -8,6 +8,7 @@ import Factor.Type
 import Factor.Type.Error
 import Factor.Stack(Stack(..))
 import qualified Factor.Stack as Stack
+import qualified Factor.Util.Graph as Graph
 
 import Control.Monad.Except
 import Control.Monad.Writer
@@ -55,7 +56,24 @@ removeSynonyms (Assumptions m0 m1) = Assumptions (removeSynonyms0 m0) (removeSyn
               in keeps
 
 substituteFully :: Assumptions -> Type -> Type
-substituteFully (Assumptions m m') = substituteUntilDone m . substituteStackUntilDone m'
+substituteFully asm =
+    let Assumptions m m' = removeSynonyms asm
+    in substituteUntilDone m . substituteStackUntilDone m'
+
+occursCheck :: (FromTypeError e, MonadError e m) => Assumptions -> m ()
+occursCheck (Assumptions m m') =
+    let allQuantVars' (StackDesc (Stack ts) r) =
+            concatMap allQuantVars ts ++ (case r of { RestQuant r' -> [r'] ; _ -> [] })
+        compile f g n = [(v, e) | (v, t) <- Map.assocs n
+                                , e <- fmap ((,) (g t)) $ f t]
+        vertices = Map.keys m ++ Map.keys m'
+        edges = compile allQuantVars Right m ++ compile allQuantVars' Left m'
+        graph = Graph.fromEdges vertices edges snd
+    in case Graph.findCycles graph of
+         [] -> pure ()
+         ( Graph.Cycle vs es : _ ) ->
+             let zipped = zip vs (fmap fst es) in
+             throwError (fromTypeError $ OccursCheck zipped)
 
 consolidate :: (FromTypeError e, MonadError e m, MonadWriter AssumptionsAll m) =>
                AssumptionsAll -> m Assumptions
@@ -65,7 +83,7 @@ consolidate (AssumptionsAll m0 m1) =
         mapM (foldM1 intersectionStack) m1
 
 consolidateUntilDone :: (FromTypeError e, MonadError e m) => AssumptionsAll -> m Assumptions
-consolidateUntilDone = fmap removeSynonyms . go
+consolidateUntilDone asm = fmap removeSynonyms (go asm) >>= \asm' -> occursCheck asm' >> pure asm'
     where go x = runWriterT (consolidate x) >>=
                  \case
                       (a, w) | w == mempty -> pure a

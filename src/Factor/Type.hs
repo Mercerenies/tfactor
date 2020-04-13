@@ -23,20 +23,20 @@ data Type = PrimType PrimType
           | FunType FunctionType
           | GroundVar Id
           | QuantVar Id
-            deriving (Eq)
+            deriving (Eq, Ord)
 
 data PolyFunctionType = PolyFunctionType [Id] FunctionType
                         deriving (Eq)
 
 data FunctionType = FunctionType StackDesc StackDesc
-                    deriving (Eq)
+                    deriving (Eq, Ord)
 
 data StackDesc = StackDesc (Stack Type) RestVar
-                 deriving (Eq)
+                 deriving (Eq, Ord)
 
 data RestVar = RestGround Id
              | RestQuant Id
-               deriving (Eq)
+               deriving (Eq, Ord)
 
 data PrimType = TInt | TAny | TNothing | TBool | TString | TSymbol
                 deriving (Eq, Ord, Enum)
