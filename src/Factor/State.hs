@@ -8,7 +8,8 @@ module Factor.State(EvalState(..), ReadOnlyState(ReadOnlyState), ReaderValue(..)
                     pushStack, peekStackMaybe, peekStack, popStackMaybe, popStack,
                     declsToReadOnly, atQId, lookupFn,
                     allNamesInModule, allNames,
-                    readerFunctionType, readerMacroType) where
+                    readerFunctionType, readerMacroType,
+                    merge) where
 
 import Factor.Error
 import Factor.Code
@@ -19,6 +20,7 @@ import qualified Factor.Stack as Stack
 
 import Data.Map(Map)
 import qualified Data.Map as Map
+import qualified Data.Map.Merge.Lazy as Merge
 import Data.Foldable
 import Control.Monad.Reader hiding (reader)
 import Control.Monad.State
@@ -141,3 +143,8 @@ readerMacroType (UDFunction _ _) = Nothing
 readerMacroType (BIFunction _ _) = Nothing
 readerMacroType (UDMacro t _) = Just t
 readerMacroType (Module _) = Nothing
+
+merge :: MonadError FactorError m => ReadOnlyState -> ReadOnlyState -> m ReadOnlyState
+merge (ReadOnlyState m) (ReadOnlyState m') =
+    ReadOnlyState <$> Merge.mergeA Merge.preserveMissing Merge.preserveMissing failure m m'
+        where failure = Merge.zipWithAMatched $ \k _ _ -> throwError (DuplicateDecl k)
