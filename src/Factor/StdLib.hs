@@ -82,7 +82,7 @@ dup = BuiltIn $ popStack1 >>= \x -> pushStack (Stack.fromList [x, x])
 dup2 :: BuiltIn ()
 dup2 = BuiltIn $ popStack2 >>= \(x, y) -> pushStack (Stack.fromList [x, y, x, y])
 
--- ( 'R 'a 'b 'c -- 'R 'a 'b 'a 'b 'c )
+-- ( 'R 'a 'b 'c -- 'R 'a 'b 'c 'a 'b 'c )
 dup3 :: BuiltIn ()
 dup3 = BuiltIn $ popStack3 >>= \(x, y, z) -> pushStack (Stack.fromList [x, y, z, x, y, z])
 
@@ -123,6 +123,45 @@ rot = BuiltIn $ popStack3 >>= \(x, y, z) -> pushStack (Stack.fromList [z, x, y])
 -- ( 'R 'a 'b 'c -- 'R 'c 'a 'b )
 unrot :: BuiltIn ()
 unrot = BuiltIn $ popStack3 >>= \(x, y, z) -> pushStack (Stack.fromList [y, z, x])
+
+-- ( 'S 'a ( 'S -- 'T ) -- 'T 'a )
+dip :: BuiltIn ()
+dip = BuiltIn $ popStack2 >>= \(f, x) ->
+                assertFunction f >>= \(Function _ ss) ->
+                evalSeq ss >> pushStack (Stack.fromList [x])
+
+-- ( 'S 'a 'b ( 'S -- 'T ) -- 'T 'a 'b )
+dip2 :: BuiltIn ()
+dip2 = BuiltIn $ popStack3 >>= \(f, y, x) ->
+                 assertFunction f >>= \(Function _ ss) ->
+                 evalSeq ss >> pushStack (Stack.fromList [y, x])
+
+-- ( 'S 'a 'b 'c ( 'S -- 'T ) -- 'T 'a 'b 'c )
+dip3 :: BuiltIn ()
+dip3 = BuiltIn $ popStack4 >>= \(f, z, y, x) ->
+                 assertFunction f >>= \(Function _ ss) ->
+                 evalSeq ss >> pushStack (Stack.fromList [z, y, x])
+
+-- ( 'S 'a ( 'S 'a -- 'T ) -- 'T 'a )
+keep :: BuiltIn ()
+keep = BuiltIn $ popStack2 >>= \(f, x) ->
+                 pushStack (Stack.fromList [x]) >>
+                 assertFunction f >>= \(Function _ ss) ->
+                 evalSeq ss >> pushStack (Stack.fromList [x])
+
+-- ( 'S 'a 'b ( 'S 'a 'b -- 'T ) -- 'T 'a 'b )
+keep2 :: BuiltIn ()
+keep2 = BuiltIn $ popStack3 >>= \(f, y, x) ->
+                 pushStack (Stack.fromList [y, x]) >>
+                 assertFunction f >>= \(Function _ ss) ->
+                 evalSeq ss >> pushStack (Stack.fromList [y, x])
+
+-- ( 'S 'a 'b 'c ( 'S 'a 'b 'c -- 'T ) -- 'T 'a 'b 'c )
+keep3 :: BuiltIn ()
+keep3 = BuiltIn $ popStack4 >>= \(f, z, y, x) ->
+                 pushStack (Stack.fromList [z, y, x]) >>
+                 assertFunction f >>= \(Function _ ss) ->
+                 evalSeq ss >> pushStack (Stack.fromList [z, y, x])
 
 -- ( 'S ( 'S -- 'T ) -- 'T )
 call :: BuiltIn ()
@@ -177,6 +216,12 @@ builtins = Map.fromList [
             ("swapd", polyFn [QuantVar "c", QuantVar "b", QuantVar "a"] "R" [QuantVar "c", QuantVar "a", QuantVar "b"] "R" swapd),
             ("rot", polyFn [QuantVar "c", QuantVar "b", QuantVar "a"] "R" [QuantVar "a", QuantVar "c", QuantVar "b"] "R" rot),
             ("unrot", polyFn [QuantVar "c", QuantVar "b", QuantVar "a"] "R" [QuantVar "b", QuantVar "a", QuantVar "c"] "R" unrot),
+            ("dip", polyFn [FunType (functionType [] (RestQuant "S") [] (RestQuant "T")), QuantVar "a"] "S" [QuantVar "a"] "T" dip),
+            ("dip2", polyFn [FunType (functionType [] (RestQuant "S") [] (RestQuant "T")), QuantVar "b", QuantVar "a"] "S" [QuantVar "b", QuantVar "a"] "T" dip2),
+            ("dip3", polyFn [FunType (functionType [] (RestQuant "S") [] (RestQuant "T")), QuantVar "c", QuantVar "b", QuantVar "a"] "S" [QuantVar "c", QuantVar "b", QuantVar "a"] "T" dip3),
+            ("keep", polyFn [FunType (functionType [QuantVar "a"] (RestQuant "S") [] (RestQuant "T")), QuantVar "a"] "S" [QuantVar "a"] "T" keep),
+            ("keep2", polyFn [FunType (functionType [QuantVar "b", QuantVar "a"] (RestQuant "S") [] (RestQuant "T")), QuantVar "b", QuantVar "a"] "S" [QuantVar "b", QuantVar "a"] "T" keep2),
+            ("keep3", polyFn [FunType (functionType [QuantVar "c", QuantVar "b", QuantVar "a"] (RestQuant "S") [] (RestQuant "T")), QuantVar "c", QuantVar "b", QuantVar "a"] "S" [QuantVar "c", QuantVar "b", QuantVar "a"] "T" keep3),
             ("call", polyFn [FunType (functionType [] (RestQuant "S") [] (RestQuant "T"))] "S" [] "T" call),
             ("if", polyFn [FunType (functionType [] (RestQuant "S") [] (RestQuant "T")), FunType (functionType [] (RestQuant "S") [] (RestQuant "T")), PrimType TBool] "S" [] "T" if_),
             ("+", polyFn [PrimType TInt, PrimType TInt] "R" [PrimType TInt] "R" $ binmathop (+)),

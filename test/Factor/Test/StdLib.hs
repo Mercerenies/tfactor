@@ -60,7 +60,8 @@ runAndMatch s1 s2 = do
               show s2 ++ " (got " ++ show a2 ++ ")") $ a1 == a2
 
 tests :: Test
-tests = TestLabel "Factor.Test.StdLib" $ TestList [testLiterals, testShuffles, testBranching]
+tests = TestLabel "Factor.Test.StdLib" $ TestList [testLiterals, testShuffles, testBranching,
+                                                   testCombinators]
 
 testLiterals :: Test
 testLiterals = TestLabel "testLiterals" $ TestList [
@@ -111,5 +112,22 @@ testBranching = TestLabel "testBranching" $ TestList [
                  TestCase (runAndMatch "100 false [ dup ] [ 200 ] if" "100 200"),
                  TestCase (runAndMatch "[ [ 1 ] call 2 ] call" "1 2")
                 ]
+
+testCombinators :: Test
+testCombinators = TestLabel "testCombinators" $ TestList [
+                   TestCase (runAndMatch "1 2 3 [ drop ] dip" "1 3"),
+                   TestCase (runAndMatch "1 2 3 4 [ swap ] dip" "1 3 2 4"),
+                   TestCase (runAndMatch "1 2 3 4 [ [ drop ] dip ] dip" "1 3 4"),
+                   TestCase (runAndMatch "1 2 3 4 [ 99 ] dip" "1 2 3 99 4"),
+                   TestCase (runAndMatch "1 2 3 [ drop ] dip2" "2 3"),
+                   TestCase (runAndMatch "1 2 3 4 [ swap ] dip2" "2 1 3 4"),
+                   TestCase (runAndMatch "1 2 3 4 [ 99 ] dip2" "1 2 99 3 4"),
+                   TestCase (runAndMatch "1 2 3 4 [ drop ] dip3" "2 3 4"),
+                   TestCase (runAndMatch "1 2 3 4 5 [ swap ] dip3" "2 1 3 4 5"),
+                   TestCase (runAndMatch "1 2 3 4 [ 99 ] dip3" "1 99 2 3 4"),
+                   TestCase (runAndMatch "1 2 3 4 5 [ swap ] keep" "1 2 3 5 4 5"),
+                   TestCase (runAndMatch "1 2 3 4 5 [ [ swap ] dip ] keep2" "1 2 4 3 5 4 5"),
+                   TestCase (runAndMatch "1 2 3 4 5 [ [ swap ] dip2 ] keep3" "1 3 2 4 5 3 4 5")
+                  ]
 
 -- TODO Test the basic integer math operators
