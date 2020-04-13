@@ -159,13 +159,13 @@ functionType = do
     (_, _) -> fail "stack var asymmetry in function type"
 
 parseStmt :: SourceName -> [Token] -> Either ParseError Statement
-parseStmt = parse statement
+parseStmt = parse (statement <* eof)
 
 parseSeq :: SourceName -> [Token] -> Either ParseError Sequence
-parseSeq = parse seq_
+parseSeq = parse (seq_ <* eof)
 
 parseDecl :: SourceName -> [Token] -> Either ParseError Declaration
-parseDecl = parse decl
+parseDecl = parse (decl <* eof)
 
 parseFile :: SourceName -> [Token] -> Either ParseError [Declaration]
 parseFile = parse decls
