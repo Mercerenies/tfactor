@@ -106,6 +106,7 @@ declsToReadOnly ds r = foldM go r ds
                           inner <- foldM go emptyModule def
                           pure $ over moduleNames (defineModule v inner) reader
                 AliasDecl i j -> pure $ over moduleAliases (++ [Alias i j]) reader
+                OpenDecl j -> pure $ over moduleAliases (++ [Open j]) reader
 
 defineFunction :: Id -> PolyFunctionType -> Sequence -> Map Id ReaderValue -> Map Id ReaderValue
 defineFunction v t def = Map.insert v (UDFunction t $ Function (Just v) def)

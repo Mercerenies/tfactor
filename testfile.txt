@@ -18,9 +18,20 @@ mod MyModule
 
 end
 
+mod MyTestModule1
+
+  fun foobar ( Any -- )
+    drop
+  end
+
+end
+
 # My module likes to go by "Joe" :)
 alias Joe = MyModule
 alias charlie = Joe.drop2
+
+alias MyTestModule2 = MyTestModule1
+open MyTestModule2
 
 fun my-swap ( 'd 'c -- 'c 'd )
   swap
@@ -63,6 +74,7 @@ fun main ( -- Int Int Int Int Int String Int Symbol Symbol Symbol Symbol Symbol 
   100 200 300 400 500 MyModule.drop2 MyModule.MyNestedModule.drop2-again
   999999 999999 Joe.drop2
   999999 999999 charlie
+  999999 foobar
   :abc :def :ghi :jkl drop do-it-twice
   :first :second dup2
   600 700 800 dup3

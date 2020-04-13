@@ -31,6 +31,7 @@ data Declaration = FunctionDecl PolyFunctionType Function
                  | MacroDecl PolyFunctionType Macro
                  | ModuleDecl Id [Declaration]
                  | AliasDecl Id QId
+                 | OpenDecl QId
                    deriving (Show, Eq)
 
 functionName :: Function -> Maybe Id

@@ -86,4 +86,7 @@ handleAliasDecl m a = case a of
                                -- Ensure that the name exists
                                _ <- ask >>= lookupFn j'
                                pure $ defAlias i j' m
-                        Open mname -> ask >>= \reader -> lookupAndOpenModule mname reader m
+                        Open mname -> do
+                               reader <- ask
+                               mname' <- resolveAlias m mname
+                               lookupAndOpenModule mname' reader m
