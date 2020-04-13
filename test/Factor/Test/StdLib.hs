@@ -13,6 +13,7 @@ import Factor.Id
 import Factor.Stack(Stack(..))
 --import qualified Factor.Stack as Stack
 import Factor.Code
+import Factor.Type.Checker
 
 import Test.HUnit
 import Control.Monad.Except
@@ -32,7 +33,17 @@ parseAndRun s = runExceptT go >>= eitherToFail
             let fullbindings = bindStdlibModule $ ReadOnlyState Map.empty
             aliases <- lookupAndOpenModule (QId [stdlibModuleName]) fullbindings Map.empty
             seq_' <- resolveAliasesSeq aliases seq_
-            seq_'' <- runReaderT (augmentSeqWithMacros seq_') fullbindings
+
+            -- The typechecks are pretty weak here, since we don't
+            -- have any declared type to compare them to, but we can
+            -- at least check that there *is* a well-defined type for
+            -- them.
+            seq_'' <- flip runReaderT fullbindings $ do
+                        _ <- checkHasDefinedType MacroPass seq_'
+                        seq_'' <- augmentSeqWithMacros seq_'
+                        _ <- checkHasDefinedType FunctionPass seq_''
+                        return seq_''
+
             ((), st, ()) <- runRWST (evalSeq seq_'') fullbindings newState
             return st
 

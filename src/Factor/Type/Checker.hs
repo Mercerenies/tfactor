@@ -96,6 +96,17 @@ typeOfSeq tpass (Sequence xs) = foldM go emptyPolyFnType xs
             knownVars $ quantifiedVars res
             return res
 
+-- A weaker typecheck for when we don't know what we're looking for
+-- but just want to catch any glaring errors that cause
+-- contradictions.
+checkHasDefinedType :: (MonadError FactorError m, MonadReader ReadOnlyState m) =>
+                       TypeCheckerPass -> Sequence -> m ()
+checkHasDefinedType tpass ss = runWriterT go >>= doSub
+    where go = evalStateT (typeOfSeq tpass ss) mempty
+          doSub (PolyFunctionType {}, w) = do
+            Assumptions _ _ <- consolidateUntilDone w
+            pure ()
+
 -- When checking the declared type of a thing, all we care about is
 -- that the types line up. The assumptions we used to get there are
 -- irrelevant.
