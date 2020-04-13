@@ -1,0 +1,11 @@
+
+fun tri-me ( 'S 'a ( 'S 'a -- 'T ) ( 'T 'a -- 'U ) ( 'U 'a -- 'V ) -- 'V )
+  [ keep ] dip2 [ keep ] dip call
+end
+
+# This one doesn't compile, anymore, thankfully. The substitutions
+# ended up happening in a weird order and it caught the system in a
+# bind that has since been fixed.
+#fun tri-me ( 'S 'a ( 'S 'a -- 'T ) ( 'T 'a -- 'U ) ( 'U 'a -- 'V ) -- 'V )
+#  [ keep ] dip2 [ keep ] dip call
+#end

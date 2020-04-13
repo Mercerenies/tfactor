@@ -56,9 +56,11 @@ removeSynonyms (Assumptions m0 m1) = Assumptions (removeSynonyms0 m0) (removeSyn
               in keeps
 
 substituteFully :: Assumptions -> Type -> Type
-substituteFully asm =
+substituteFully asm t0 =
     let Assumptions m m' = removeSynonyms asm
-    in substituteUntilDone m . substituteStackUntilDone m'
+        go t = let t' = substituteUntilDone m . substituteStackUntilDone m' $ t
+               in if t == t' then t else go t'
+    in go t0
 
 occursCheck :: (FromTypeError e, MonadError e m) => Assumptions -> m ()
 occursCheck (Assumptions m m') =
