@@ -11,6 +11,7 @@ import Factor.Code
 import Data.Map(Map)
 import qualified Data.Map as Map
 import Control.Monad.Except
+import Control.Monad.Reader hiding (reader)
 import Control.Lens
 
 data Alias = AliasValue QId
@@ -66,11 +67,23 @@ resolveAliasesSeq :: MonadError FactorError m => Map Id Alias -> Sequence -> m S
 resolveAliasesSeq m (Sequence xs) = Sequence <$> mapM (resolveAliasesStmt m) xs
 
 -- TODO Aliases in types...
-resolveAliasesMod :: MonadError FactorError m =>
+resolveAliasesMod :: (MonadReader ReadOnlyState m, MonadError FactorError m) =>
                      Map Id Alias -> QId -> Module -> m Module
-resolveAliasesMod m name modl = itraverseOf (moduleNames . itraversed) go modl
-    where m' = openModule name modl $ m
-          go _ (UDFunction t (Function v ss)) = UDFunction t . Function v <$> resolveAliasesSeq m' ss
-          go _ (bif @ BIFunction {}) = pure bif
-          go _ (UDMacro t (Macro v ss)) = UDMacro t . Macro v <$> resolveAliasesSeq m' ss
-          go k (ModuleValue inner) = ModuleValue <$> resolveAliasesMod m' (name <> QId [k]) inner
+resolveAliasesMod m name modl = do
+  let m' = openModule name modl m
+  m'' <- foldM handleAliasDecl m' (modl^.moduleAliases)
+  let go _ (UDFunction t (Function v ss)) = UDFunction t . Function v <$> resolveAliasesSeq m'' ss
+      go _ (bif @ BIFunction {}) = pure bif
+      go _ (UDMacro t (Macro v ss)) = UDMacro t . Macro v <$> resolveAliasesSeq m'' ss
+      go k (ModuleValue inner) = ModuleValue <$> resolveAliasesMod m'' (name <> QId [k]) inner
+  itraverseOf (moduleNames . itraversed) go modl
+
+handleAliasDecl :: (MonadReader ReadOnlyState m, MonadError FactorError m) =>
+                   Map Id Alias -> AliasDecl -> m (Map Id Alias)
+handleAliasDecl m a = case a of
+                        Alias i j -> do
+                               j' <- resolveAlias m j
+                               -- Ensure that the name exists
+                               _ <- ask >>= lookupFn j'
+                               pure $ defAlias i j' m
+                        Open mname -> ask >>= \reader -> lookupAndOpenModule mname reader m

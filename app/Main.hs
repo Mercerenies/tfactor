@@ -15,6 +15,7 @@ import Factor.Loader
 import System.Environment
 import System.Exit
 import Control.Monad.Except
+import Control.Monad.Reader
 import Control.Lens
 import qualified Data.Map as Map
 
@@ -43,13 +44,10 @@ run filename = do
   let newbindings = ReadOnlyState definednames
   fullbindings <- bindStdlibModule prelude newbindings
   aliases <- lookupAndOpenModule (QId [primitivesModuleName]) fullbindings Map.empty
-  newbindings' <- forOf readerModule newbindings $ resolveAliasesMod aliases (QId [])
+  newbindings' <-
+      runReaderT (forOf readerModule newbindings $ resolveAliasesMod aliases (QId [])) fullbindings
   reader'' <- bindStdlibModule prelude newbindings'
   reader''' <- loadEntities (allNames newbindings') reader''
-  --_ <- runReaderT (checkAllTypes MacroPass) reader''
-  -- TODO We expose some names that are dangerous and not fully loaded yet here.
-  --reader''' <- forOf readerNames reader'' $ \r -> runReaderT (traverse augmentWithMacros r) reader''
-  --_ <- runReaderT (checkAllTypes FunctionPass) reader'''
   (_, state) <- liftEither $ runEval (callFunction (QId [Id "main"])) reader''' newState
   liftIO $ print state
 

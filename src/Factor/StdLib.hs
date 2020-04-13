@@ -22,6 +22,7 @@ import Factor.Parser
 import Control.Monad
 import Control.Monad.Except
 import Control.Monad.State
+import Control.Monad.Reader
 import Control.Lens
 import Data.Map(Map)
 import qualified Data.Map as Map
@@ -267,7 +268,8 @@ loadPreludeImpl = do
   let newbindings = ReadOnlyState definednames
       fullbindings = bindPrimitives newbindings
   aliases <- lookupAndOpenModule (QId [primitivesModuleName]) fullbindings Map.empty
-  newbindings' <- forOf readerModule newbindings $ resolveAliasesMod aliases (QId [])
+  newbindings' <-
+      runReaderT (forOf readerModule newbindings $ resolveAliasesMod aliases (QId [])) fullbindings
   let reader'' = bindPrimitives newbindings'
   loadEntities (allNames newbindings') reader''
 
