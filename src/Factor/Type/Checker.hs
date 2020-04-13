@@ -53,12 +53,11 @@ typeOfValue tpass value = case value of
                                 tell $ AssumptionsAll assum assum'
                                 let asm = AssumptionsAll univ univ'
                                 casm <- consolidateUntilDone asm
-                                let ss'' = case substituteBoth casm (FunType ss') of
+                                let ss'' = case substituteFully casm (FunType ss') of
                                              FunType x -> x
                                              _ -> error "Substitution changed type in typeOfValue"
                                 ss''' <- monomorphize (PolyFunctionType ids ss'')
                                 return $ FunType ss'''
-    where substituteBoth (Assumptions a b) = substituteUntilDone a . substituteStackUntilDone b
 
 -- A single statement always carries an effect on the stack, hence we
 -- treat its type as a function type.

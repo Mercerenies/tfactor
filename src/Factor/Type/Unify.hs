@@ -54,6 +54,9 @@ removeSynonyms (Assumptions m0 m1) = Assumptions (removeSynonyms0 m0) (removeSyn
 --                  keeps' = fmap (substituteStackUntilDone' removals) keeps
               in keeps
 
+substituteFully :: Assumptions -> Type -> Type
+substituteFully (Assumptions m m') = substituteUntilDone m . substituteStackUntilDone m'
+
 consolidate :: (FromTypeError e, MonadError e m, MonadWriter AssumptionsAll m) =>
                AssumptionsAll -> m Assumptions
 consolidate (AssumptionsAll m0 m1) =
@@ -156,10 +159,8 @@ isSubtypeOf s t = do
   (u, w) <- listen (s `intersection` t)
   --tell w -- Don't need this; I misunderstood what `listen' does.
   cw <- consolidateUntilDone w
-  let subAll :: Assumptions -> Type -> Type
-      subAll (Assumptions m m') = substituteStackUntilDone m' . substituteUntilDone m
-      u' = subAll cw u
-      s' = subAll cw s
+  let u' = substituteFully cw u
+      s' = substituteFully cw s
   if u' == s' then pure () else noUnify
 
 -- pad :: FunctionType -> FunctionType -> (FunctionType, FunctionType)
@@ -241,7 +242,6 @@ composePFunctions :: (FromTypeError e, MonadError e m, MonadWriter AssumptionsAl
 composePFunctions (PolyFunctionType i f) (PolyFunctionType j g) =
       go f (renameToAvoidConflicts' (`elem` i) g)
     where allQuants = i `List.union` (renameToAvoidConflicts'' (`elem` i) j)
-          substituteBoth (Assumptions a b) = substituteUntilDone a . substituteStackUntilDone b
           go f0 g0 = do
             (h, AssumptionsAll w w') <- censor (const mempty) $ listen (composeFunctions f0 g0)
             let (univ , assum ) = Map.partitionWithKey (\k _ -> k `elem` allQuants) w
@@ -253,7 +253,7 @@ composePFunctions (PolyFunctionType i f) (PolyFunctionType j g) =
             tell $ AssumptionsAll assum assum'
             let asm = AssumptionsAll univ univ'
             casm <- consolidateUntilDone asm
-            let h' = case substituteBoth casm (FunType h) of
+            let h' = case substituteFully casm (FunType h) of
                        FunType t -> t
                        _ -> error "Substitution changed type in composePFunctions"
                 -- Intersect to remove any quantified variables that
