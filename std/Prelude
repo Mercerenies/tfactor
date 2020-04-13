@@ -97,6 +97,30 @@ fun keep3 ( 'S 'a 'b 'c ( 'S 'a 'b 'c -- 'T ) -- 'T 'a 'b 'c )
   [ dup3 ] dip dip3
 end
 
+fun bi ( 'S 'a ( 'S 'a -- 'T ) ( 'T 'a -- 'U ) -- 'U )
+  [ keep ] dip call
+end
+
+fun bi2 ( 'S 'a 'b ( 'S 'a 'b -- 'T ) ( 'T 'a 'b -- 'U ) -- 'U )
+  [ keep2 ] dip call
+end
+
+fun bi3 ( 'S 'a 'b 'c ( 'S 'a 'b 'c -- 'T ) ( 'T 'a 'b 'c -- 'U ) -- 'U )
+  [ keep3 ] dip call
+end
+
+fun tri ( 'S 'a ( 'S 'a -- 'T ) ( 'T 'a -- 'U ) ( 'U 'a -- 'V ) -- 'V )
+  [ keep ] dip2 [ keep ] dip call
+end
+
+fun tri2 ( 'S 'a 'b ( 'S 'a 'b -- 'T ) ( 'T 'a 'b -- 'U ) ( 'U 'a 'b -- 'V ) -- 'V )
+  [ keep2 ] dip2 [ keep2 ] dip call
+end
+
+fun tri3 ( 'S 'a 'b 'c ( 'S 'a 'b 'c -- 'T ) ( 'T 'a 'b 'c -- 'U ) ( 'U 'a 'b 'c -- 'V ) -- 'V )
+  [ keep3 ] dip2 [ keep3 ] dip call
+end
+
 fun call ( 'S ( 'S -- 'T ) -- 'T )
   P.call
 end

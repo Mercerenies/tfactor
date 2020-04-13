@@ -129,7 +129,16 @@ testCombinators p = TestLabel "testCombinators" $ TestList [
                      TestCase (runAndMatch p "1 2 3 4 [ 99 ] dip3" "1 99 2 3 4"),
                      TestCase (runAndMatch p "1 2 3 4 5 [ swap ] keep" "1 2 3 5 4 5"),
                      TestCase (runAndMatch p "1 2 3 4 5 [ [ swap ] dip ] keep2" "1 2 4 3 5 4 5"),
-                     TestCase (runAndMatch p "1 2 3 4 5 [ [ swap ] dip2 ] keep3" "1 3 2 4 5 3 4 5")
+                     TestCase (runAndMatch p "1 2 3 4 5 [ [ swap ] dip2 ] keep3" "1 3 2 4 5 3 4 5"),
+                     TestCase (runAndMatch p "1 2 3 [ 10 + ] keep" "1 2 13 3"),
+                     TestCase (runAndMatch p "1 2 3 [ + ] keep2" "1 5 2 3"),
+                     TestCase (runAndMatch p "1 2 3 [ + + ] keep3" "6 1 2 3"),
+                     TestCase (runAndMatch p "1 2 3 [ 10 + ] [ 20 + ] bi" "1 2 13 23"),
+                     TestCase (runAndMatch p "1 2 3 [ + ] [ * ] bi2" "1 5 6"),
+                     TestCase (runAndMatch p "1 2 3 [ + + ] [ + - ] bi3" "6 -4"),
+                     TestCase (runAndMatch p "1 2 3 [ 10 + ] [ 20 + ] [ 30 + ] tri" "1 2 13 23 33"),
+                     TestCase (runAndMatch p "1 2 3 [ + ] [ * ] [ - ] tri2" "1 5 6 -1"),
+                     TestCase (runAndMatch p "2 3 4 [ + + ] [ + - ] [ * * ] tri3" "9 -5 24")
                     ]
 
 -- TODO Test the basic integer math operators
