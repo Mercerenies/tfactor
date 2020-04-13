@@ -1,5 +1,146 @@
 # -*- Text -*-
 
+alias P = Primitives
+
+fun drop ( Any -- )
+  P.drop
+end
+
+fun drop2 ( Any Any -- )
+  drop drop
+end
+
+fun drop3 ( Any Any Any -- )
+  drop2 drop
+end
+
+fun nip ( Any 'a -- 'a )
+  swap drop
+end
+
+fun nip2 ( Any Any 'a -- 'a )
+  nip nip
+end
+
+fun nip3 ( Any Any Any 'a -- 'a )
+  nip2 nip
+end
+
+fun dup ( 'a -- 'a 'a )
+  P.dup
+end
+
+fun dup2 ( 'a 'b -- 'a 'b 'a 'b )
+  over over
+end
+
+fun dup3 ( 'a 'b 'c -- 'a 'b 'c 'a 'b 'c )
+  pick pick pick
+end
+
+fun over ( 'a 'b -- 'a 'b 'a )
+  P.over
+end
+
+fun over2 ( 'a 'b 'c -- 'a 'b 'c 'a 'b )
+  pick pick
+end
+
+fun pick ( 'a 'b 'c -- 'a 'b 'c 'a )
+  P.pick
+end
+
+fun id ( -- )
+end
+
+fun swap ( 'a 'b -- 'b 'a )
+  P.swap
+end
+
+fun dupd ( 'a 'b -- 'a 'a 'b )
+  [ dup ] dip
+end
+
+fun swapd ( 'a 'b 'c -- 'b 'a 'c )
+  [ swap ] dip
+end
+
+fun rot ( 'a 'b 'c -- 'b 'c 'a )
+  P.rot
+end
+
+fun unrot ( 'a 'b 'c -- 'c 'a 'b )
+  rot rot
+end
+
+fun dip ( 'S 'a ( 'S -- 'T ) -- 'T 'a )
+  P.dip
+end
+
+fun dip2 ( 'S 'a 'b ( 'S -- 'T ) -- 'T 'a 'b )
+  swap [ dip ] dip
+end
+
+fun dip3 ( 'S 'a 'b 'c ( 'S -- 'T ) -- 'T 'a 'b 'c )
+  swap [ dip2 ] dip
+end
+
+fun keep ( 'S 'a ( 'S 'a -- 'T ) -- 'T 'a )
+  [ dup ] dip dip
+end
+
+fun keep2 ( 'S 'a 'b ( 'S 'a 'b -- 'T ) -- 'T 'a 'b )
+  [ dup2 ] dip dip2
+end
+
+fun keep3 ( 'S 'a 'b 'c ( 'S 'a 'b 'c -- 'T ) -- 'T 'a 'b 'c )
+  [ dup3 ] dip dip3
+end
+
 fun call ( 'S ( 'S -- 'T ) -- 'T )
-  Primitives.call
+  P.call
+end
+
+fun if ( 'S Bool ( 'S -- 'T ) ( 'S -- 'T ) -- 'T )
+  P.if
+end
+
+fun + ( Int Int -- Int )
+  P.+
+end
+
+fun - ( Int Int -- Int )
+  P.-
+end
+
+fun * ( Int Int -- Int )
+  P.*
+end
+
+fun / ( Int Int -- Int )
+  P./
+end
+
+fun = ( Int Int -- Bool )
+  P.=
+end
+
+fun != ( Int Int -- Bool )
+  P.!=
+end
+
+fun < ( Int Int -- Bool )
+  P.<
+end
+
+fun > ( Int Int -- Bool )
+  P.>
+end
+
+fun <= ( Int Int -- Bool )
+  P.<=
+end
+
+fun >= ( Int Int -- Bool )
+  P.>=
 end

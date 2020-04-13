@@ -43,7 +43,7 @@ run filename = do
   definednames <- declsToReadOnly decls emptyModule
   let newbindings = ReadOnlyState definednames
   fullbindings <- bindStdlibModule prelude newbindings
-  aliases <- lookupAndOpenModule (QId [primitivesModuleName]) fullbindings Map.empty
+  aliases <- lookupAndOpenModule (QId [preludeModuleName]) fullbindings Map.empty
   newbindings' <-
       runReaderT (forOf readerModule newbindings $ resolveAliasesMod aliases (QId [])) fullbindings
   reader'' <- bindStdlibModule prelude newbindings'

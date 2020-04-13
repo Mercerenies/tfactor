@@ -33,7 +33,7 @@ parseAndRun shared s = runExceptT go >>= eitherToFail
             tokens <- liftParseError $ parseManyTokens "(test case)" s
             seq_ <- liftParseError $ parseSeq "(test case)" tokens
             fullbindings <- bindStdlibModule prelude newReader
-            aliases <- lookupAndOpenModule (QId [primitivesModuleName]) fullbindings Map.empty
+            aliases <- lookupAndOpenModule (QId [preludeModuleName]) fullbindings Map.empty
             seq_' <- resolveAliasesSeq aliases seq_
 
             -- The typechecks are pretty weak here, since we don't
@@ -91,7 +91,6 @@ testShuffles p = TestLabel "testShuffles" $ TestList [
                   TestCase (runAndMatch p "10 20 30 40 dup3" "10 20 30 40 20 30 40"),
                   TestCase (runAndMatch p ":abc :def :ghi over" ":abc :def :ghi :def"),
                   TestCase (runAndMatch p "1 2 3 4 5 over2" "1 2 3 4 5 3 4"),
-                  TestCase (runAndMatch p "1 2 3 4 5 over3" "1 2 3 4 5 2 3 4"),
                   TestCase (runAndMatch p "100 id" "100"),
                   TestCase (runAndMatch p "id 100 id 200 id id id id" "100 200"),
                   TestCase (runAndMatch p "100 200 300 swap" "100 300 200"),
