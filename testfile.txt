@@ -61,7 +61,7 @@ end
 
 # Here's a comment before main.
 
-fun main ( -- Int Int Int Int Int String Int Symbol Symbol Symbol Symbol Symbol Symbol Int Int Int Int Int Int Int Int Int Int Int Int Int Int Int Int Int Int Int Int Int )
+fun main ( -- Int Int Int Int Int String Int Symbol Symbol Symbol Symbol Symbol Symbol Int Int Int Int Int Int Int Int Int Int Int Int Int Int )
   500 3 nip
   500 500 2 nip2
   500 500 500 1 nip3
@@ -80,5 +80,4 @@ fun main ( -- Int Int Int Int Int String Int Symbol Symbol Symbol Symbol Symbol 
   600 700 800 dup3
   1000 2000 over
   1000 2000 3000 over2
-  1000 2000 3000 4000 over3
 end
