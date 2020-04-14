@@ -1,0 +1,55 @@
+
+* GENERAL THOUGHTS
+** Functors
+  + /sigh/ Functors. It's gonna be big, and it's gonna be messy, but we
+    gotta do it. Here, I mean "Functor" in the OCaml way, in the sense
+    of parameterized module, not in the Haskell way.
+  + This depends on module types. We need to be able to define module
+    types, so that modules can map to them.
+    - Nominal or structural?
+      * OCaml goes structural, which seems to be a smarter choice.
+      * Maybe have an option to explicitly turn on nominal typing for a
+        given module. I will admit it is sometimes useful, especially
+        for typeclass-style stuff if there's a possibility of
+        accidental overlap.
+  + Unlike in OCaml, modules should probably be able to take types as
+    arguments in addition to modules, since we're using modules to
+    represent data.
+*** Syntax Thoughts
+ + We put parameter names in braces after the module name.
+#+BEGIN_SRC
+mod Foo { Argument }
+  # In here, Argument is a module that's available
+end
+#+END_SRC
+   - Issue: How do we specify the type of the argument?
+** Module Synonyms
+  + Aliases deal with the problem locally, but what if we want to "export" an alias?
+    - For functions, we can currently just redefine the function and,
+      eventually (once we write an inliner), it'll be inlined. Maybe
+      we'll define a nicer way later, but for now that suffices.
+    - Can't currently be done for modules. Need a way to say "make this
+      module equal this other one and export it".
+** Visibility Modifiers
+  + Everything is public right now.
+  + I'm thinking we go public and private access. Things are public by
+    default but can be made private with a keyword.
+    - Private names can only be used in the current module and any
+      modules contained strictly therein.
+    - Anything can be marked private, including but not limited to:
+      Functions, macros, modules, records, record constructors, record
+      fields.
+** Record Stuff
+  + There's a bit of refinement that needs doing with records. For
+    one, it should be an error if you don't define any constructor,
+    even a private one, as a type that can never be constructed is
+    worthless. If you want an uninhabited type, you shouldn't be using
+    records, as even the empty product is inhabited.
+** Data Declarations
+  + Sum of product types.
+  + As with records, we get a module "for free" which represents the
+    type.
+  + The names of the various constructors are inside the module.
+  + Some sort of master "pattern matching" function which takes a
+    bunch of quotations and folds around the data, kind of like
+    ~maybe~ or ~either~ do for the respective data types in Haskell.
