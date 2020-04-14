@@ -131,11 +131,26 @@ unsafeRecordConstruct :: BuiltIn ()
 unsafeRecordConstruct = BuiltIn $ do
                           (s, n) <- popStack2
                           s' <- assertString s
-                          n' <- assertInt n
-                          args <- popStack (fromInteger n')
+                          n' <- fmap fromInteger $ assertInt n
+                          args <- popStack n'
                           let args' = toList $ Stack.FromBottom args
                               qid = splitQualified (Id s')
                           pushStack (Stack.singleton $ makeRecord qid args')
+
+-- This one has a correct type signature at least, but it's still
+-- unsafe in that it produces a runtime error if the index is out of
+-- bounds. Also, you know, accessing record fields by numerical index
+-- is generally a bad idea anyway.
+
+-- ( 'S Any Int -- 'S Any )
+unsafeRecordGet :: BuiltIn ()
+unsafeRecordGet = BuiltIn $ do
+                    (n, obj) <- popStack2
+                    n' <- fmap fromInteger $ assertInt n
+                    (_, obj') <- assertRecord obj
+                    case recordGetField n' obj' of
+                      Nothing -> throwError (RuntimeError "record slot index out of bounds")
+                      Just x -> pushStack (Stack.singleton x)
 
 -- ( 'R Int Int -- 'R Int )
 binmathop :: (Integer -> Integer -> Integer) -> BuiltIn ()
@@ -170,6 +185,7 @@ builtins = Map.fromList [
             ("unsafe", polyFn [] "S" [] "T" unsafe),
             ("unsafe1", polyFn [QuantVar "a"] "S" [QuantVar "b"] "S" unsafe1),
             ("unsafe-record-construct", polyFn [PrimType TString, PrimType TInt] "S" [PrimType TAny] "T" unsafeRecordConstruct),
+            ("unsafe-record-get", polyFn [PrimType TInt, PrimType TAny] "S" [PrimType TAny] "S" unsafeRecordGet),
             ("+", polyFn [PrimType TInt, PrimType TInt] "R" [PrimType TInt] "R" $ binmathop (+)),
             ("-", polyFn [PrimType TInt, PrimType TInt] "R" [PrimType TInt] "R" $ binmathop (-)),
             ("*", polyFn [PrimType TInt, PrimType TInt] "R" [PrimType TInt] "R" $ binmathop (*)),

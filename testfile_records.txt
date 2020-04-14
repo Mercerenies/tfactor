@@ -8,6 +8,10 @@ fun make-my-fun-type ( Int Int -- Any )
   2 "MyFunType" Primitives.unsafe-record-construct
 end
 
-fun main ( -- Any )
-  10 20 make-my-fun-type
+fun get-first-slot ( Any -- Int )
+  0 Primitives.unsafe-record-get Primitives.unsafe1
+end
+
+fun main ( -- Int Any )
+  10 20 make-my-fun-type [ get-first-slot ] keep
 end

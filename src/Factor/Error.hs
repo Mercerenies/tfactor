@@ -2,7 +2,7 @@
 
 module Factor.Error(FactorError(..),
                     liftParseError, liftTypeError,
-                    assertBool, assertFunction, assertInt, assertString) where
+                    assertBool, assertFunction, assertInt, assertString, assertRecord) where
 
 import Factor.Id
 import Factor.Type.Error
@@ -11,7 +11,8 @@ import Factor.Code
 
 import Text.Parsec(ParseError)
 import Control.Monad.Except
-import Control.Arrow
+import Control.Arrow hiding (arr)
+import Data.Array.IArray
 
 -- TODO: NotAFunction and NotAmodule are used for kind of weird things
 -- right now. Need to split them into different error messages based
@@ -29,6 +30,7 @@ data FactorError = NoSuchFunction QId
                  | NotAFunction
                  | NotAModule
                  | RuntimeTypeError Data Type
+                 | RuntimeError String -- Generic error if nothing else really applies.
                  | AmbiguousName Id [QId]
                  | MacroRecursionLimit Sequence
                  | LoadCycle [QId]
@@ -48,6 +50,7 @@ instance Show FactorError where
           NotAFunction -> ("Attempt to call non-function" ++)
           NotAModule -> ("Attempt to subscript non-module" ++)
           RuntimeTypeError d t -> ("Expected value of type " ++) . shows t . (", got " ++) . shows d
+          RuntimeError e -> ("Runtime error " ++) . shows e
           AmbiguousName n xs ->
               ("Ambiguous name " ++) . shows n . (" could refer to any of " ++) . shows xs
           MacroRecursionLimit _ ->
@@ -79,3 +82,7 @@ assertInt v = throwError (RuntimeTypeError v (PrimType TInt))
 assertString :: MonadError FactorError m => Data -> m String
 assertString (String x) = pure x
 assertString v = throwError (RuntimeTypeError v (PrimType TString))
+
+assertRecord :: MonadError FactorError m => Data -> m (QId, Array Int Data)
+assertRecord (RecordInstance qid arr) = pure (qid, arr)
+assertRecord v = throwError (RuntimeError $ "expecting record, got " ++ show v)
