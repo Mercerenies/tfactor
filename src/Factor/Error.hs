@@ -2,7 +2,7 @@
 
 module Factor.Error(FactorError(..),
                     liftParseError, liftTypeError,
-                    assertBool, assertFunction, assertInt) where
+                    assertBool, assertFunction, assertInt, assertString) where
 
 import Factor.Id
 import Factor.Type.Error
@@ -75,3 +75,7 @@ assertFunction _ = throwError NotAFunction
 assertInt :: MonadError FactorError m => Data -> m Integer
 assertInt (Int x) = pure x
 assertInt v = throwError (RuntimeTypeError v (PrimType TInt))
+
+assertString :: MonadError FactorError m => Data -> m String
+assertString (String x) = pure x
+assertString v = throwError (RuntimeTypeError v (PrimType TString))

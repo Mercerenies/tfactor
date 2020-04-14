@@ -26,6 +26,7 @@ import Control.Monad.Reader
 import Control.Lens
 import Data.Map(Map)
 import qualified Data.Map as Map
+import Data.Foldable
 
 newtype Prelude = Prelude ReadOnlyState
 
@@ -115,6 +116,23 @@ if_ = BuiltIn $ popStack3 >>= \(f, t, cond) -> do
 unsafe :: BuiltIn ()
 unsafe = BuiltIn $ pure ()
 
+-- This function is also unsafe, in that its type signature is a lie.
+-- To use it safely, you MUST wrap it in a function which explicitly
+-- declares the CORRECT stack effect. It will actually pop as many
+-- additional arguments as the integer tells it to. There's no way to
+-- express this in the type system, so here we are.
+
+-- ( 'S Int String -- 'T Any )
+unsafeRecordConstruct :: BuiltIn ()
+unsafeRecordConstruct = BuiltIn $ do
+                          (s, n) <- popStack2
+                          s' <- assertString s
+                          n' <- assertInt n
+                          args <- popStack (fromInteger n')
+                          let args' = toList $ Stack.FromBottom args
+                              qid = splitQualified (Id s')
+                          pushStack (Stack.singleton $ makeRecord qid args')
+
 -- ( 'R Int Int -- 'R Int )
 binmathop :: (Integer -> Integer -> Integer) -> BuiltIn ()
 binmathop f = BuiltIn $ popStack2 >>= \(b, a) -> do
@@ -146,6 +164,7 @@ builtins = Map.fromList [
             ("call", polyFn [FunType (functionType [] (RestQuant "S") [] (RestQuant "T"))] "S" [] "T" call),
             ("if", polyFn [FunType (functionType [] (RestQuant "S") [] (RestQuant "T")), FunType (functionType [] (RestQuant "S") [] (RestQuant "T")), PrimType TBool] "S" [] "T" if_),
             ("unsafe", polyFn [] "S" [] "T" unsafe),
+            ("unsafe-record-construct", polyFn [PrimType TString, PrimType TInt] "S" [PrimType TAny] "T" unsafeRecordConstruct),
             ("+", polyFn [PrimType TInt, PrimType TInt] "R" [PrimType TInt] "R" $ binmathop (+)),
             ("-", polyFn [PrimType TInt, PrimType TInt] "R" [PrimType TInt] "R" $ binmathop (-)),
             ("*", polyFn [PrimType TInt, PrimType TInt] "R" [PrimType TInt] "R" $ binmathop (*)),

@@ -1,0 +1,13 @@
+
+# This is basically what record types will "desugar" too.
+
+mod MyFunType
+end
+
+fun make-my-fun-type ( Int Int -- Any )
+  2 "MyFunType" Primitives.unsafe-record-construct
+end
+
+fun main ( -- Any )
+  10 20 make-my-fun-type
+end
