@@ -85,6 +85,10 @@ fun dip3 ( 'S 'a 'b 'c ( 'S -- 'T ) -- 'T 'a 'b 'c )
   swap [ dip2 ] dip
 end
 
+fun dip4 ( 'S 'a 'b 'c 'd ( 'S -- 'T ) -- 'T 'a 'b 'c 'd )
+  swap [ dip3 ] dip
+end
+
 fun keep ( 'S 'a ( 'S 'a -- 'T ) -- 'T 'a )
   [ dup ] dip dip
 end
@@ -119,6 +123,22 @@ end
 
 fun tri3 ( 'S 'a 'b 'c ( 'S 'a 'b 'c -- 'T ) ( 'T 'a 'b 'c -- 'U ) ( 'U 'a 'b 'c -- 'V ) -- 'V )
   [ keep3 ] dip2 [ keep3 ] dip call
+end
+
+fun bi* ( 'S 'a 'b ( 'S 'a -- 'T ) ( 'T 'b -- 'U ) -- 'U )
+  [ dip ] dip call
+end
+
+fun bi2* ( 'S 'a 'b 'c 'd ( 'S 'a 'b -- 'T ) ( 'T 'c 'd -- 'U ) -- 'U )
+  [ dip2 ] dip call
+end
+
+fun tri* ( 'S 'a 'b 'c ( 'S 'a -- 'T ) ( 'T 'b -- 'U ) ( 'U 'c -- 'V ) -- 'V )
+  [ dip2 ] dip2 [ dip ] dip call
+end
+
+fun tri2* ( 'S 'a 'b 'c 'd 'e 'f ( 'S 'a 'b -- 'T ) ( 'T 'c 'd -- 'U ) ( 'U 'e 'f -- 'V ) -- 'V )
+  [ dip4 ] dip2 [ dip2 ] dip call
 end
 
 fun call ( 'S ( 'S -- 'T ) -- 'T )

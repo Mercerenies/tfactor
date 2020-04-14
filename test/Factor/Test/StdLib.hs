@@ -138,7 +138,11 @@ testCombinators p = TestLabel "testCombinators" $ TestList [
                      TestCase (runAndMatch p "1 2 3 [ + + ] [ + - ] bi3" "6 -4"),
                      TestCase (runAndMatch p "1 2 3 [ 10 + ] [ 20 + ] [ 30 + ] tri" "1 2 13 23 33"),
                      TestCase (runAndMatch p "1 2 3 [ + ] [ * ] [ - ] tri2" "1 5 6 -1"),
-                     TestCase (runAndMatch p "2 3 4 [ + + ] [ + - ] [ * * ] tri3" "9 -5 24")
+                     TestCase (runAndMatch p "2 3 4 [ + + ] [ + - ] [ * * ] tri3" "9 -5 24"),
+                     TestCase (runAndMatch p "1 2 [ 10 + ] [ 10 - ] bi*" "11 -8"),
+                     TestCase (runAndMatch p "1 2 3 4 [ + ] [ * ] bi2*" "3 12"),
+                     TestCase (runAndMatch p "1 2 3 [ 10 + ] [ 20 + ] [ 30 + ] tri*" "11 22 33"),
+                     TestCase (runAndMatch p "1 2 3 4 5 6 [ + ] [ * ] [ < ] tri2*" "3 12 true")
                     ]
 
 -- TODO Test the basic integer math operators
