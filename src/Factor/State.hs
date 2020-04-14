@@ -3,7 +3,7 @@
 
 module Factor.State(EvalState(..), ReadOnlyState(ReadOnlyState), ReaderValue(..),
                     Module(Module), AliasDecl(..), BuiltIn(..), BuiltInConstraints,
-                    readerModule, readerNames, moduleNames, moduleAliases,
+                    readerModule, readerNames, moduleNames, moduleAliases, moduleIsType,
                     newState, newReader, emptyModule,
                     pushStack, peekStackMaybe, peekStack, popStackMaybe, popStack,
                     declsToReadOnly, atQId, lookupFn,
@@ -45,7 +45,8 @@ data ReaderValue = UDFunction PolyFunctionType  Function    -- User-defined func
 
 data Module = Module {
       _moduleNames :: Map Id ReaderValue,
-      _moduleAliases :: [AliasDecl]
+      _moduleAliases :: [AliasDecl],
+      _moduleIsType :: Bool
     }
 
 data AliasDecl = Alias Id QId
@@ -69,7 +70,7 @@ newReader :: ReadOnlyState
 newReader = ReadOnlyState emptyModule
 
 emptyModule :: Module
-emptyModule = Module Map.empty []
+emptyModule = Module Map.empty [] False
 
 pushStack :: MonadState EvalState m => Stack Data -> m ()
 pushStack xs = modify $ \s -> s { stateStack = Stack.appendStack xs (stateStack s) }
@@ -114,7 +115,8 @@ declsToReadOnly qid ds r = foldM go r ds
                  | otherwise -> do
                           let qid' = qid <> QId [v]
                           inner <- expandRecordDecl qid' def emptyModule
-                          pure $ over moduleNames (defineModule v inner) reader
+                          let inner' = set moduleIsType True inner
+                          pure $ over moduleNames (defineModule v inner') reader
                 AliasDecl i j -> pure $ over moduleAliases (++ [Alias i j]) reader
                 OpenDecl j -> pure $ over moduleAliases (++ [Open j]) reader
 
@@ -221,7 +223,7 @@ readerMacroType (UDMacro t _) = Just t
 readerMacroType (ModuleValue _) = Nothing
 
 merge :: MonadError FactorError m => ReadOnlyState -> ReadOnlyState -> m ReadOnlyState
-merge (ReadOnlyState (Module m a)) (ReadOnlyState (Module m' a')) =
-    fmap ReadOnlyState (Module <$> merged <*> pure (a ++ a'))
+merge (ReadOnlyState (Module m a t)) (ReadOnlyState (Module m' a' t')) =
+    fmap ReadOnlyState (Module <$> merged <*> pure (a ++ a') <*> pure (t || t'))
         where failure = Merge.zipWithAMatched $ \k _ _ -> throwError (DuplicateDecl k)
               merged = Merge.mergeA Merge.preserveMissing Merge.preserveMissing failure m m'

@@ -199,10 +199,11 @@ builtins = Map.fromList [
            ]
 
 stdlibs :: ReadOnlyState
-stdlibs = ReadOnlyState (Module builtins [])
+stdlibs = ReadOnlyState (Module builtins [] False)
 
 bindPrimitives :: ReadOnlyState -> ReadOnlyState
-bindPrimitives = over readerNames (Map.insert primitivesModuleName (ModuleValue $ Module builtins []))
+bindPrimitives =
+    over readerNames (Map.insert primitivesModuleName (ModuleValue $ Module builtins [] False))
 
 loadPreludeImpl :: (MonadError FactorError m, MonadIO m) => m ReadOnlyState
 loadPreludeImpl = do
