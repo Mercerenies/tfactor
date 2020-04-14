@@ -59,6 +59,14 @@ fun doesn't-actually-do-anything ( -- )
   "D" "E" "F" drop3
 end
 
+# Do not call this function unless you like seeing programs
+# crash at runtime :)
+fun absurd-function ( -- Int Int )
+  "These are quite obviously not integers."
+  "Very, very, obviously."
+  Primitives.unsafe
+end
+
 # Here's a comment before main.
 
 fun main ( -- Int Int Int Int Int String Int Symbol Symbol Symbol Symbol Symbol Symbol Int Int Int Int Int Int Int Int Int Int Int Int Int Int )

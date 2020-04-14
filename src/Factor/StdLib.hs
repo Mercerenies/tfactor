@@ -105,6 +105,16 @@ if_ = BuiltIn $ popStack3 >>= \(f, t, cond) -> do
         Function _ f' <- assertFunction f
         evalSeq (if cond' then t' else f')
 
+-- The function `unsafe` has no runtime effect but has a completely,
+-- absurdly unsafe type signature. It will agree with literally any
+-- function type. Needless to say, be VERY careful if you decide to
+-- use it, as it's a backdoor into the type system explicitly designed
+-- to break everything.
+
+-- ( 'S -- 'T )
+unsafe :: BuiltIn ()
+unsafe = BuiltIn $ pure ()
+
 -- ( 'R Int Int -- 'R Int )
 binmathop :: (Integer -> Integer -> Integer) -> BuiltIn ()
 binmathop f = BuiltIn $ popStack2 >>= \(b, a) -> do
@@ -135,6 +145,7 @@ builtins = Map.fromList [
             ("dip", polyFn [FunType (functionType [] (RestQuant "S") [] (RestQuant "T")), QuantVar "a"] "S" [QuantVar "a"] "T" dip),
             ("call", polyFn [FunType (functionType [] (RestQuant "S") [] (RestQuant "T"))] "S" [] "T" call),
             ("if", polyFn [FunType (functionType [] (RestQuant "S") [] (RestQuant "T")), FunType (functionType [] (RestQuant "S") [] (RestQuant "T")), PrimType TBool] "S" [] "T" if_),
+            ("unsafe", polyFn [] "S" [] "T" unsafe),
             ("+", polyFn [PrimType TInt, PrimType TInt] "R" [PrimType TInt] "R" $ binmathop (+)),
             ("-", polyFn [PrimType TInt, PrimType TInt] "R" [PrimType TInt] "R" $ binmathop (-)),
             ("*", polyFn [PrimType TInt, PrimType TInt] "R" [PrimType TInt] "R" $ binmathop (*)),
