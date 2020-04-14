@@ -22,6 +22,7 @@ import Factor.Names
 import Data.Map(Map)
 import qualified Data.Map as Map
 import qualified Data.Map.Merge.Lazy as Merge
+import qualified Data.List as List
 import Data.Foldable
 import Data.Maybe
 import Control.Monad.Reader hiding (reader)
@@ -146,7 +147,7 @@ expandRecordDecl qid ds r = foldM go r ds
                     let var = unusedTypeVar
                         args = reverse $ fmap (\(_, t) -> t) collectedFields
                         fntype = polyFunctionType [var] args (RestQuant var)
-                                                  [NamedType qid] (RestQuant var)
+                                                        [NamedType qid] (RestQuant var)
                         impl = Sequence [
                                 Literal (Int . toInteger $ length collectedFields),
                                 Literal (String $ qidName qid),
@@ -155,7 +156,22 @@ expandRecordDecl qid ds r = foldM go r ds
                                ]
                         d = FunctionDecl fntype (Function (Just v) impl)
                     in declsToReadOnly qid [d] reader
-                RecordField _i _t -> pure reader -- error "TODO This"
+                RecordField i t ->
+                    let var = unusedTypeVar
+                        fntype = polyFunctionType [var] [NamedType qid] (RestQuant var)
+                                                        [t] (RestQuant var)
+                        -- We're iterating over the exact same data
+                        -- used to construct collectedFields, so the
+                        -- field must exist.
+                        indx = maybe (error "Internal error in expandRecordDecl") id
+                                (List.findIndex (\(i', _) -> i == i') collectedFields)
+                        impl = Sequence [
+                                Literal (Int . toInteger $ indx),
+                                Call (QId [rootAliasName, primitivesModuleName, Id "unsafe-record-get"]), -- TODO Put this name in Factor.Names
+                                Call (QId [rootAliasName, primitivesModuleName, Id "unsafe1"]) -- TODO Put this name in Factor.Names
+                               ]
+                        d = FunctionDecl fntype (Function (Just i) impl)
+                    in declsToReadOnly qid [d] reader
                 RecordOrdinaryDecl d -> declsToReadOnly qid [d] reader
 
 atQId :: QId -> Traversal' ReadOnlyState (Maybe ReaderValue)

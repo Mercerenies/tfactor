@@ -19,7 +19,7 @@ record Vector3
   field z Int
 end
 
-fun main ( -- Int Any Any )
+fun main ( -- Int Any Int Any )
   10 20 make-my-fun-type [ get-first-slot ] keep
-  100 200 300 Vector3.make
+  100 200 300 Vector3.make [ Vector3.x ] keep
 end
