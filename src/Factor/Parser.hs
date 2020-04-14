@@ -128,6 +128,12 @@ primType = TInt <$ symbol "Int" <|>
            TString <$ symbol "String" <|>
            TSymbol <$ symbol "Symbol"
 
+namedType :: Parser QId
+namedType = try $ do
+  qid <- qualifiedId
+  when (qid == QId [Id "--"]) $ unexpected "--"
+  return qid
+
 quantType :: Parser Id
 quantType = satisfy go
     where go (SymbolToken _ ('\'':x:xs)) | isLower x = Just (Id (x:xs))
@@ -140,6 +146,7 @@ restQuantType = satisfy go
 
 type_ :: Parser Type
 type_ = (PrimType <$> primType <?> "primitive type") <|>
+        (NamedType <$> namedType <?> "named type") <|>
         (QuantVar <$> quantType <?> "type variable") <|>
         (FunType <$> functionType <?> "function type")
 
