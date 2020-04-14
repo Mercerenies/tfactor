@@ -116,6 +116,10 @@ if_ = BuiltIn $ popStack3 >>= \(f, t, cond) -> do
 unsafe :: BuiltIn ()
 unsafe = BuiltIn $ pure ()
 
+-- ( 'S 'a -- 'S 'b )
+unsafe1 :: BuiltIn ()
+unsafe1 = BuiltIn $ pure ()
+
 -- This function is also unsafe, in that its type signature is a lie.
 -- To use it safely, you MUST wrap it in a function which explicitly
 -- declares the CORRECT stack effect. It will actually pop as many
@@ -164,6 +168,7 @@ builtins = Map.fromList [
             ("call", polyFn [FunType (functionType [] (RestQuant "S") [] (RestQuant "T"))] "S" [] "T" call),
             ("if", polyFn [FunType (functionType [] (RestQuant "S") [] (RestQuant "T")), FunType (functionType [] (RestQuant "S") [] (RestQuant "T")), PrimType TBool] "S" [] "T" if_),
             ("unsafe", polyFn [] "S" [] "T" unsafe),
+            ("unsafe1", polyFn [QuantVar "a"] "S" [QuantVar "b"] "S" unsafe1),
             ("unsafe-record-construct", polyFn [PrimType TString, PrimType TInt] "S" [PrimType TAny] "T" unsafeRecordConstruct),
             ("+", polyFn [PrimType TInt, PrimType TInt] "R" [PrimType TInt] "R" $ binmathop (+)),
             ("-", polyFn [PrimType TInt, PrimType TInt] "R" [PrimType TInt] "R" $ binmathop (-)),
