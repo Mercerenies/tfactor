@@ -129,6 +129,8 @@ unionStack (StackDesc (Stack (a:as)) x) (StackDesc (Stack (b:bs)) y) = do
 union :: (FromTypeError e, MonadError e m, MonadWriter AssumptionsAll m) =>
          Type -> Type -> m Type
 union a b | a == b = pure a
+union (PrimType TNothing) (QuantVar b) = PrimType TNothing <$ assume b (PrimType TNothing)
+union (QuantVar a) (PrimType TNothing) = PrimType TNothing <$ assume a (PrimType TNothing)
 union (PrimType TNothing) t = pure t
 union t (PrimType TNothing) = pure t
 union (QuantVar a) (QuantVar b) =
@@ -160,6 +162,8 @@ intersectionStack (StackDesc (Stack (a:as)) x) (StackDesc (Stack (b:bs)) y) = do
 intersection :: (FromTypeError e, MonadError e m, MonadWriter AssumptionsAll m) =>
                 Type -> Type -> m Type
 intersection a b | a == b = pure a
+intersection (PrimType TAny) (QuantVar b) = PrimType TAny <$ assume b (PrimType TAny)
+intersection (QuantVar a) (PrimType TAny) = PrimType TAny <$ assume a (PrimType TAny)
 intersection (PrimType TAny) t = pure t
 intersection t (PrimType TAny) = pure t
 intersection (QuantVar a) (QuantVar b) =
