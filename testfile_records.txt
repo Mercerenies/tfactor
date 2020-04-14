@@ -27,8 +27,10 @@ record Vector3
 
 end
 
-fun main ( -- Int Any Int Vector3 Int )
+alias V3 = Vector3
+
+fun main ( -- Int Any Int V3 Int )
   10 20 make-my-fun-type [ get-first-slot ] keep
-  100 200 300 Vector3.make [ Vector3.x ] keep
+  100 200 300 Vector3.make [ V3.x ] keep
   1 2 3 Vector3.make 1 3 2 Vector3.make Vector3.dot
 end

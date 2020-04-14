@@ -8,6 +8,8 @@ import Factor.Util
 import Factor.Error
 import Factor.Code
 import Factor.Names
+import Factor.Type
+import qualified Factor.Stack as Stack
 
 import Data.Map(Map)
 import qualified Data.Map as Map
@@ -69,15 +71,39 @@ resolveAliasesStmt m (Literal d) = Literal <$> resolveAliasesData m d
 resolveAliasesSeq :: MonadError FactorError m => Map Id Alias -> Sequence -> m Sequence
 resolveAliasesSeq m (Sequence xs) = Sequence <$> mapM (resolveAliasesStmt m) xs
 
+resolveAliasesType :: MonadError FactorError m => Map Id Alias -> Type -> m Type
+resolveAliasesType _ (PrimType t) = pure $ PrimType t
+resolveAliasesType m (FunType fn) = FunType <$> resolveAliasesFnType m fn
+resolveAliasesType m (NamedType qid) = NamedType <$> resolveAlias m qid
+resolveAliasesType _ (GroundVar i) = pure $ GroundVar i
+resolveAliasesType _ (QuantVar i) = pure $ QuantVar i
+
+resolveAliasesFnType :: MonadError FactorError m => Map Id Alias -> FunctionType -> m FunctionType
+resolveAliasesFnType m (FunctionType (StackDesc args a) (StackDesc rets r)) = do
+  Stack.FromTop args' <- mapM (resolveAliasesType m) (Stack.FromTop args)
+  Stack.FromTop rets' <- mapM (resolveAliasesType m) (Stack.FromTop rets)
+  return $ FunctionType (StackDesc args' a) (StackDesc rets' r)
+
+resolveAliasesPolyFnType :: MonadError FactorError m =>
+                            Map Id Alias -> PolyFunctionType -> m PolyFunctionType
+resolveAliasesPolyFnType m (PolyFunctionType i f) =
+    PolyFunctionType i <$> resolveAliasesFnType m f
+
 -- TODO Aliases in types...
 resolveAliasesMod :: (MonadReader ReadOnlyState m, MonadError FactorError m) =>
                      Map Id Alias -> QId -> Module -> m Module
 resolveAliasesMod m name modl = do
   let m' = openModule name modl m
   m'' <- foldM handleAliasDecl m' (modl^.moduleAliases)
-  let go _ (UDFunction t (Function v ss)) = UDFunction t . Function v <$> resolveAliasesSeq m'' ss
+  let go _ (UDFunction t (Function v ss)) = do
+             ss' <- resolveAliasesSeq m'' ss
+             t' <- resolveAliasesPolyFnType m'' t
+             return $ UDFunction t' (Function v ss')
       go _ (bif @ BIFunction {}) = pure bif
-      go _ (UDMacro t (Macro v ss)) = UDMacro t . Macro v <$> resolveAliasesSeq m'' ss
+      go _ (UDMacro t (Macro v ss)) = do
+             ss' <- resolveAliasesSeq m'' ss
+             t' <- resolveAliasesPolyFnType m'' t
+             return $ UDMacro t' (Macro v ss')
       go k (ModuleValue inner) = ModuleValue <$> resolveAliasesMod m'' (name <> QId [k]) inner
   itraverseOf (moduleNames . itraversed) go modl
 
