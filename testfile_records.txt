@@ -29,6 +29,8 @@ end
 
 alias V3 = Vector3
 
+mod ThisModuleIsNotAType end
+
 fun main ( -- Int Any Int V3 Int )
   10 20 make-my-fun-type [ get-first-slot ] keep
   100 200 300 Vector3.make [ V3.x ] keep

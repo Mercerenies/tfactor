@@ -1,4 +1,4 @@
-{-# LANGUAGE FlexibleContexts, GeneralizedNewtypeDeriving #-}
+{-# LANGUAGE FlexibleContexts, GeneralizedNewtypeDeriving, LambdaCase #-}
 
 module Factor.Type.Checker where
 
@@ -8,6 +8,7 @@ import Factor.Type
 import Factor.Type.Unify
 import Factor.Error
 import Factor.Id
+import qualified Factor.Stack as Stack
 
 import Data.Set(Set)
 import qualified Data.Set as Set
@@ -112,7 +113,8 @@ checkHasDefinedType tpass ss = runWriterT go >>= doSub
 -- irrelevant.
 checkDeclaredType :: (MonadError FactorError m, MonadReader ReadOnlyState m) =>
                      TypeCheckerPass -> PolyFunctionType -> Sequence -> m ()
-checkDeclaredType tpass (PolyFunctionType ids declared) ss = runWriterT go >>= doSub
+checkDeclaredType tpass (PolyFunctionType ids declared) ss =
+      checkIsWellDefined (FunType declared) >> runWriterT go >>= doSub
     where go = do
             ss' <- evalStateT (typeOfSeq tpass ss) mempty
             let inferred = underlyingFnType ss'
@@ -123,6 +125,19 @@ checkDeclaredType tpass (PolyFunctionType ids declared) ss = runWriterT go >>= d
           doSub ((), w) = do
                  Assumptions _ _ <- consolidateUntilDone w
                  pure ()
+
+checkIsWellDefined :: (MonadError FactorError m, MonadReader ReadOnlyState m) =>
+                      Type -> m ()
+checkIsWellDefined (PrimType {}) = pure ()
+checkIsWellDefined (GroundVar {}) = pure ()
+checkIsWellDefined (QuantVar {}) = pure ()
+checkIsWellDefined (FunType (FunctionType (StackDesc args _) (StackDesc rets _))) =
+    mapM_ checkIsWellDefined (Stack.FromTop args) >>
+    mapM_ checkIsWellDefined (Stack.FromTop rets)
+checkIsWellDefined (NamedType t) =
+    ask >>= lookupFn t >>= \case
+        ModuleValue m | m^.moduleIsType -> pure ()
+        _ -> throwError (NoSuchType t)
 
 -- TODO We make up some variables here. It's safe right now, but once
 -- modules start taking type arguments, it will cease to be safe.

@@ -22,6 +22,7 @@ import Data.Array.IArray
 
 data FactorError = NoSuchFunction QId
                  | NoSuchModule QId
+                 | NoSuchType QId
                  | StackUnderflow
                  | DuplicateDecl Id
                  | InternalError String
@@ -41,6 +42,7 @@ instance Show FactorError where
         case err of
           NoSuchFunction v -> ("No such function " ++) . shows v
           NoSuchModule v -> ("No such module " ++) . shows v
+          NoSuchType v -> ("No such type " ++) . shows v
           StackUnderflow -> ("Stack underflow" ++)
           DuplicateDecl v -> ("Duplicate declaration " ++) . shows v
           InternalError str ->

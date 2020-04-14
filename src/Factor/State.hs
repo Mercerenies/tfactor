@@ -188,6 +188,9 @@ atQId (QId xs0) = readerNames . go xs0
           shim f (Just (ModuleValue m)) = Just . ModuleValue <$> traverseOf moduleNames f m
           shim _ (Just x) = pure $ Just x
 
+-- TODO This is used for more than just functions. Change its name to
+-- reflect that, and make it stop throwing NoSuchFunction, since that
+-- error may not be right.
 lookupFn :: MonadError FactorError m => QId -> ReadOnlyState -> m ReaderValue
 lookupFn (QId ids) reader =
   -- Lookup the top-level name in the alias table first.
