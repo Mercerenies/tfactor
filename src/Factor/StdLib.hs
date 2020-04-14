@@ -1,8 +1,7 @@
 {-# LANGUAGE FlexibleContexts, LambdaCase, OverloadedStrings #-}
 
 module Factor.StdLib(Prelude(),
-                     builtins, stdlibs, primitivesModuleName,
-                     preludeFileName, preludeModuleName,
+                     builtins, stdlibs,
                      bindPrimitives, -- TODO This one will be private soon. I need it right now but I won't soon.
                      loadPrelude, bindStdlibModule) where
 
@@ -18,6 +17,7 @@ import Factor.Eval
 import Factor.Loader
 import Factor.Parser.Token
 import Factor.Parser
+import Factor.Names
 
 import Control.Monad
 import Control.Monad.Except
@@ -201,12 +201,6 @@ builtins = Map.fromList [
 stdlibs :: ReadOnlyState
 stdlibs = ReadOnlyState (Module builtins [])
 
-preludeFileName :: FilePath
-preludeFileName = "std/Prelude"
-
-preludeModuleName :: Id
-preludeModuleName = Id "Prelude"
-
 bindPrimitives :: ReadOnlyState -> ReadOnlyState
 bindPrimitives = over readerNames (Map.insert primitivesModuleName (ModuleValue $ Module builtins []))
 
@@ -225,9 +219,6 @@ loadPreludeImpl = do
 
 loadPrelude :: (MonadError FactorError m, MonadIO m) => m Prelude
 loadPrelude = fmap Prelude loadPreludeImpl `catchError` (\e -> throwError (InternalError $ show e))
-
-primitivesModuleName :: Id
-primitivesModuleName = Id "Primitives"
 
 bindStdlibModule :: MonadError FactorError m => Prelude -> ReadOnlyState -> m ReadOnlyState
 bindStdlibModule (Prelude p) m = p `merge` m

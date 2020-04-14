@@ -11,6 +11,7 @@ import Factor.Error
 import Factor.Id
 import Factor.StdLib
 import Factor.Loader
+import Factor.Names
 
 import System.Environment
 import System.Exit

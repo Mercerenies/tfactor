@@ -15,6 +15,7 @@ import Factor.Stack(Stack(..))
 --import qualified Factor.Stack as Stack
 import Factor.Code
 import Factor.Type.Checker
+import Factor.Names
 
 import Test.HUnit
 import Control.Monad.Except
