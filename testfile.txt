@@ -83,6 +83,7 @@ fun main ( -- Int Int Int Int Int String Int Symbol Symbol Symbol Symbol Symbol 
   999999 999999 Joe.drop2
   999999 999999 charlie
   999999 foobar
+  999999 999999 __root.MyModule.drop2
   :abc :def :ghi :jkl drop do-it-twice
   :first :second dup2
   600 700 800 dup3

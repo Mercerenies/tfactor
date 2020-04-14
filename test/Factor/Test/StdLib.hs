@@ -10,12 +10,9 @@ import Factor.State.Alias
 import Factor.State.Macro
 import Factor.Eval
 import Factor.Error(liftParseError)
-import Factor.Id
 import Factor.Stack(Stack(..))
---import qualified Factor.Stack as Stack
 import Factor.Code
 import Factor.Type.Checker
-import Factor.Names
 
 import Test.HUnit
 import Control.Monad.Except
@@ -34,7 +31,7 @@ parseAndRun shared s = runExceptT go >>= eitherToFail
             tokens <- liftParseError $ parseManyTokens "(test case)" s
             seq_ <- liftParseError $ parseSeq "(test case)" tokens
             fullbindings <- bindStdlibModule prelude newReader
-            aliases <- lookupAndOpenModule (QId [preludeModuleName]) fullbindings Map.empty
+            aliases <- bindDefaultAliases fullbindings Map.empty
             seq_' <- resolveAliasesSeq aliases seq_
 
             -- The typechecks are pretty weak here, since we don't

@@ -7,6 +7,7 @@ import Factor.Id
 import Factor.Util
 import Factor.Error
 import Factor.Code
+import Factor.Names
 
 import Data.Map(Map)
 import qualified Data.Map as Map
@@ -92,3 +93,8 @@ handleAliasDecl m a = case a of
                                reader <- ask
                                mname' <- resolveAlias m mname
                                lookupAndOpenModule mname' reader m
+
+bindDefaultAliases :: MonadError FactorError m => ReadOnlyState -> Map Id Alias -> m (Map Id Alias)
+bindDefaultAliases reader aliases =
+    lookupAndOpenModule (QId [preludeModuleName]) reader aliases >>=
+    pure . defAlias rootAliasName (QId [])

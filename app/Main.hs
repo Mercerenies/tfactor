@@ -11,7 +11,6 @@ import Factor.Error
 import Factor.Id
 import Factor.StdLib
 import Factor.Loader
-import Factor.Names
 
 import System.Environment
 import System.Exit
@@ -44,7 +43,7 @@ run filename = do
   definednames <- declsToReadOnly decls emptyModule
   let newbindings = ReadOnlyState definednames
   fullbindings <- bindStdlibModule prelude newbindings
-  aliases <- lookupAndOpenModule (QId [preludeModuleName]) fullbindings Map.empty
+  aliases <- bindDefaultAliases fullbindings Map.empty
   newbindings' <-
       runReaderT (forOf readerModule newbindings $ resolveAliasesMod aliases (QId [])) fullbindings
   reader'' <- bindStdlibModule prelude newbindings'
