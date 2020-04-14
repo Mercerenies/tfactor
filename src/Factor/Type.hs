@@ -21,6 +21,7 @@ import qualified Data.Set as Set
 -- ground and only unify with identical variables.
 data Type = PrimType PrimType
           | FunType FunctionType
+          | NamedType QId
           | GroundVar Id
           | QuantVar Id
             deriving (Eq, Ord)
@@ -62,6 +63,7 @@ instance Show StackDesc where
 instance Show Type where
     showsPrec n (PrimType t) = showsPrec n t
     showsPrec n (FunType t) = showsPrec n t
+    showsPrec n (NamedType t) = showsPrec n t
     showsPrec n (GroundVar t) = ("'" ++) . showsPrec n t
     showsPrec n (QuantVar t) = ("''" ++) . showsPrec n t
 
@@ -104,6 +106,7 @@ gensub a b = go
     where go (PrimType t) = PrimType t
           go (FunType (FunctionType (StackDesc xs x) (StackDesc ys y))) =
               FunType (FunctionType (StackDesc (fmap go xs) x) (StackDesc (fmap go ys) y))
+          go (NamedType t) = NamedType t
           go (GroundVar v) = a v
           go (QuantVar v) = b v
 
@@ -121,6 +124,7 @@ gensubstack :: (Id -> StackDesc) -> (Id -> StackDesc) -> (Type -> Type, StackDes
 gensubstack a b = (go, go')
     where go (PrimType t) = (PrimType t)
           go (FunType (FunctionType arg ret)) = FunType (FunctionType (go' arg) (go' ret))
+          go (NamedType t) = NamedType t
           go (GroundVar v) = GroundVar v
           go (QuantVar v) = QuantVar v
           go' (StackDesc xs x) =
@@ -169,6 +173,7 @@ allGroundVars = Set.toList . go
     where go (PrimType {}) = Set.empty
           go (FunType (FunctionType (StackDesc xs x) (StackDesc ys y))) =
               foldMap go (FromTop xs) <> include x <> foldMap go (FromTop ys) <> include y
+          go (NamedType _) = Set.empty
           go (GroundVar v) = Set.singleton v
           go (QuantVar {}) = Set.empty
           include (RestGround x) = Set.singleton x
@@ -179,6 +184,7 @@ allQuantVars = Set.toList . go
     where go (PrimType {}) = Set.empty
           go (FunType (FunctionType (StackDesc xs x) (StackDesc ys y))) =
               foldMap go (FromTop xs) <> include x <> foldMap go (FromTop ys) <> include y
+          go (NamedType _) = Set.empty
           go (GroundVar {}) = Set.empty
           go (QuantVar v) = Set.singleton v
           include (RestQuant x) = Set.singleton x

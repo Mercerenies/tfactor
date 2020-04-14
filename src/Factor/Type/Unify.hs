@@ -100,11 +100,13 @@ assume' v s = tell (AssumptionsAll mempty (Map.singleton v [s]))
 _intersectionHandlesThisCase :: Type -> ()
 _intersectionHandlesThisCase (PrimType {}) = ()
 _intersectionHandlesThisCase (FunType {}) = ()
+_intersectionHandlesThisCase (NamedType _) = ()
 _intersectionHandlesThisCase (GroundVar {}) = ()
 _intersectionHandlesThisCase (QuantVar {}) = ()
 
--- GroundVar and (non-TAny) PrimType are trivial as they're just an
--- equality check, which is handled at the very beginning.
+-- GroundVar, NamedType, and (non-TAny) PrimType are trivial as
+-- they're just an equality check, which is handled at the very
+-- beginning.
 
 unionStack :: (FromTypeError e, MonadError e m, MonadWriter AssumptionsAll m) =>
               StackDesc -> StackDesc -> m StackDesc

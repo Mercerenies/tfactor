@@ -30,6 +30,7 @@ dependencies:
 - mmorph >= 1 && < 2
 - split >= 0 && < 1
 - lens >= 4 && < 5
+- array >= 0 && < 1
 
 library:
   source-dirs: src

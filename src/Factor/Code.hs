@@ -5,6 +5,8 @@ module Factor.Code(Function(..), Macro(..), Data(..), Statement(..), Sequence(..
 import Factor.Id
 import Factor.Type
 
+import Data.Array.IArray
+
 -- Functions may be named but are not necessarily so.
 data Function = Function (Maybe Id) Sequence
                 deriving (Show, Eq)
@@ -18,6 +20,7 @@ data Data = Int Integer
           | Bool Bool
           | String String
           | Symbol String -- TODO Actually implement these things in some kind of efficient way
+          | RecordInstance QId (Array Int Data)
             deriving (Show, Eq)
 
 data Statement = Call QId
