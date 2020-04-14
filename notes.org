@@ -53,3 +53,6 @@ end
   + Some sort of master "pattern matching" function which takes a
     bunch of quotations and folds around the data, kind of like
     ~maybe~ or ~either~ do for the respective data types in Haskell.
+** Arrays
+  + Don't forget that we still don't have arrays. Need to decide on
+    the syntax and lots of stuff for those.
