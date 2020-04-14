@@ -12,6 +12,14 @@ fun get-first-slot ( Any -- Int )
   0 Primitives.unsafe-record-get Primitives.unsafe1
 end
 
-fun main ( -- Int Any )
+record Vector3
+  constructor make
+  field x Int
+  field y Int
+  field z Int
+end
+
+fun main ( -- Int Any Any )
   10 20 make-my-fun-type [ get-first-slot ] keep
+  100 200 300 Vector3.make
 end

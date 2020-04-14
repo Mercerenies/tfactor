@@ -16,7 +16,7 @@ import Control.Monad
 type Parser = Parsec [Token] ()
 
 keywords :: [String]
-keywords = ["true", "false", "fun", "mod", "end", "macro", "alias", "open"]
+keywords = ["true", "false", "fun", "mod", "end", "macro", "alias", "open", "field", "constructor"]
 
 -- (Unused right now)
 _id_ :: Parser Id
@@ -65,6 +65,7 @@ decl :: Parser Declaration
 decl = (\(t, s) -> FunctionDecl t s) <$> functionDecl <|>
        (\(t, s) -> MacroDecl t s) <$> macroDecl <|>
        (\(i, m) -> ModuleDecl i m) <$> moduleDecl <|>
+       (\(i, d) -> RecordDecl i d) <$> recordDecl <|>
        (\(i, j) -> AliasDecl i j) <$> aliasDecl <|>
        (\i -> OpenDecl i) <$> openDecl
 
@@ -93,6 +94,20 @@ moduleDecl = do
   decls <- many decl
   _ <- symbol "end"
   return (name, decls)
+
+recordDecl :: Parser (Id, [RecordInfo])
+recordDecl = do
+  _ <- symbol "record"
+  name <- unqualifiedId
+  decls <- many recordInfo
+  _ <- symbol "end"
+  return (name, decls)
+
+recordInfo :: Parser RecordInfo
+recordInfo =
+    RecordConstructor <$> (symbol "constructor" *> unqualifiedId) <|>
+    RecordField <$> (symbol "field" *> unqualifiedId) <*> type_ <|>
+    RecordOrdinaryDecl <$> decl
 
 aliasDecl :: Parser (Id, QId)
 aliasDecl = do
@@ -137,9 +152,6 @@ stackDesc = go <?> "stack descriptor"
                        Nothing -> Left . Stack.fromList $ reverse args
                        Just r' -> Right $ StackDesc (Stack.fromList $ reverse args) (RestQuant r')
 
-freshVar :: [Id] -> Id
-freshVar vs = head [v | n <- [0 :: Int ..], let v = Id ("R" <> show n), v `notElem` vs]
-
 functionType :: Parser FunctionType
 functionType = do
   _ <- symbol "("
@@ -152,7 +164,7 @@ functionType = do
     (Left args', Left rets') ->
         let used = foldMap allQuantVars (Stack.FromTop args') <>
                    foldMap allQuantVars (Stack.FromTop rets')
-            fresh = freshVar used
+            fresh = freshVar "R" used
             args'' = StackDesc args' (RestQuant fresh)
             rets'' = StackDesc rets' (RestQuant fresh)
         in return $ FunctionType args'' rets''

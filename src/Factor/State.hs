@@ -17,11 +17,13 @@ import Factor.Id
 import Factor.Type
 import Factor.Stack(Stack)
 import qualified Factor.Stack as Stack
+import Factor.Names
 
 import Data.Map(Map)
 import qualified Data.Map as Map
 import qualified Data.Map.Merge.Lazy as Merge
 import Data.Foldable
+import Data.Maybe
 import Control.Monad.Reader hiding (reader)
 import Control.Monad.State
 import Control.Monad.Except
@@ -88,8 +90,8 @@ popStack :: (MonadState EvalState m, MonadError FactorError m) => Int -> m (Stac
 popStack n = popStackMaybe n >>= maybe (throwError StackUnderflow) return
 
 declsToReadOnly :: MonadError FactorError m =>
-                   [Declaration] -> Module -> m Module
-declsToReadOnly ds r = foldM go r ds
+                   QId -> [Declaration] -> Module -> m Module
+declsToReadOnly qid ds r = foldM go r ds
     where go reader decl =
               case decl of
                 FunctionDecl _ (Function Nothing _) ->
@@ -103,7 +105,14 @@ declsToReadOnly ds r = foldM go r ds
                 ModuleDecl v def
                  | Map.member v (reader^.moduleNames) -> throwError (DuplicateDecl v)
                  | otherwise -> do
-                          inner <- foldM go emptyModule def
+                          let qid' = qid <> QId [v]
+                          inner <- declsToReadOnly qid' def emptyModule
+                          pure $ over moduleNames (defineModule v inner) reader
+                RecordDecl v def
+                 | Map.member v (reader^.moduleNames) -> throwError (DuplicateDecl v)
+                 | otherwise -> do
+                          let qid' = qid <> QId [v]
+                          inner <- expandRecordDecl qid' def emptyModule
                           pure $ over moduleNames (defineModule v inner) reader
                 AliasDecl i j -> pure $ over moduleAliases (++ [Alias i j]) reader
                 OpenDecl j -> pure $ over moduleAliases (++ [Open j]) reader
@@ -116,6 +125,38 @@ defineMacro v t def = Map.insert v (UDMacro t $ Macro v def)
 
 defineModule :: Id -> Module -> Map Id ReaderValue -> Map Id ReaderValue
 defineModule v def = Map.insert v (ModuleValue def)
+
+-- TODO Mark which modules can be treated as types and which cannot,
+-- as a flag on the Module type itself.
+
+-- Hopefully, somewhere down the road, record declarations will be
+-- able to be a declaration macro defined in Prelude, and then they'll
+-- just translate inside the language. But for now, it's special
+-- syntax sugar since the tools to do that aren't in place yet.
+expandRecordDecl :: MonadError FactorError m => QId -> [RecordInfo] -> Module -> m Module
+expandRecordDecl qid ds r = foldM go r ds
+    where collectField (RecordField i t) = Just (i, t)
+          collectField _ = Nothing
+          collectedFields = mapMaybe collectField ds
+          usedTypeVars = concatMap (\(_, t) -> allQuantVars t) collectedFields
+          unusedTypeVar = freshVar "R" usedTypeVars
+          go reader decl =
+              case decl of
+                RecordConstructor v ->
+                    let var = unusedTypeVar
+                        args = reverse $ fmap (\(_, t) -> t) collectedFields
+                        fntype = polyFunctionType [var] args (RestQuant var)
+                                                  [NamedType qid] (RestQuant var)
+                        impl = Sequence [
+                                Literal (Int . toInteger $ length collectedFields),
+                                Literal (String $ qidName qid),
+                                Call (QId [rootAliasName, primitivesModuleName, Id "unsafe-record-construct"]), -- TODO Put this name in Factor.Names
+                                Call (QId [rootAliasName, primitivesModuleName, Id "unsafe1"]) -- TODO Put this name in Factor.Names
+                               ]
+                        d = FunctionDecl fntype (Function (Just v) impl)
+                    in declsToReadOnly qid [d] reader
+                RecordField _i _t -> pure reader -- error "TODO This"
+                RecordOrdinaryDecl d -> declsToReadOnly qid [d] reader
 
 atQId :: QId -> Traversal' ReadOnlyState (Maybe ReaderValue)
 atQId (QId xs0) = readerNames . go xs0

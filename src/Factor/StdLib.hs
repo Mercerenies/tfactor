@@ -209,7 +209,7 @@ loadPreludeImpl = do
   contents <- liftIO $ readFile preludeFileName
   contents' <- liftParseError $ parseManyTokens preludeFileName contents
   decls <- liftParseError $ parseFile preludeFileName contents'
-  definednames <- declsToReadOnly [ModuleDecl preludeModuleName decls] emptyModule
+  definednames <- declsToReadOnly (QId []) [ModuleDecl preludeModuleName decls] emptyModule
   let newbindings = ReadOnlyState definednames
       fullbindings = bindPrimitives newbindings
   newbindings' <-

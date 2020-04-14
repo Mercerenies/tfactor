@@ -1,5 +1,6 @@
 
-module Factor.Code(Function(..), Macro(..), Data(..), Statement(..), Sequence(..), Declaration(..),
+module Factor.Code(Function(..), Macro(..), Data(..), Statement(..),
+                   Sequence(..), Declaration(..), RecordInfo(..),
                    functionName, functionSeq, makeRecord, recordGetField) where
 
 import Factor.Id
@@ -34,9 +35,15 @@ newtype Sequence = Sequence { unSequence :: [Statement] }
 data Declaration = FunctionDecl PolyFunctionType Function
                  | MacroDecl PolyFunctionType Macro
                  | ModuleDecl Id [Declaration]
+                 | RecordDecl Id [RecordInfo]
                  | AliasDecl Id QId
                  | OpenDecl QId
                    deriving (Show, Eq)
+
+data RecordInfo = RecordConstructor Id
+                | RecordField Id Type
+                | RecordOrdinaryDecl Declaration
+                  deriving (Show, Eq)
 
 functionName :: Function -> Maybe Id
 functionName (Function i _) = i

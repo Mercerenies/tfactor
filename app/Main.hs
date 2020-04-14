@@ -40,7 +40,7 @@ run filename = do
   contents <- liftIO $ readFile filename
   contents' <- liftParseError $ parseManyTokens filename contents
   decls <- liftParseError $ parseFile filename contents'
-  definednames <- declsToReadOnly decls emptyModule
+  definednames <- declsToReadOnly (QId []) decls emptyModule
   let newbindings = ReadOnlyState definednames
   fullbindings <- bindStdlibModule prelude newbindings
   aliases <- bindDefaultAliases fullbindings Map.empty
