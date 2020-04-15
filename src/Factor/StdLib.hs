@@ -215,16 +215,15 @@ loadPreludeImpl = do
   contents <- liftIO $ readFile preludeFileName
   contents' <- liftParseError $ parseManyTokens preludeFileName contents
   decls <- liftParseError $ parseFile preludeFileName contents'
-  flip evalStateT newResourceTable $ do
-      definednames <- declsToReadOnly (QId []) [ModuleDecl preludeModuleName decls] emptyModule
-      -- ///// We need to rewrite this >.<
-      let newbindings = ReadOnlyState definednames
-      fullbindings <- bindPrimitives newbindings
-      newbindings' <-
-          runReaderT (forOf readerModule newbindings $ resolveAliasesMod Map.empty (QId []))
-                     fullbindings
-      reader <- bindPrimitives newbindings'
-      loadEntities (allNames newbindings') reader
+  newbindings <- flip evalStateT newResourceTable $ do
+    definednames <- declsToReadOnly (QId []) [ModuleDecl preludeModuleName decls] emptyModule
+    resourcetable <- get
+    return $ ReadOnlyState definednames resourcetable
+  fullbindings <- bindPrimitives newbindings
+  newbindings' <-
+      runReaderT (forOf (readerResources . traverse) newbindings $ resolveAliasesResource Map.empty) fullbindings
+  reader <- bindPrimitives newbindings'
+  loadEntities (allNames newbindings') reader
 
 loadPrelude :: (MonadError FactorError m, MonadIO m) => m Prelude
 loadPrelude = fmap Prelude loadPreludeImpl `catchError` (\e -> throwError (InternalError $ show e))

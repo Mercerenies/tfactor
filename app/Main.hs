@@ -43,16 +43,17 @@ run filename = do
   contents <- liftIO $ readFile filename
   contents' <- liftParseError $ parseManyTokens filename contents
   decls <- liftParseError $ parseFile filename contents'
-  reader <- flip evalStateT newResourceTable $ do
+  newbindings <- flip evalStateT newResourceTable $ do
       definednames <- declsToReadOnly (QId []) decls emptyModule
-      let newbindings = ReadOnlyState definednames
-      fullbindings <- bindStdlibModule prelude newbindings
-      aliases <- bindDefaultAliases fullbindings Map.empty
-      newbindings' <-
-          runReaderT (forOf readerModule newbindings $ resolveAliasesMod aliases (QId [])) fullbindings
-      reader'' <- bindStdlibModule prelude newbindings'
-      loadEntities (allNames newbindings') reader''
-  (_, state) <- liftEither $ runEval (callFunction (QId [Id "main"])) reader newState
+      resourcetable <- get
+      return $ ReadOnlyState definednames resourcetable
+  fullbindings <- bindStdlibModule prelude newbindings
+  aliases <- bindDefaultAliases fullbindings Map.empty
+  newbindings' <-
+      runReaderT (forOf (readerResources . traverse) newbindings $ resolveAliasesResource aliases) fullbindings
+  reader'' <- bindStdlibModule prelude newbindings'
+  reader''' <- loadEntities (allNames newbindings') reader''
+  (_, state) <- liftEither $ runEval (callFunction (QId [Id "main"])) reader''' newState
   liftIO $ print state
 
 main :: IO ()
