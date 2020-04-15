@@ -1,4 +1,5 @@
-{-# LANGUAGE FlexibleContexts, ConstraintKinds, RankNTypes, TemplateHaskell #-}
+{-# LANGUAGE FlexibleContexts, ConstraintKinds, RankNTypes, TemplateHaskell,
+    GeneralizedNewtypeDeriving, TypeFamilies #-}
 
 module Factor.State.Types(EvalState(..), ReadOnlyState(ReadOnlyState), ReaderValue(..), RId,
                           Module(Module), AliasDecl(..), BuiltIn(..), BuiltInConstraints,
@@ -50,6 +51,12 @@ type BuiltInConstraints m = (MonadReader ReadOnlyState m, MonadState EvalState m
 newtype BuiltIn a = BuiltIn { unBuiltIn :: forall m. BuiltInConstraints m => m a }
 
 newtype ResourceTable = ResourceTable (Seq ReaderValue)
+
+type instance Index ResourceTable = Int
+type instance IxValue ResourceTable = ReaderValue
+
+instance Ixed ResourceTable where
+    ix n f (ResourceTable s) = ResourceTable <$> ix n f s
 
 type RId = Int
 
