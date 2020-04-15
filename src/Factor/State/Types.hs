@@ -2,8 +2,9 @@
 
 module Factor.State.Types(EvalState(..), ReadOnlyState(ReadOnlyState), ReaderValue(..),
                           Module(Module), AliasDecl(..), BuiltIn(..), BuiltInConstraints,
+                          ResourceTable(..),
                           readerModule, readerNames, moduleNames, moduleAliases, moduleIsType,
-                          newState, newReader, emptyModule) where
+                          newState, newReader, emptyModule, newResourceTable) where
 
 import Factor.Error
 import Factor.Id
@@ -18,6 +19,8 @@ import Control.Monad.Reader
 import Control.Lens
 import Data.Map(Map)
 import qualified Data.Map as Map
+import Data.Sequence(Seq)
+import qualified Data.Sequence as Seq
 
 data EvalState = EvalState {
       stateStack :: Stack Data
@@ -46,6 +49,8 @@ type BuiltInConstraints m = (MonadReader ReadOnlyState m, MonadState EvalState m
 
 newtype BuiltIn a = BuiltIn { unBuiltIn :: forall m. BuiltInConstraints m => m a }
 
+newtype ResourceTable = ResourceTable (Seq ReaderValue)
+
 makeLenses ''ReadOnlyState
 makeLenses ''Module
 
@@ -60,3 +65,6 @@ newReader = ReadOnlyState emptyModule
 
 emptyModule :: Module
 emptyModule = Module Map.empty [] False
+
+newResourceTable :: ResourceTable
+newResourceTable = ResourceTable Seq.Empty
