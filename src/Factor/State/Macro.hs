@@ -83,5 +83,5 @@ augmentWithMacros rv =
       UDFunction p (Function v ss) -> (UDFunction p . Function v) <$>
                                       recursivelyAugmentSeq (Just defaultRecursionLimit) ss
       BIFunction {} -> pure rv
-      UDMacro {} -> pure rv
-      ModuleValue terms -> ModuleValue <$> (moduleNames . traverse) augmentWithMacros terms
+      UDMacro {} -> pure rv -- TODO Augment this with macros
+      ModuleValue {} -> pure rv

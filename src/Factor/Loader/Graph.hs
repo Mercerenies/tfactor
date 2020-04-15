@@ -44,7 +44,7 @@ filterAndClassify qids r = setFilterMap go
 
 produceDependencyGraph :: [QId] -> ReadOnlyState -> Graph QId GraphEdge
 produceDependencyGraph qids reader =
-    Graph.fromEdges qids (fold $ Map.mapWithKey (go (QId [])) $ reader^.readerNames) proj1
+    Graph.fromEdges qids (fold $ Map.mapWithKey (go' (QId [])) $ reader^.readerNames) proj1
     where proj1 (GraphEdge qid _) = qid
           namesToEdges = toList . filterAndClassify qids reader
           go k0 k1 v = let k = k0 <> QId [k1]
@@ -54,9 +54,12 @@ produceDependencyGraph qids reader =
                                      UDMacro _ (Macro _ ss) -> namesToEdges $ findDependenciesSeq ss
                                      ModuleValue {} -> [] -- TODO Right now, modules have no dependencies because they have no load phase
                            inner = case v of
-                                     ModuleValue m -> fold (Map.mapWithKey (go k) (m^.moduleNames))
+                                     ModuleValue m -> fold (Map.mapWithKey (go' k) (m^.moduleNames))
                                      _ -> []
                        in map ((,) k) edges ++ inner
+          go' k0 k1 v = case reader^.readerResources.pre (ix v) of
+                          Nothing -> error "Internal error in produceDependencyGraph"
+                          Just v' -> go k0 k1 v'
 
 collapseCycles :: MonadError FactorError m =>
                   Graph QId GraphEdge -> m (Graph (Set QId) GraphEdge)

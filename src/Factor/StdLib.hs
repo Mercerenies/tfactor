@@ -204,9 +204,11 @@ builtins = Map.fromList [
 stdlibs :: ReadOnlyState
 stdlibs = mapToReader builtins
 
-bindPrimitives :: ReadOnlyState -> ReadOnlyState
-bindPrimitives =
-    over readerNames (Map.insert primitivesModuleName (ModuleValue $ Module builtins [] False))
+bindPrimitives :: MonadError FactorError m => ReadOnlyState -> m ReadOnlyState
+bindPrimitives reader =
+    let (bindings, table) = runState (foldM (\m (k, v) -> defineResource k v m) Map.empty $ Map.toList builtins) newResourceTable
+        reader' = ReadOnlyState (Module bindings [] False) table
+    in reader `merge` reader'
 
 loadPreludeImpl :: (MonadError FactorError m, MonadIO m) => m ReadOnlyState
 loadPreludeImpl = do
@@ -215,12 +217,13 @@ loadPreludeImpl = do
   decls <- liftParseError $ parseFile preludeFileName contents'
   flip evalStateT newResourceTable $ do
       definednames <- declsToReadOnly (QId []) [ModuleDecl preludeModuleName decls] emptyModule
+      -- ///// We need to rewrite this >.<
       let newbindings = ReadOnlyState definednames
-          fullbindings = bindPrimitives newbindings
+      fullbindings <- bindPrimitives newbindings
       newbindings' <-
           runReaderT (forOf readerModule newbindings $ resolveAliasesMod Map.empty (QId []))
                      fullbindings
-      let reader = bindPrimitives newbindings'
+      reader <- bindPrimitives newbindings'
       loadEntities (allNames newbindings') reader
 
 loadPrelude :: (MonadError FactorError m, MonadIO m) => m Prelude

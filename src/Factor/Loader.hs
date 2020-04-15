@@ -21,7 +21,7 @@ loadEntity r = do
   pure r'
 
 loadEntityAt :: MonadError FactorError m => QId -> ReadOnlyState -> m ReadOnlyState
-loadEntityAt qid r = traverseOf (atQId qid) (\v -> runReaderT (traverse loadEntity v) r) r
+loadEntityAt qid r = traverseOf (atQId qid) (\v -> runReaderT (loadEntity v) r) r
 
 loadEntities :: MonadError FactorError m => [QId] -> ReadOnlyState -> m ReadOnlyState
 loadEntities qids r = do

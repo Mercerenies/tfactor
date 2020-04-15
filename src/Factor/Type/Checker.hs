@@ -164,11 +164,11 @@ checkTypeOf tpass (UDMacro t (Macro _ ss)) =
           -- starting from an empty stack.
           let t0 = polyFunctionType [] [] (RestGround (Id "R")) [] (RestQuant (Id "S"))
           in checkDeclaredType tpass t0 ss
-checkTypeOf tpass (ModuleValue m) = checkTypes tpass (view moduleNames m) -- Nothing to do with the module as a whole (yet).
+checkTypeOf _ (ModuleValue _) = pure () -- Nothing to do with the module as a whole (yet).
 
 checkTypes :: (MonadError FactorError m, MonadReader ReadOnlyState m) =>
               TypeCheckerPass -> Map Id ReaderValue -> m ()
 checkTypes tpass = void . traverse (checkTypeOf tpass)
 
 checkAllTypes :: (MonadError FactorError m, MonadReader ReadOnlyState m) => TypeCheckerPass -> m ()
-checkAllTypes tpass = asks (view readerNames) >>= checkTypes tpass
+checkAllTypes tpass = asks (view readerResources) >>= (void . traverse (checkTypeOf tpass))

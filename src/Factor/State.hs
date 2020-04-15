@@ -2,7 +2,8 @@
 
 module Factor.State(ReadOnlyState(ReadOnlyState), ReaderValue(..),
                     Module(Module), AliasDecl(..),
-                    readerModule, readerNames, moduleNames, moduleAliases, moduleIsType,
+                    readerModule, readerNames, readerResources,
+                    moduleNames, moduleAliases, moduleIsType,
                     newReader, emptyModule,
                     declsToReadOnly, atQId, lookupFn,
                     allNamesInModule, allNames,
@@ -15,7 +16,7 @@ import Factor.Id
 import Factor.Type
 import Factor.Names
 import Factor.State.Types
---import Factor.State.Resource
+import Factor.State.Resource
 
 import Data.Map(Map)
 import qualified Data.Map as Map
@@ -28,7 +29,7 @@ import Control.Monad.Except
 import Control.Monad.State
 import Control.Lens
 
-declsToReadOnly :: (MonadState ResourceTable m, MonadError FactorError m) =>
+declsToReadOnly :: (MonadState (ResourceTable ReaderValue) m, MonadError FactorError m) =>
                    QId -> [Declaration] -> Module -> m Module
 declsToReadOnly qid ds r = foldM go r ds
     where go reader decl =
@@ -57,17 +58,17 @@ declsToReadOnly qid ds r = foldM go r ds
                 AliasDecl i j -> pure $ over moduleAliases (++ [Alias i j]) reader
                 OpenDecl j -> pure $ over moduleAliases (++ [Open j]) reader
 
-defineFunction :: MonadState ResourceTable m =>
-                  Id -> PolyFunctionType -> Sequence -> Map Id ReaderValue -> m (Map Id ReaderValue)
-defineFunction v t def = pure . Map.insert v (UDFunction t $ Function (Just v) def)
+defineFunction :: MonadState (ResourceTable ReaderValue) m =>
+                  Id -> PolyFunctionType -> Sequence -> Map Id RId -> m (Map Id RId)
+defineFunction v t def = defineResource v (UDFunction t $ Function (Just v) def)
 
-defineMacro :: MonadState ResourceTable m =>
-               Id -> PolyFunctionType -> Sequence -> Map Id ReaderValue -> m (Map Id ReaderValue)
-defineMacro v t def = pure . Map.insert v (UDMacro t $ Macro v def)
+defineMacro :: MonadState (ResourceTable ReaderValue) m =>
+               Id -> PolyFunctionType -> Sequence -> Map Id RId -> m (Map Id RId)
+defineMacro v t def = defineResource v (UDMacro t $ Macro v def)
 
-defineModule :: MonadState ResourceTable m =>
-                Id -> Module -> Map Id ReaderValue -> m (Map Id ReaderValue)
-defineModule v def = pure . Map.insert v (ModuleValue def)
+defineModule :: MonadState (ResourceTable ReaderValue) m =>
+                Id -> Module -> Map Id RId -> m (Map Id RId)
+defineModule v def = defineResource v (ModuleValue def)
 
 -- TODO Mark which modules can be treated as types and which cannot,
 -- as a flag on the Module type itself.
@@ -76,7 +77,7 @@ defineModule v def = pure . Map.insert v (ModuleValue def)
 -- able to be a declaration macro defined in Prelude, and then they'll
 -- just translate inside the language. But for now, it's special
 -- syntax sugar since the tools to do that aren't in place yet.
-expandRecordDecl :: (MonadState ResourceTable m, MonadError FactorError m) =>
+expandRecordDecl :: (MonadState (ResourceTable ReaderValue) m, MonadError FactorError m) =>
                     QId -> [RecordInfo] -> Module -> m Module
 expandRecordDecl qid ds r = foldM go r ds
     where collectField (RecordField i t) = Just (i, t)
@@ -117,17 +118,20 @@ expandRecordDecl qid ds r = foldM go r ds
                     in declsToReadOnly qid [d] reader
                 RecordOrdinaryDecl d -> declsToReadOnly qid [d] reader
 
-atQId :: QId -> Traversal' ReadOnlyState (Maybe ReaderValue)
-atQId (QId xs0) = readerNames . go xs0
-    where go :: [Id] -> Traversal' (Map Id ReaderValue) (Maybe ReaderValue)
-          go [] = error "Empty identifier in atQId"
-          go [x] = at x
-          go (x:xs) = at x . shim . go xs
-          -- TODO This follows the first Traversal law. Does it follow
-          -- the second? I think so but I'm not 100% certain.
-          shim _ Nothing = pure Nothing
-          shim f (Just (ModuleValue m)) = Just . ModuleValue <$> traverseOf moduleNames f m
-          shim _ (Just x) = pure $ Just x
+atRId :: RId -> Traversal' ReadOnlyState ReaderValue
+atRId rid = readerResources . ix rid
+
+-- TODO Is this whole thing valid from a Traversal law standpoint...?
+atQId :: QId -> Traversal' ReadOnlyState ReaderValue
+atQId (QId xs0) f r0 = go xs0 (r0^.readerNames)
+    where go [] _ = pure r0
+          go [x] r = case Map.lookup x r of
+                       Nothing -> pure r0
+                       Just rid -> atRId rid f r0
+          go (x:xs) r = case Map.lookup x r >>= flip getResource (r0^.readerResources) of
+                          Nothing -> pure r0
+                          Just (ModuleValue m) -> go xs (m^.moduleNames)
+                          Just _ -> pure r0
 
 -- TODO This is used for more than just functions. Change its name to
 -- reflect that, and make it stop throwing NoSuchFunction, since that
@@ -136,23 +140,30 @@ lookupFn :: MonadError FactorError m => QId -> ReadOnlyState -> m ReaderValue
 lookupFn (QId ids) reader =
   -- Lookup the top-level name in the alias table first.
   let go (ModuleValue names) i =
-          maybe (throwError $ NoSuchFunction (QId ids)) pure $ names^.moduleNames.at i
+          case (names^.moduleNames.at i) >>= flip getResource (reader^.readerResources) of
+            Nothing -> throwError $ NoSuchFunction (QId ids)
+            Just x -> pure x
       go _ _ = throwError $ NoSuchModule (QId ids)
   in foldM go (ModuleValue $ view readerModule reader) ids
 
-allNamesInModule :: QId -> Module -> [QId]
-allNamesInModule k0 = fold . Map.mapWithKey go . view moduleNames
-    where go k1 v =
+allNamesInModule :: ResourceTable ReaderValue -> QId -> Module -> [QId]
+allNamesInModule resources k0 = fold . Map.mapWithKey go' . view moduleNames
+    where go :: Id -> ReaderValue -> [QId]
+          go k1 v =
               let k = k0 <> QId [k1]
                   innernames = case v of
                                  UDFunction {} -> []
                                  BIFunction {} -> []
                                  UDMacro {} -> []
-                                 ModuleValue m' -> allNamesInModule k m'
+                                 ModuleValue m' -> allNamesInModule resources k m'
               in k : innernames
+          go' :: Id -> RId -> [QId]
+          go' k v = case getResource v resources of
+                      Nothing -> []
+                      Just v' -> go k v'
 
 allNames :: ReadOnlyState -> [QId]
-allNames (view readerModule -> m) = allNamesInModule (QId []) m
+allNames reader = allNamesInModule (reader^.readerResources) (QId []) (reader^.readerModule)
 
 readerFunctionType :: ReaderValue -> Maybe PolyFunctionType
 readerFunctionType (UDFunction t _) = Just t
@@ -167,10 +178,14 @@ readerMacroType (UDMacro t _) = Just t
 readerMacroType (ModuleValue _) = Nothing
 
 merge :: MonadError FactorError m => ReadOnlyState -> ReadOnlyState -> m ReadOnlyState
-merge (ReadOnlyState (Module m a t)) (ReadOnlyState (Module m' a' t')) =
-    fmap ReadOnlyState (Module <$> merged <*> pure (a ++ a') <*> pure (t || t'))
+merge (ReadOnlyState (Module m a t) r) (ReadOnlyState (Module m' a' t') r') =
+    ReadOnlyState <$> (Module <$> merged <*> pure (a ++ a') <*> pure (t || t')) <*> pure rtable
         where failure = Merge.zipWithAMatched $ \k _ _ -> throwError (DuplicateDecl k)
-              merged = Merge.mergeA Merge.preserveMissing Merge.preserveMissing failure m m'
+              renamedm = fmap (+ resourceCount r) m'
+              renamedr = modifyRIds (+ resourceCount r) r'
+              merged = Merge.mergeA Merge.preserveMissing Merge.preserveMissing failure m renamedm
+              rtable = r `catResources` renamedr
 
 mapToReader :: Map Id ReaderValue -> ReadOnlyState
-mapToReader m = ReadOnlyState (Module m [] False)
+mapToReader m = ReadOnlyState (Module modl [] False) resources
+    where (modl, resources) = runState (traverse appendResource' m) newResourceTable

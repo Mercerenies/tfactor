@@ -89,23 +89,18 @@ resolveAliasesPolyFnType :: MonadError FactorError m =>
 resolveAliasesPolyFnType m (PolyFunctionType i f) =
     PolyFunctionType i <$> resolveAliasesFnType m f
 
--- TODO Aliases in types...
-resolveAliasesMod :: (MonadReader ReadOnlyState m, MonadError FactorError m) =>
-                     Map Id Alias -> QId -> Module -> m Module
-resolveAliasesMod m name modl = do
-  let m' = openModule name modl m
-  m'' <- foldM handleAliasDecl m' (modl^.moduleAliases)
-  let go _ (UDFunction t (Function v ss)) = do
-             ss' <- resolveAliasesSeq m'' ss
-             t' <- resolveAliasesPolyFnType m'' t
-             return $ UDFunction t' (Function v ss')
-      go _ (bif @ BIFunction {}) = pure bif
-      go _ (UDMacro t (Macro v ss)) = do
-             ss' <- resolveAliasesSeq m'' ss
-             t' <- resolveAliasesPolyFnType m'' t
-             return $ UDMacro t' (Macro v ss')
-      go k (ModuleValue inner) = ModuleValue <$> resolveAliasesMod m'' (name <> QId [k]) inner
-  itraverseOf (moduleNames . itraversed) go modl
+resolveAliasesResource :: MonadError FactorError m =>
+                          Map Id Alias -> ReaderValue -> m ReaderValue
+resolveAliasesResource m (UDFunction t (Function v ss)) = do
+  ss' <- resolveAliasesSeq m ss
+  t' <- resolveAliasesPolyFnType m t
+  return $ UDFunction t' (Function v ss')
+resolveAliasesResource _ (bif @ BIFunction {}) = pure bif
+resolveAliasesResource m (UDMacro t (Macro v ss)) = do
+  ss' <- resolveAliasesSeq m ss
+  t' <- resolveAliasesPolyFnType m t
+  return $ UDMacro t' (Macro v ss')
+resolveAliasesResource _ (ModuleValue inner) = pure (ModuleValue inner)
 
 handleAliasDecl :: (MonadReader ReadOnlyState m, MonadError FactorError m) =>
                    Map Id Alias -> AliasDecl -> m (Map Id Alias)

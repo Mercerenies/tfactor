@@ -1,10 +1,11 @@
 {-# LANGUAGE FlexibleContexts, ConstraintKinds, RankNTypes, TemplateHaskell,
-    GeneralizedNewtypeDeriving, TypeFamilies #-}
+    GeneralizedNewtypeDeriving, TypeFamilies, DeriveTraversable #-}
 
 module Factor.State.Types(EvalState(..), ReadOnlyState(ReadOnlyState), ReaderValue(..), RId,
                           Module(Module), AliasDecl(..), BuiltIn(..), BuiltInConstraints,
                           ResourceTable(..),
-                          readerModule, readerNames, moduleNames, moduleAliases, moduleIsType,
+                          readerModule, readerNames, readerResources,
+                          moduleNames, moduleAliases, moduleIsType,
                           newState, newReader, emptyModule, newResourceTable) where
 
 import Factor.Error
@@ -28,7 +29,8 @@ data EvalState = EvalState {
     } deriving (Show, Eq)
 
 data ReadOnlyState = ReadOnlyState {
-      _readerModule :: Module
+      _readerModule :: Module,
+      _readerResources :: ResourceTable ReaderValue
     }
 
 data ReaderValue = UDFunction PolyFunctionType Function -- User-defined function
@@ -37,7 +39,7 @@ data ReaderValue = UDFunction PolyFunctionType Function -- User-defined function
                  | ModuleValue Module
 
 data Module = Module {
-      _moduleNames :: Map Id ReaderValue,
+      _moduleNames :: Map Id RId,
       _moduleAliases :: [AliasDecl],
       _moduleIsType :: Bool
     }
@@ -50,12 +52,13 @@ type BuiltInConstraints m = (MonadReader ReadOnlyState m, MonadState EvalState m
 
 newtype BuiltIn a = BuiltIn { unBuiltIn :: forall m. BuiltInConstraints m => m a }
 
-newtype ResourceTable = ResourceTable (Seq ReaderValue)
+newtype ResourceTable a = ResourceTable (Seq a)
+    deriving (Functor, Foldable, Traversable)
 
-type instance Index ResourceTable = Int
-type instance IxValue ResourceTable = ReaderValue
+type instance Index (ResourceTable a) = Int
+type instance IxValue (ResourceTable a) = a
 
-instance Ixed ResourceTable where
+instance Ixed (ResourceTable a) where
     ix n f (ResourceTable s) = ResourceTable <$> ix n f s
 
 type RId = Int
@@ -63,17 +66,17 @@ type RId = Int
 makeLenses ''ReadOnlyState
 makeLenses ''Module
 
-readerNames :: Lens' ReadOnlyState (Map Id ReaderValue)
+readerNames :: Lens' ReadOnlyState (Map Id RId)
 readerNames = readerModule . moduleNames
 
 newState :: EvalState
 newState = EvalState Stack.empty
 
 newReader :: ReadOnlyState
-newReader = ReadOnlyState emptyModule
+newReader = ReadOnlyState emptyModule newResourceTable
 
 emptyModule :: Module
 emptyModule = Module Map.empty [] False
 
-newResourceTable :: ResourceTable
+newResourceTable :: ResourceTable a
 newResourceTable = ResourceTable Seq.Empty
