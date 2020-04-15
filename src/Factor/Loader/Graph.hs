@@ -43,8 +43,8 @@ filterAndClassify qids r = setFilterMap go
                      Right (ModuleValue {}) -> Just $ GraphEdge qid WeakDependency -- TODO Not sure about this one?
 
 produceDependencyGraph :: [QId] -> ReadOnlyState -> Graph QId GraphEdge
-produceDependencyGraph qids (reader @ (ReadOnlyState (Module modl _ _))) =
-    Graph.fromEdges qids (fold $ Map.mapWithKey (go (QId [])) modl) proj1
+produceDependencyGraph qids reader =
+    Graph.fromEdges qids (fold $ Map.mapWithKey (go (QId [])) $ reader^.readerNames) proj1
     where proj1 (GraphEdge qid _) = qid
           namesToEdges = toList . filterAndClassify qids reader
           go k0 k1 v = let k = k0 <> QId [k1]

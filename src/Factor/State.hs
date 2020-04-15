@@ -7,7 +7,7 @@ module Factor.State(ReadOnlyState(ReadOnlyState), ReaderValue(..),
                     declsToReadOnly, atQId, lookupFn,
                     allNamesInModule, allNames,
                     readerFunctionType, readerMacroType,
-                    merge) where
+                    merge, mapToReader) where
 
 import Factor.Error
 import Factor.Code
@@ -165,3 +165,6 @@ merge (ReadOnlyState (Module m a t)) (ReadOnlyState (Module m' a' t')) =
     fmap ReadOnlyState (Module <$> merged <*> pure (a ++ a') <*> pure (t || t'))
         where failure = Merge.zipWithAMatched $ \k _ _ -> throwError (DuplicateDecl k)
               merged = Merge.mergeA Merge.preserveMissing Merge.preserveMissing failure m m'
+
+mapToReader :: Map Id ReaderValue -> ReadOnlyState
+mapToReader m = ReadOnlyState (Module m [] False)

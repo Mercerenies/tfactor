@@ -201,7 +201,7 @@ builtins = Map.fromList [
            ]
 
 stdlibs :: ReadOnlyState
-stdlibs = ReadOnlyState (Module builtins [] False)
+stdlibs = mapToReader builtins
 
 bindPrimitives :: ReadOnlyState -> ReadOnlyState
 bindPrimitives =
