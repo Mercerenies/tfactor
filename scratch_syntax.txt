@@ -1,0 +1,53 @@
+
+# This is not (yet) real code. It's me playing around with
+# some syntax ideas and seeing if I like how they look and
+# feel.
+
+trait HasFoo
+
+  val foo ( -- Int )
+
+end
+
+mod ThisHasFoo
+  require HasFoo # Optional but verifies that it satisfies the interface.
+
+  fun foo ( -- Int )
+    10
+  end
+
+end
+
+mod DoubleFoo { Foo : HasFoo }
+  require HasFoo
+
+  fun foo ( -- Int )
+    Foo.foo 2 *
+  end
+
+end
+
+mod MyFoo : HasFoo = DoubleFoo { ThisHasFoo } end
+
+trait Eq { X : Type }
+
+  val == ( X X -- Bool )
+
+end
+
+mod IntIsEq
+  require Eq { Int }
+
+  fun == ( Int Int -- Bool ) # Ideally, type signature is optional here
+    =                        # since it should be obvious.
+  end
+
+end
+
+fun == { IsEq : Eq { 'a } } ( 'a 'a -- Bool )
+  IsEq.==
+end
+
+fun != { IsEq : Eq { 'a } } ( 'a 'a -- Bool )
+  { IsEq } == not
+end
