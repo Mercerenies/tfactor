@@ -11,6 +11,7 @@ import Factor.State
 import Factor.State.Alias
 import Factor.State.Stack
 import Factor.State.Types(BuiltIn(..))
+import Factor.State.Resource
 import Factor.Id
 import Factor.Type
 import Factor.Error
@@ -24,7 +25,7 @@ import Factor.Names
 import Control.Monad
 import Control.Monad.Except
 import Control.Monad.State
-import Control.Monad.Reader
+import Control.Monad.Reader hiding (reader)
 import Control.Lens
 import Data.Map(Map)
 import qualified Data.Map as Map
@@ -212,13 +213,15 @@ loadPreludeImpl = do
   contents <- liftIO $ readFile preludeFileName
   contents' <- liftParseError $ parseManyTokens preludeFileName contents
   decls <- liftParseError $ parseFile preludeFileName contents'
-  definednames <- declsToReadOnly (QId []) [ModuleDecl preludeModuleName decls] emptyModule
-  let newbindings = ReadOnlyState definednames
-      fullbindings = bindPrimitives newbindings
-  newbindings' <-
-      runReaderT (forOf readerModule newbindings $ resolveAliasesMod Map.empty (QId [])) fullbindings
-  let reader'' = bindPrimitives newbindings'
-  loadEntities (allNames newbindings') reader''
+  flip evalStateT newResourceTable $ do
+      definednames <- declsToReadOnly (QId []) [ModuleDecl preludeModuleName decls] emptyModule
+      let newbindings = ReadOnlyState definednames
+          fullbindings = bindPrimitives newbindings
+      newbindings' <-
+          runReaderT (forOf readerModule newbindings $ resolveAliasesMod Map.empty (QId []))
+                     fullbindings
+      let reader = bindPrimitives newbindings'
+      loadEntities (allNames newbindings') reader
 
 loadPrelude :: (MonadError FactorError m, MonadIO m) => m Prelude
 loadPrelude = fmap Prelude loadPreludeImpl `catchError` (\e -> throwError (InternalError $ show e))

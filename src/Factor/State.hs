@@ -15,6 +15,7 @@ import Factor.Id
 import Factor.Type
 import Factor.Names
 import Factor.State.Types
+--import Factor.State.Resource
 
 import Data.Map(Map)
 import qualified Data.Map as Map
@@ -24,9 +25,10 @@ import Data.Foldable
 import Data.Maybe
 import Control.Monad.Reader hiding (reader)
 import Control.Monad.Except
+import Control.Monad.State
 import Control.Lens
 
-declsToReadOnly :: MonadError FactorError m =>
+declsToReadOnly :: (MonadState ResourceTable m, MonadError FactorError m) =>
                    QId -> [Declaration] -> Module -> m Module
 declsToReadOnly qid ds r = foldM go r ds
     where go reader decl =
@@ -71,7 +73,8 @@ defineModule v def = Map.insert v (ModuleValue def)
 -- able to be a declaration macro defined in Prelude, and then they'll
 -- just translate inside the language. But for now, it's special
 -- syntax sugar since the tools to do that aren't in place yet.
-expandRecordDecl :: MonadError FactorError m => QId -> [RecordInfo] -> Module -> m Module
+expandRecordDecl :: (MonadState ResourceTable m, MonadError FactorError m) =>
+                    QId -> [RecordInfo] -> Module -> m Module
 expandRecordDecl qid ds r = foldM go r ds
     where collectField (RecordField i t) = Just (i, t)
           collectField _ = Nothing

@@ -8,6 +8,7 @@ import Factor.Eval
 import Factor.State
 import Factor.State.Stack
 import Factor.State.Alias
+import Factor.State.Resource
 import Factor.Error
 import Factor.Id
 import Factor.StdLib
@@ -16,7 +17,8 @@ import Factor.Loader
 import System.Environment
 import System.Exit
 import Control.Monad.Except
-import Control.Monad.Reader
+import Control.Monad.Reader hiding (reader)
+import Control.Monad.State hiding (state)
 import Control.Lens
 import qualified Data.Map as Map
 
@@ -41,15 +43,16 @@ run filename = do
   contents <- liftIO $ readFile filename
   contents' <- liftParseError $ parseManyTokens filename contents
   decls <- liftParseError $ parseFile filename contents'
-  definednames <- declsToReadOnly (QId []) decls emptyModule
-  let newbindings = ReadOnlyState definednames
-  fullbindings <- bindStdlibModule prelude newbindings
-  aliases <- bindDefaultAliases fullbindings Map.empty
-  newbindings' <-
-      runReaderT (forOf readerModule newbindings $ resolveAliasesMod aliases (QId [])) fullbindings
-  reader'' <- bindStdlibModule prelude newbindings'
-  reader''' <- loadEntities (allNames newbindings') reader''
-  (_, state) <- liftEither $ runEval (callFunction (QId [Id "main"])) reader''' newState
+  reader <- flip evalStateT newResourceTable $ do
+      definednames <- declsToReadOnly (QId []) decls emptyModule
+      let newbindings = ReadOnlyState definednames
+      fullbindings <- bindStdlibModule prelude newbindings
+      aliases <- bindDefaultAliases fullbindings Map.empty
+      newbindings' <-
+          runReaderT (forOf readerModule newbindings $ resolveAliasesMod aliases (QId [])) fullbindings
+      reader'' <- bindStdlibModule prelude newbindings'
+      loadEntities (allNames newbindings') reader''
+  (_, state) <- liftEither $ runEval (callFunction (QId [Id "main"])) reader newState
   liftIO $ print state
 
 main :: IO ()
