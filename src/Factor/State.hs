@@ -37,34 +37,37 @@ declsToReadOnly qid ds r = foldM go r ds
                     throwError (InternalError "Unnamed top-level function")
                 FunctionDecl t (Function (Just v) def)
                  | Map.member v (reader^.moduleNames) -> throwError (DuplicateDecl v)
-                 | otherwise -> pure $ over moduleNames (defineFunction v t def) reader
+                 | otherwise -> traverseOf moduleNames (defineFunction v t def) reader
                 MacroDecl t (Macro v def)
                  | Map.member v (reader^.moduleNames) -> throwError (DuplicateDecl v)
-                 | otherwise -> pure $ over moduleNames (defineMacro v t def) reader
+                 | otherwise -> traverseOf moduleNames (defineMacro v t def) reader
                 ModuleDecl v def
                  | Map.member v (reader^.moduleNames) -> throwError (DuplicateDecl v)
                  | otherwise -> do
                           let qid' = qid <> QId [v]
                           inner <- declsToReadOnly qid' def emptyModule
-                          pure $ over moduleNames (defineModule v inner) reader
+                          traverseOf moduleNames (defineModule v inner) reader
                 RecordDecl v def
                  | Map.member v (reader^.moduleNames) -> throwError (DuplicateDecl v)
                  | otherwise -> do
                           let qid' = qid <> QId [v]
                           inner <- expandRecordDecl qid' def emptyModule
                           let inner' = set moduleIsType True inner
-                          pure $ over moduleNames (defineModule v inner') reader
+                          traverseOf moduleNames (defineModule v inner') reader
                 AliasDecl i j -> pure $ over moduleAliases (++ [Alias i j]) reader
                 OpenDecl j -> pure $ over moduleAliases (++ [Open j]) reader
 
-defineFunction :: Id -> PolyFunctionType -> Sequence -> Map Id ReaderValue -> Map Id ReaderValue
-defineFunction v t def = Map.insert v (UDFunction t $ Function (Just v) def)
+defineFunction :: MonadState ResourceTable m =>
+                  Id -> PolyFunctionType -> Sequence -> Map Id ReaderValue -> m (Map Id ReaderValue)
+defineFunction v t def = pure . Map.insert v (UDFunction t $ Function (Just v) def)
 
-defineMacro :: Id -> PolyFunctionType -> Sequence -> Map Id ReaderValue -> Map Id ReaderValue
-defineMacro v t def = Map.insert v (UDMacro t $ Macro v def)
+defineMacro :: MonadState ResourceTable m =>
+               Id -> PolyFunctionType -> Sequence -> Map Id ReaderValue -> m (Map Id ReaderValue)
+defineMacro v t def = pure . Map.insert v (UDMacro t $ Macro v def)
 
-defineModule :: Id -> Module -> Map Id ReaderValue -> Map Id ReaderValue
-defineModule v def = Map.insert v (ModuleValue def)
+defineModule :: MonadState ResourceTable m =>
+                Id -> Module -> Map Id ReaderValue -> m (Map Id ReaderValue)
+defineModule v def = pure . Map.insert v (ModuleValue def)
 
 -- TODO Mark which modules can be treated as types and which cannot,
 -- as a flag on the Module type itself.
