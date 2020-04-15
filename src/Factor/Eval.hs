@@ -8,6 +8,8 @@ module Factor.Eval(EvalT, Eval,
 import Factor.Code
 import Factor.Error
 import Factor.State
+import Factor.State.Stack
+import Factor.State.Types(BuiltIn(..))
 import Factor.Id
 import qualified Factor.Stack as Stack
 

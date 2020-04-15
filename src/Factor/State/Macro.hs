@@ -3,6 +3,7 @@
 module Factor.State.Macro where
 
 import Factor.State
+import Factor.State.Stack
 import Factor.Eval
 import Factor.Error
 import Factor.Code

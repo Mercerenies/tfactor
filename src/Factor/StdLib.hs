@@ -9,6 +9,8 @@ import Factor.Stack(Stack(..))
 import qualified Factor.Stack as Stack
 import Factor.State
 import Factor.State.Alias
+import Factor.State.Stack
+import Factor.State.Types(BuiltIn(..))
 import Factor.Id
 import Factor.Type
 import Factor.Error

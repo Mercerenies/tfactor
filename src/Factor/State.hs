@@ -1,11 +1,9 @@
-{-# LANGUAGE FlexibleContexts, ViewPatterns, RankNTypes,
-  ConstraintKinds, KindSignatures, TemplateHaskell #-}
+{-# LANGUAGE FlexibleContexts, ViewPatterns, KindSignatures, RankNTypes #-}
 
-module Factor.State(EvalState(..), ReadOnlyState(ReadOnlyState), ReaderValue(..),
-                    Module(Module), AliasDecl(..), BuiltIn(..), BuiltInConstraints,
+module Factor.State(ReadOnlyState(ReadOnlyState), ReaderValue(..),
+                    Module(Module), AliasDecl(..),
                     readerModule, readerNames, moduleNames, moduleAliases, moduleIsType,
-                    newState, newReader, emptyModule,
-                    pushStack, peekStackMaybe, peekStack, popStackMaybe, popStack,
+                    newReader, emptyModule,
                     declsToReadOnly, atQId, lookupFn,
                     allNamesInModule, allNames,
                     readerFunctionType, readerMacroType,
@@ -15,9 +13,8 @@ import Factor.Error
 import Factor.Code
 import Factor.Id
 import Factor.Type
-import Factor.Stack(Stack)
-import qualified Factor.Stack as Stack
 import Factor.Names
+import Factor.State.Types
 
 import Data.Map(Map)
 import qualified Data.Map as Map
@@ -26,70 +23,8 @@ import qualified Data.List as List
 import Data.Foldable
 import Data.Maybe
 import Control.Monad.Reader hiding (reader)
-import Control.Monad.State
 import Control.Monad.Except
 import Control.Lens
-
-data EvalState = EvalState {
-      stateStack :: Stack Data
-    } deriving (Show, Eq)
-
-data ReadOnlyState = ReadOnlyState {
-      _readerModule :: Module
-    }
-
-data ReaderValue = UDFunction PolyFunctionType  Function    -- User-defined function
-                 | BIFunction PolyFunctionType (BuiltIn ()) -- Built-in function
-                 | UDMacro PolyFunctionType  Macro       -- User-defined macro
-                 | ModuleValue Module
-
-data Module = Module {
-      _moduleNames :: Map Id ReaderValue,
-      _moduleAliases :: [AliasDecl],
-      _moduleIsType :: Bool
-    }
-
-data AliasDecl = Alias Id QId
-               | Open QId
-                 deriving (Show, Eq)
-
-type BuiltInConstraints m = (MonadReader ReadOnlyState m, MonadState EvalState m, MonadError FactorError m)
-
-newtype BuiltIn a = BuiltIn { unBuiltIn :: forall m. BuiltInConstraints m => m a }
-
-makeLenses ''ReadOnlyState
-makeLenses ''Module
-
-readerNames :: Lens' ReadOnlyState (Map Id ReaderValue)
-readerNames = readerModule . moduleNames
-
-newState :: EvalState
-newState = EvalState Stack.empty
-
-newReader :: ReadOnlyState
-newReader = ReadOnlyState emptyModule
-
-emptyModule :: Module
-emptyModule = Module Map.empty [] False
-
-pushStack :: MonadState EvalState m => Stack Data -> m ()
-pushStack xs = modify $ \s -> s { stateStack = Stack.appendStack xs (stateStack s) }
-
-peekStackMaybe :: MonadState EvalState m => Int -> m (Maybe (Stack Data))
-peekStackMaybe n = go <$> gets stateStack
-    where go = fmap fst . Stack.splitStack n
-
-peekStack :: (MonadState EvalState m, MonadError FactorError m) => Int -> m (Stack Data)
-peekStack n = peekStackMaybe n >>= maybe (throwError StackUnderflow) return
-
-popStackMaybe :: MonadState EvalState m => Int -> m (Maybe (Stack Data))
-popStackMaybe n = gets stateStack >>= go
-    where go ss = case Stack.splitStack n ss of
-                    Nothing -> pure Nothing
-                    Just (a, b) -> Just a <$ modify (\s -> s { stateStack = b })
-
-popStack :: (MonadState EvalState m, MonadError FactorError m) => Int -> m (Stack Data)
-popStack n = popStackMaybe n >>= maybe (throwError StackUnderflow) return
 
 declsToReadOnly :: MonadError FactorError m =>
                    QId -> [Declaration] -> Module -> m Module

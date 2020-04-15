@@ -56,3 +56,20 @@ end
 ** Arrays
   + Don't forget that we still don't have arrays. Need to decide on
     the syntax and lots of stuff for those.
+* TRAITS AND MODULE PARAMETERS PLAN
+ 1. [ ] Module synonyms that are exported
+ 2. [ ] All types are modules
+    + [ ] Primitive types are modules
+    + [ ] Function types are modules
+ 3. [ ] Traits
+    + [ ] New declaration
+    + [ ] New ~ReaderValue~ possibility
+    + [ ] A way to verify that a module satisfies a trait
+    + [ ] Syntactic assertion, i.e. ~require~
+    + [ ] Traits are modules (??)
+ 4. [ ] Parameterized traits
+    + [ ] Parameterization
+    + [ ] Syntax: ~require~ and ~trait~ declarations can take parameters
+ 5. [ ] Parameterized modules
+    + [ ] Parameterization
+ 6. [ ] Functions can take module arguments

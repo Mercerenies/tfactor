@@ -6,6 +6,7 @@ import Factor.Parser
 import Factor.Parser.Token
 import Factor.Eval
 import Factor.State
+import Factor.State.Stack
 import Factor.State.Alias
 import Factor.Error
 import Factor.Id
