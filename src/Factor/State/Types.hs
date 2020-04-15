@@ -1,6 +1,6 @@
 {-# LANGUAGE FlexibleContexts, ConstraintKinds, RankNTypes, TemplateHaskell #-}
 
-module Factor.State.Types(EvalState(..), ReadOnlyState(ReadOnlyState), ReaderValue(..),
+module Factor.State.Types(EvalState(..), ReadOnlyState(ReadOnlyState), ReaderValue(..), RId,
                           Module(Module), AliasDecl(..), BuiltIn(..), BuiltInConstraints,
                           ResourceTable(..),
                           readerModule, readerNames, moduleNames, moduleAliases, moduleIsType,
@@ -50,6 +50,8 @@ type BuiltInConstraints m = (MonadReader ReadOnlyState m, MonadState EvalState m
 newtype BuiltIn a = BuiltIn { unBuiltIn :: forall m. BuiltInConstraints m => m a }
 
 newtype ResourceTable = ResourceTable (Seq ReaderValue)
+
+type RId = Int
 
 makeLenses ''ReadOnlyState
 makeLenses ''Module

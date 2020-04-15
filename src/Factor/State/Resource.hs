@@ -1,6 +1,6 @@
 {-# LANGUAGE FlexibleContexts #-}
 
-module Factor.State.Resource(ResourceTable(..), newResourceTable,
+module Factor.State.Resource(ResourceTable(..), RId, newResourceTable,
                              appendResource, getResource, getResource') where
 
 import Factor.State.Types
@@ -9,8 +9,6 @@ import Factor.Error
 import Data.Sequence(Seq(..), (!?))
 import qualified Data.Sequence as Seq
 import Control.Monad.Except
-
-type RId = Int
 
 appendResource :: ReaderValue -> ResourceTable -> (RId, ResourceTable)
 appendResource value (ResourceTable table) =
