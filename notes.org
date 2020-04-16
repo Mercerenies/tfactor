@@ -57,19 +57,20 @@ end
   + Don't forget that we still don't have arrays. Need to decide on
     the syntax and lots of stuff for those.
 * TRAITS AND MODULE PARAMETERS PLAN
- 1. [ ] Module synonyms that are exported
- 2. [ ] All types are modules
+ 1. [X] ~ResourceTable~ transition
+ 2. [ ] Module synonyms that are exported
+ 3. [ ] All types are modules
     + [ ] Primitive types are modules
     + [ ] Function types are modules
- 3. [ ] Traits
+ 4. [ ] Traits
     + [ ] New declaration
     + [ ] New ~ReaderValue~ possibility
     + [ ] A way to verify that a module satisfies a trait
     + [ ] Syntactic assertion, i.e. ~require~
     + [ ] Traits are modules (??)
- 4. [ ] Parameterized traits
+ 5. [ ] Parameterized traits
     + [ ] Parameterization
     + [ ] Syntax: ~require~ and ~trait~ declarations can take parameters
- 5. [ ] Parameterized modules
+ 6. [ ] Parameterized modules
     + [ ] Parameterization
- 6. [ ] Functions can take module arguments
+ 7. [ ] Functions can take module arguments
