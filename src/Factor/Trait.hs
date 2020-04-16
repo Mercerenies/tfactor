@@ -32,20 +32,20 @@ moduleSatisfies reader (Trait reqs0) m0 = mapM_ (go (QId []) m0) reqs0
               let qid' = qid <> QId [v]
                   value = (m^.moduleNames.possibly (ix v)) >>= (\rid -> reader^.readerResources.possibly (ix rid))
               in case info of
-                   TraitFunction (PolyFunctionType _ reqtype) -> do
+                   TraitFunction (PolyFunctionType r reqtype) -> do
                              value' <- requireExists qid' info value
                              case value' of
                                UDFunction (PolyFunctionType _ decltype) _ ->
-                                   requireSubtype qid' info (FunType decltype) (FunType reqtype)
+                                   requireSubtype qid' info (FunType decltype) (toGround r $ FunType reqtype)
                                BIFunction (PolyFunctionType _ decltype) _ ->
-                                   requireSubtype qid' info (FunType decltype) (FunType reqtype)
+                                   requireSubtype qid' info (FunType decltype) (toGround r $ FunType reqtype)
                                _ -> throwError (MissingFromTrait qid' info)
-                   TraitMacro (PolyFunctionType _ reqtype) -> do
+                   TraitMacro (PolyFunctionType r reqtype) -> do
                              value' <- requireExists qid' info value
                              case value' of
                                UDMacro (PolyFunctionType _ decltype) _ -> -- TODO Support BIMacro here,
                                                                           -- once we write that
-                                   requireSubtype qid' info (FunType decltype) (FunType reqtype)
+                                   requireSubtype qid' info (FunType decltype) (toGround r $ FunType reqtype)
                                _ -> throwError (MissingFromTrait qid' info)
                    TraitModule reqs -> do
                              value' <- requireExists qid' info value

@@ -51,7 +51,7 @@ mod OuterModule
   require HasInnerModule
 
   mod Inner
-    fun foo ( Int -- Int ) end
+    fun foo ( 'a -- 'a ) id end
   end
 
 end
