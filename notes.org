@@ -66,8 +66,8 @@ end
  4. [-] Traits
     + [X] New declaration
     + [X] New ~ReaderValue~ possibility
-    + [ ] A way to verify that a module satisfies a trait
-    + [ ] Syntactic assertion, i.e. ~require~
+    + [X] A way to verify that a module satisfies a trait
+    + [X] Syntactic assertion, i.e. ~require~
     + [ ] Traits are modules (??)
     + [ ] Alternatively, trait synonyms (??)
     + [ ] Trait includes
