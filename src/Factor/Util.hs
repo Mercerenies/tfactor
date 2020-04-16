@@ -1,13 +1,17 @@
+{-# LANGUAGE RankNTypes #-}
 
-module Factor.Util(sepBy, padLeft, foldM1, insertOrUpdate, errorToMaybe, setFilterMap) where
+module Factor.Util(sepBy, padLeft, foldM1, insertOrUpdate, errorToMaybe, setFilterMap,
+                   possibly, possibly') where
 
 import Control.Monad
 import Control.Monad.Except
+import Control.Lens
 import Data.Map(Map)
 import qualified Data.Map as Map
 import Data.Set(Set)
 import qualified Data.Set as Set
 import Data.Maybe
+import Data.Monoid
 
 sepBy :: Foldable t => ShowS -> t ShowS -> ShowS
 sepBy delim = maybe id id . foldr go Nothing
@@ -32,3 +36,9 @@ errorToMaybe a = catchError (fmap Just a) (const (pure Nothing))
 
 setFilterMap :: Ord b => (a -> Maybe b) -> Set a -> Set b
 setFilterMap f = Set.map fromJust . Set.delete Nothing . Set.map f
+
+possibly :: Traversal' s a -> Getter s (Maybe a)
+possibly t = possibly' (First . Just) t . to getFirst
+
+possibly' :: Monoid b => (a -> b) -> Traversal' s a -> Getter s b
+possibly' f t = to $ getConst . t (Const . f)

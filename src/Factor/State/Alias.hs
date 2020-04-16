@@ -102,6 +102,7 @@ resolveAliasesResource m (UDMacro t (Macro v ss)) = do
   t' <- resolveAliasesPolyFnType m t
   return $ UDMacro t' (Macro v ss')
 resolveAliasesResource _ (ModuleValue inner) = pure (ModuleValue inner)
+resolveAliasesResource m (ModuleSynonym qid) = ModuleSynonym <$> resolveAlias m qid
 
 resolveAliasesResource' :: (MonadError FactorError m, MonadReader ReadOnlyState m) =>
                            Map Id Alias -> QId -> ReaderValue -> m ReaderValue

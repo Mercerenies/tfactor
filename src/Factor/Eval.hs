@@ -51,3 +51,4 @@ callFunction v = ask >>= lookupFn v >>= go
           go (BIFunction _ (BuiltIn f)) = f
           go (UDMacro _ _) = throwError NotAFunction
           go (ModuleValue _) = throwError NotAFunction
+          go (ModuleSynonym _) = throwError NotAFunction

@@ -182,7 +182,8 @@ allNamesInModule resources k0 = fold . Map.mapWithKey go' . view moduleNames
                                  BIFunction {} -> []
                                  UDMacro {} -> []
                                  ModuleValue m' -> allNamesInModule resources k m'
-              in k : innernames
+                                 ModuleSynonym {} -> [] -- Can't look them up yet, as the
+              in k : innernames                         -- synonym hasn't been resolved.
           go' :: Id -> RId -> [QId]
           go' k v = case getResource v resources of
                       Nothing -> []
@@ -191,17 +192,23 @@ allNamesInModule resources k0 = fold . Map.mapWithKey go' . view moduleNames
 allNames :: ReadOnlyState -> [QId]
 allNames reader = allNamesInModule (reader^.readerResources) (QId []) (reader^.readerModule)
 
+-- TODO Internally combine these into one function, since they're
+-- mutually exclusive, then provide the same public API in a more
+-- consolidated way.
+
 readerFunctionType :: ReaderValue -> Maybe PolyFunctionType
 readerFunctionType (UDFunction t _) = Just t
 readerFunctionType (BIFunction t _) = Just t
 readerFunctionType (UDMacro _ _) = Nothing
 readerFunctionType (ModuleValue _) = Nothing
+readerFunctionType (ModuleSynonym _) = Nothing
 
 readerMacroType :: ReaderValue -> Maybe PolyFunctionType
 readerMacroType (UDFunction _ _) = Nothing
 readerMacroType (BIFunction _ _) = Nothing
 readerMacroType (UDMacro t _) = Just t
 readerMacroType (ModuleValue _) = Nothing
+readerMacroType (ModuleSynonym _) = Nothing
 
 merge :: MonadError FactorError m => ReadOnlyState -> ReadOnlyState -> m ReadOnlyState
 merge (ReadOnlyState (Module m a t) r) (ReadOnlyState (Module m' a' t') r') =

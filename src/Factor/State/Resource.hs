@@ -68,6 +68,7 @@ modifyRIds f (ResourceTable table) = ResourceTable $ fmap (over _2 go) table
           go (UDFunction t g) = UDFunction t g
           go (BIFunction t g) = BIFunction t g
           go (UDMacro t m) = UDMacro t m
+          go (ModuleSynonym q) = ModuleSynonym q
 
 traverseWithQId :: Applicative f => ((QId, a) -> f b) -> ResourceTable a -> f (ResourceTable b)
 traverseWithQId f (ResourceTable table) =

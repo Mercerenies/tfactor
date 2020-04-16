@@ -37,6 +37,7 @@ data ReaderValue = UDFunction PolyFunctionType Function -- User-defined function
                  | BIFunction PolyFunctionType (BuiltIn ()) -- Built-in function
                  | UDMacro PolyFunctionType Macro -- User-defined macro
                  | ModuleValue Module
+                 | ModuleSynonym QId
 
 data Module = Module {
       _moduleNames :: Map Id RId,
