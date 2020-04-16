@@ -9,3 +9,5 @@ end
 #fun tri-me ( 'S 'a ( 'S 'a -- 'T ) ( 'T 'a -- 'U ) ( 'U 'a -- 'V ) -- 'V )
 #  [ keep ] dip2 [ keep ] dip call
 #end
+
+fun main ( -- ) end
