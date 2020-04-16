@@ -5,7 +5,7 @@ module Factor.State(ReadOnlyState(ReadOnlyState), ReaderValue(..),
                     readerModule, readerNames, readerResources,
                     moduleNames, moduleAliases, moduleIsType,
                     newReader, emptyModule,
-                    declsToReadOnly, atQIdResource, atQId, lookupFn,
+                    declsToReadOnly, atQIdResource, atQId, lookupFn, lookupFnName,
                     allNamesInModule, allNames,
                     readerFunctionType, readerMacroType,
                     merge, mapToReader) where
@@ -169,13 +169,25 @@ atQId (QId xs0) f r0 = go xs0 (r0^.readerNames)
 -- error may not be right.
 lookupFn :: MonadError FactorError m => QId -> ReadOnlyState -> m ReaderValue
 lookupFn (QId ids) reader =
-  -- Lookup the top-level name in the alias table first.
   let go (ModuleValue names) i =
           case (names^.moduleNames.at i) >>= flip getResource (reader^.readerResources) of
             Nothing -> throwError $ NoSuchFunction (QId ids)
             Just x -> pure x
       go _ _ = throwError $ NoSuchModule (QId ids)
   in foldM go (ModuleValue $ view readerModule reader) ids
+
+lookupFnName :: MonadError FactorError m => QId -> ReadOnlyState -> m QId
+lookupFnName (QId ids) reader =
+  let go (ModuleValue names) [i] =
+          case (names^.moduleNames.at i) >>= flip getResourceName (reader^.readerResources) of
+            Nothing -> throwError $ NoSuchFunction (QId ids)
+            Just x -> pure x
+      go (ModuleValue names) (i:is) =
+          case (names^.moduleNames.at i) >>= flip getResource (reader^.readerResources) of
+            Nothing -> throwError $ NoSuchFunction (QId ids)
+            Just x -> go x is
+      go _ _ = throwError $ NoSuchModule (QId ids)
+  in go (ModuleValue $ view readerModule reader) ids
 
 allNamesInModule :: ResourceTable ReaderValue -> QId -> Module -> [QId]
 allNamesInModule resources k0 = fold . Map.mapWithKey go' . view moduleNames
