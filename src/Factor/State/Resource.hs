@@ -6,6 +6,11 @@ module Factor.State.Resource(ResourceTable(..), RId, newResourceTable,
                              defineResource, resourceCount, catResources,
                              modifyRIds, traverseWithQId, mapWithQId) where
 
+-- TODO Should we give the top-level module a place in the resource
+-- table? It may make merging modules more of a pain, since the merge
+-- operation at the top-level is nontrivial whereas for all other
+-- modules it's a simple error.
+
 import Factor.State.Types
 import Factor.Error
 import Factor.Id
@@ -69,6 +74,7 @@ modifyRIds f (ResourceTable table) = ResourceTable $ fmap (over _2 go) table
           go (BIFunction t g) = BIFunction t g
           go (UDMacro t m) = UDMacro t m
           go (ModuleSynonym q) = ModuleSynonym q
+          go (TraitValue t) = TraitValue t
 
 traverseWithQId :: Applicative f => ((QId, a) -> f b) -> ResourceTable a -> f (ResourceTable b)
 traverseWithQId f (ResourceTable table) =

@@ -6,6 +6,7 @@ import Factor.Type
 import Factor.State
 import qualified Factor.Stack as Stack
 import Factor.Error
+import Factor.Trait.Types
 import Factor.Id
 
 import Control.Monad.Reader
@@ -28,12 +29,21 @@ normalizePolyFnType (PolyFunctionType names (FunctionType (StackDesc args a) (St
   Stack.FromTop rets' <- traverse normalizeType (Stack.FromTop rets)
   return $ PolyFunctionType names (FunctionType (StackDesc args' a) (StackDesc rets' r))
 
+normalizeTypesTrait :: (MonadReader ReadOnlyState m, MonadError FactorError m) =>
+                       TraitInfo -> m TraitInfo
+normalizeTypesTrait (TraitFunction p) = TraitFunction <$> normalizePolyFnType p
+normalizeTypesTrait (TraitMacro p) = TraitMacro <$> normalizePolyFnType p
+normalizeTypesTrait (TraitModule xs) =
+    TraitModule <$> mapM (\(i, t) -> ((,) i) <$> normalizeTypesTrait t) xs
+
 normalizeTypesRes :: (MonadReader ReadOnlyState m, MonadError FactorError m) => ReaderValue -> m ReaderValue
 normalizeTypesRes (UDFunction t f) = UDFunction <$> normalizePolyFnType t <*> pure f
 normalizeTypesRes (BIFunction t f) = BIFunction <$> normalizePolyFnType t <*> pure f
 normalizeTypesRes (UDMacro t f) = UDMacro <$> normalizePolyFnType t <*> pure f
 normalizeTypesRes (ModuleValue v) = pure $ ModuleValue v
 normalizeTypesRes (ModuleSynonym v) = pure $ ModuleSynonym v
+normalizeTypesRes (TraitValue (Trait xs)) =
+    TraitValue . Trait <$> mapM (\(i, t) -> ((,) i) <$> normalizeTypesTrait t) xs
 
 normalizeTypesAt :: MonadError FactorError m => QId -> ReadOnlyState -> m ReadOnlyState
 normalizeTypesAt qid r = traverseOf (atQId qid) (\v -> runReaderT (normalizeTypesRes v) r) r

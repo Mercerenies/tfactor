@@ -5,6 +5,7 @@ module Factor.Code(Function(..), Macro(..), Data(..), Statement(..),
 
 import Factor.Id
 import Factor.Type
+import Factor.Trait.Types
 
 import Data.Ix
 import Data.Array.IArray
@@ -37,6 +38,7 @@ data Declaration = FunctionDecl PolyFunctionType Function
                  | ModuleDecl Id [Declaration]
                  | ModuleSyn Id QId
                  | RecordDecl Id [RecordInfo]
+                 | TraitDecl Id Trait
                  | AliasDecl Id QId
                  | OpenDecl QId
                    deriving (Show, Eq)

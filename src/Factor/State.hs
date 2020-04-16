@@ -64,6 +64,11 @@ declsToReadOnly qid ds r = foldM go r ds
                           inner <- expandRecordDecl qid' def emptyModule
                           let inner' = set moduleIsType True inner
                           traverseOf moduleNames (defineModule qid' v inner') reader
+                TraitDecl v def
+                 | Map.member v (reader^.moduleNames) -> throwError (DuplicateDecl v)
+                 | otherwise ->
+                     let qid' = qid <> QId [v]
+                     in traverseOf moduleNames (defineResource qid' v (TraitValue def)) reader
                 AliasDecl i j -> pure $ over moduleAliases (++ [Alias i j]) reader
                 OpenDecl j -> pure $ over moduleAliases (++ [Open j]) reader
 
@@ -200,7 +205,9 @@ allNamesInModule resources k0 = fold . Map.mapWithKey go' . view moduleNames
                                  UDMacro {} -> []
                                  ModuleValue m' -> allNamesInModule resources k m'
                                  ModuleSynonym {} -> [] -- Can't look them up yet, as the
-              in k : innernames                         -- synonym hasn't been resolved.
+                                                        -- synonym hasn't been resolved.
+                                 TraitValue {} -> []
+              in k : innernames
           go' :: Id -> RId -> [QId]
           go' k v = case getResource v resources of
                       Nothing -> []
@@ -219,6 +226,7 @@ readerFunctionType (BIFunction t _) = Just t
 readerFunctionType (UDMacro _ _) = Nothing
 readerFunctionType (ModuleValue _) = Nothing
 readerFunctionType (ModuleSynonym _) = Nothing
+readerFunctionType (TraitValue _) = Nothing
 
 readerMacroType :: ReaderValue -> Maybe PolyFunctionType
 readerMacroType (UDFunction _ _) = Nothing
@@ -226,6 +234,7 @@ readerMacroType (BIFunction _ _) = Nothing
 readerMacroType (UDMacro t _) = Just t
 readerMacroType (ModuleValue _) = Nothing
 readerMacroType (ModuleSynonym _) = Nothing
+readerMacroType (TraitValue _) = Nothing
 
 merge :: MonadError FactorError m => ReadOnlyState -> ReadOnlyState -> m ReadOnlyState
 merge (ReadOnlyState (Module m a t) r) (ReadOnlyState (Module m' a' t') r') =

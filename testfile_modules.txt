@@ -1,4 +1,8 @@
 
+trait KnowsTheAnswer
+  val the-answer ( -- Int )
+end
+
 mod Container
   alias AAA = A
   mod Foo = AAA end

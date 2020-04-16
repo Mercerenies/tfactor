@@ -6,6 +6,7 @@ import Factor.Code
 import Factor.Type hiding (functionType)
 import Factor.Stack(Stack)
 import qualified Factor.Stack as Stack
+import Factor.Trait.Types
 import Factor.Parser.Token
 
 import Text.Parsec hiding (many, (<|>), string, satisfy)
@@ -16,7 +17,7 @@ import Control.Monad
 type Parser = Parsec [Token] ()
 
 keywords :: [String]
-keywords = ["true", "false", "fun", "mod", "end", "macro", "alias", "open", "field", "constructor"]
+keywords = ["true", "false", "fun", "mod", "end", "macro", "alias", "open", "field", "constructor", "val"]
 
 -- (Unused right now)
 _id_ :: Parser Id
@@ -66,6 +67,7 @@ decl = (\(t, s) -> FunctionDecl t s) <$> functionDecl <|>
        (\(t, s) -> MacroDecl t s) <$> macroDecl <|>
        (\(i, j) -> ModuleSyn i j) <$> moduleSyn <|>
        (\(i, m) -> ModuleDecl i m) <$> moduleDecl <|>
+       (\(i, t) -> TraitDecl i t) <$> trait <|>
        (\(i, d) -> RecordDecl i d) <$> recordDecl <|>
        (\(i, j) -> AliasDecl i j) <$> aliasDecl <|>
        (\i -> OpenDecl i) <$> openDecl
@@ -126,6 +128,27 @@ aliasDecl = do
 
 openDecl :: Parser QId
 openDecl = symbol "open" *> qualifiedId
+
+trait :: Parser (Id, Trait)
+trait = symbol "trait" *> ((,) <$> unqualifiedId <*> (Trait <$> many traitInfo)) <* symbol "end"
+
+traitInfo :: Parser (Id, TraitInfo)
+traitInfo = traitInfoFun <|> traitInfoMod
+
+traitInfoFun :: Parser (Id, TraitInfo)
+traitInfoFun = do
+  _ <- symbol "val"
+  name <- unqualifiedId
+  ty <- functionType
+  return (name, TraitFunction $ PolyFunctionType (allQuantVars $ FunType ty) ty)
+
+traitInfoMod :: Parser (Id, TraitInfo)
+traitInfoMod = do
+  _ <- symbol "mod"
+  name <- unqualifiedId
+  inner <- many traitInfo
+  _ <- symbol "end"
+  return (name, TraitModule inner)
 
 namedType :: Parser QId
 namedType = try $ do

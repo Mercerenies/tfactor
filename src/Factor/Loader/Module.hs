@@ -29,6 +29,7 @@ loadModule r = view (readerResources . possibly (ix r)) >>= \case
                    view (possibly $ atQIdResource dest) >>= \case
                         Nothing -> throwError (NoSuchModule dest)
                         Just r' -> pure r'
+               Just (TraitValue {}) -> pure r
 
 loadModuleAt :: MonadError FactorError m => QId -> ReadOnlyState -> m ReadOnlyState
 loadModuleAt qid r = traverseOf (atQIdResource qid) (\v -> runReaderT (loadModule v) r) r
@@ -45,6 +46,7 @@ produceModuleDepGraph qids reader =
                              UDMacro {} -> []
                              ModuleValue {} -> []
                              ModuleSynonym dest -> [(qid, GraphEdge dest)]
+                             TraitValue {} -> []
               in parents ++ others
 
 -- As in Factor.Loader.Graph, we reverse the top sort order since we

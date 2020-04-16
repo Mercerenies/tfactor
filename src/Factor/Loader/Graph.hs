@@ -42,6 +42,7 @@ filterAndClassify qids r = setFilterMap go
                      Right (UDMacro {}) -> Just $ GraphEdge qid StrongDependency
                      Right (ModuleValue {}) -> Just $ GraphEdge qid WeakDependency -- TODO Not sure about this one?
                      Right (ModuleSynonym {}) -> Just $ GraphEdge qid WeakDependency -- Same as ^
+                     Right (TraitValue {}) -> Nothing -- TODO Not sure about this one either?
 
 produceDependencyGraph :: [QId] -> ReadOnlyState -> Graph QId GraphEdge
 produceDependencyGraph qids reader =
@@ -55,6 +56,7 @@ produceDependencyGraph qids reader =
                                      UDMacro _ (Macro _ ss) -> namesToEdges $ findDependenciesSeq ss
                                      ModuleValue {} -> [] -- TODO Right now, modules have no dependencies because they have no load phase
                                      ModuleSynonym {} -> []
+                                     TraitValue {} -> []
                            inner = case v of
                                      ModuleValue m -> fold (Map.mapWithKey (go' k) (m^.moduleNames))
                                      _ -> []

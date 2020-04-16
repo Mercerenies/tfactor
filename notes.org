@@ -63,12 +63,13 @@ end
     + [X] Types need to resolve to canonical names
     + [X] Primitive types are modules
     + [ ] Function types are modules
- 4. [ ] Traits
-    + [ ] New declaration
-    + [ ] New ~ReaderValue~ possibility
+ 4. [-] Traits
+    + [X] New declaration
+    + [X] New ~ReaderValue~ possibility
     + [ ] A way to verify that a module satisfies a trait
     + [ ] Syntactic assertion, i.e. ~require~
     + [ ] Traits are modules (??)
+    + [ ] Alternatively, trait synonyms (??)
  5. [ ] Parameterized traits
     + [ ] Parameterization
     + [ ] Syntax: ~require~ and ~trait~ declarations can take parameters

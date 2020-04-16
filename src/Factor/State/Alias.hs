@@ -10,6 +10,7 @@ import Factor.Code
 import Factor.Names
 import Factor.Type
 import qualified Factor.Stack as Stack
+import Factor.Trait.Types
 
 import Data.Map(Map)
 import qualified Data.Map as Map
@@ -93,6 +94,13 @@ resolveAliasesPolyFnType :: MonadError FactorError m =>
 resolveAliasesPolyFnType m (PolyFunctionType i f) =
     PolyFunctionType i <$> resolveAliasesFnType m f
 
+resolveAliasesTrait :: MonadError FactorError m =>
+                       Map Id Alias -> TraitInfo -> m TraitInfo
+resolveAliasesTrait m (TraitFunction p) = TraitFunction <$> resolveAliasesPolyFnType m p
+resolveAliasesTrait m (TraitMacro p) = TraitMacro <$> resolveAliasesPolyFnType m p
+resolveAliasesTrait m (TraitModule xs) =
+    TraitModule <$> mapM (\(i, t) -> ((,) i) <$> resolveAliasesTrait m t) xs
+
 resolveAliasesResource :: MonadError FactorError m =>
                           Map Id Alias -> ReaderValue -> m ReaderValue
 resolveAliasesResource m (UDFunction t (Function v ss)) = do
@@ -106,6 +114,8 @@ resolveAliasesResource m (UDMacro t (Macro v ss)) = do
   return $ UDMacro t' (Macro v ss')
 resolveAliasesResource _ (ModuleValue inner) = pure (ModuleValue inner)
 resolveAliasesResource m (ModuleSynonym qid) = ModuleSynonym <$> resolveAlias m qid
+resolveAliasesResource m (TraitValue (Trait xs)) =
+    TraitValue . Trait <$> mapM (\(i, t) -> ((,) i) <$> resolveAliasesTrait m t) xs
 
 resolveAliasesResource' :: (MonadError FactorError m, MonadReader ReadOnlyState m) =>
                            Map Id Alias -> QId -> ReaderValue -> m ReaderValue

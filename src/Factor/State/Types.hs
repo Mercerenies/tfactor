@@ -12,6 +12,7 @@ import Factor.Error
 import Factor.Id
 import Factor.Code
 import Factor.Type
+import Factor.Trait.Types
 import Factor.Stack(Stack)
 import qualified Factor.Stack as Stack
 
@@ -38,6 +39,7 @@ data ReaderValue = UDFunction PolyFunctionType Function -- User-defined function
                  | UDMacro PolyFunctionType Macro -- User-defined macro
                  | ModuleValue Module
                  | ModuleSynonym QId
+                 | TraitValue Trait
 
 data Module = Module {
       _moduleNames :: Map Id RId,
