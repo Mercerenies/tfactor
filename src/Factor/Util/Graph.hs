@@ -42,7 +42,7 @@ emptyGraph vs = fromEdges vs []
 
 fromEdges :: Ord v => [v] -> [(v, e)] -> (e -> v) -> Graph v e
 fromEdges vs es inc = Graph (Map.fromList [(v, edgesFor v) | v <- vs]) inc
-    where edgesFor v = map snd $ filter (\(v', _) -> v == v') es
+    where edgesFor v = map snd $ filter (\(v', e) -> v == v' && inc e `elem` vs) es
 
 allVertices :: Graph v e -> [v]
 allVertices (Graph adja _) = Map.keys adja
