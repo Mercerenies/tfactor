@@ -9,6 +9,7 @@ mod Container
 end
 
 mod A
+  require KnowsTheAnswer
 
   fun the-answer ( -- Int )
     42
@@ -23,6 +24,37 @@ alias Con = Container
 # Should produce a cyclic load error
 # mod C = D end
 # mod D = C end
+
+# Should produce failed trait requirement
+# mod E require KnowsTheAnswer end
+# mod F require KnowsTheAnswer fun the-answer ( -- String ) "A" end end
+
+mod KindaKnowsTheAnswer
+  require KnowsTheAnswer
+
+  # This is still technically fine, though silly
+  fun the-answer ( -- Nothing )
+    42 Primitives.unsafe1
+  end
+
+end
+
+trait HasInnerModule
+
+  mod Inner
+    val foo ( 'a -- 'a )
+  end
+
+end
+
+mod OuterModule
+  require HasInnerModule
+
+  mod Inner
+    fun foo ( Int -- Int ) end
+  end
+
+end
 
 fun main ( -- Int )
   Con.Foo.the-answer

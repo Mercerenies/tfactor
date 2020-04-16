@@ -101,6 +101,10 @@ resolveAliasesTrait m (TraitMacro p) = TraitMacro <$> resolveAliasesPolyFnType m
 resolveAliasesTrait m (TraitModule xs) =
     TraitModule <$> mapM (\(i, t) -> ((,) i) <$> resolveAliasesTrait m t) xs
 
+resolveAliasesAssert :: MonadError FactorError m =>
+                        Map Id Alias -> ModuleAssert -> m ModuleAssert
+resolveAliasesAssert m (AssertTrait qid) = AssertTrait <$> resolveAlias m qid
+
 resolveAliasesResource :: MonadError FactorError m =>
                           Map Id Alias -> ReaderValue -> m ReaderValue
 resolveAliasesResource m (UDFunction t (Function v ss)) = do
@@ -112,7 +116,8 @@ resolveAliasesResource m (UDMacro t (Macro v ss)) = do
   ss' <- resolveAliasesSeq m ss
   t' <- resolveAliasesPolyFnType m t
   return $ UDMacro t' (Macro v ss')
-resolveAliasesResource _ (ModuleValue inner) = pure (ModuleValue inner)
+resolveAliasesResource m (ModuleValue inner) =
+    ModuleValue <$> traverseOf (moduleAssertions.traverse) (resolveAliasesAssert m) inner
 resolveAliasesResource m (ModuleSynonym qid) = ModuleSynonym <$> resolveAlias m qid
 resolveAliasesResource m (TraitValue (Trait xs)) =
     TraitValue . Trait <$> mapM (\(i, t) -> ((,) i) <$> resolveAliasesTrait m t) xs

@@ -17,7 +17,8 @@ import Control.Monad
 type Parser = Parsec [Token] ()
 
 keywords :: [String]
-keywords = ["true", "false", "fun", "mod", "end", "macro", "alias", "open", "field", "constructor", "val"]
+keywords = ["true", "false", "fun", "mod", "end", "macro", "alias", "open",
+            "field", "constructor", "val", "require"]
 
 -- (Unused right now)
 _id_ :: Parser Id
@@ -70,7 +71,8 @@ decl = (\(t, s) -> FunctionDecl t s) <$> functionDecl <|>
        (\(i, t) -> TraitDecl i t) <$> trait <|>
        (\(i, d) -> RecordDecl i d) <$> recordDecl <|>
        (\(i, j) -> AliasDecl i j) <$> aliasDecl <|>
-       (\i -> OpenDecl i) <$> openDecl
+       (\i -> OpenDecl i) <$> openDecl <|>
+       (\i -> RequireDecl i) <$> requireDecl
 
 functionDecl :: Parser (PolyFunctionType, Function)
 functionDecl = do
@@ -128,6 +130,9 @@ aliasDecl = do
 
 openDecl :: Parser QId
 openDecl = symbol "open" *> qualifiedId
+
+requireDecl :: Parser QId
+requireDecl = symbol "require" *> qualifiedId
 
 trait :: Parser (Id, Trait)
 trait = symbol "trait" *> ((,) <$> unqualifiedId <*> (Trait <$> many traitInfo)) <* symbol "end"

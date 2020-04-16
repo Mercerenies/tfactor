@@ -3,7 +3,7 @@
 module Factor.State(ReadOnlyState(ReadOnlyState), ReaderValue(..),
                     Module(Module), AliasDecl(..), ModuleAssert(..),
                     readerModule, readerNames, readerResources,
-                    moduleNames, moduleAliases, moduleIsType,
+                    moduleNames, moduleAliases, moduleIsType, moduleAssertions,
                     newReader, emptyModule, mapToModule,
                     declsToReadOnly, atQIdResource, atQId, lookupFn, lookupFnName,
                     allNamesInModule, allNames,
