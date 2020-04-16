@@ -1,7 +1,7 @@
 {-# LANGUAGE FlexibleContexts, ViewPatterns, KindSignatures, RankNTypes, TypeFamilies, ScopedTypeVariables #-}
 
 module Factor.State(ReadOnlyState(ReadOnlyState), ReaderValue(..),
-                    Module(Module), AliasDecl(..),
+                    Module(Module), AliasDecl(..), ModuleAssert(..),
                     readerModule, readerNames, readerResources,
                     moduleNames, moduleAliases, moduleIsType,
                     newReader, emptyModule, mapToModule,
@@ -71,6 +71,7 @@ declsToReadOnly qid ds r = foldM go r ds
                      in traverseOf moduleNames (defineResource qid' v (TraitValue def)) reader
                 AliasDecl i j -> pure $ over moduleAliases (++ [Alias i j]) reader
                 OpenDecl j -> pure $ over moduleAliases (++ [Open j]) reader
+                RequireDecl j -> pure $ over moduleAssertions (++ [AssertTrait j]) reader
 
 defineFunction :: MonadState (ResourceTable ReaderValue) m =>
                   QId -> Id -> PolyFunctionType -> Sequence -> Map Id RId -> m (Map Id RId)
