@@ -176,14 +176,17 @@ polyFn args arg rets ret =
     let fn = functionType args (RestQuant arg) rets (RestQuant ret)
     in BIFunction (PolyFunctionType (allQuantVars $ FunType fn) fn)
 
+emptyTypeModule :: Module
+emptyTypeModule = set moduleIsType True emptyModule
+
 builtins :: Map Id ReaderValue
 builtins = Map.fromList [
-            ("Int", ModuleValue (Module Map.empty [] True)),
-            ("Any", ModuleValue (Module Map.empty [] True)),
-            ("Nothing", ModuleValue (Module Map.empty [] True)),
-            ("Bool", ModuleValue (Module Map.empty [] True)),
-            ("String", ModuleValue (Module Map.empty [] True)),
-            ("Symbol", ModuleValue (Module Map.empty [] True)),
+            ("Int", ModuleValue emptyTypeModule),
+            ("Any", ModuleValue emptyTypeModule),
+            ("Nothing", ModuleValue emptyTypeModule),
+            ("Bool", ModuleValue emptyTypeModule),
+            ("String", ModuleValue emptyTypeModule),
+            ("Symbol", ModuleValue emptyTypeModule),
             ("drop", polyFn [TAny] "R" [] "R" drop_),
             ("dup", polyFn [QuantVar "a"] "R" [QuantVar "a", QuantVar "a"] "R" dup),
             ("over", polyFn [QuantVar "b", QuantVar "a"] "R" [QuantVar "a", QuantVar "b", QuantVar "a"] "R" over_),
@@ -217,11 +220,11 @@ bindPrimitives reader =
     let go m (k, v) = defineResource (QId [primitivesModuleName, k]) k v m
         (modl, table) = flip runState newResourceTable $ do
                           bindings <- foldM go Map.empty $ Map.toList builtins
-                          let prim = Module bindings [] False
+                          let prim = mapToModule bindings
                           outer <- defineResource (QId [primitivesModuleName]) primitivesModuleName
                                    (ModuleValue prim) Map.empty
                           return outer
-        reader' = ReadOnlyState (Module modl [] False) table
+        reader' = ReadOnlyState (mapToModule modl) table
     in reader `merge` reader'
 
 loadPreludeImpl :: (MonadError FactorError m, MonadIO m) => m ReadOnlyState

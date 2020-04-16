@@ -4,7 +4,7 @@ module Factor.State(ReadOnlyState(ReadOnlyState), ReaderValue(..),
                     Module(Module), AliasDecl(..),
                     readerModule, readerNames, readerResources,
                     moduleNames, moduleAliases, moduleIsType,
-                    newReader, emptyModule,
+                    newReader, emptyModule, mapToModule,
                     declsToReadOnly, atQIdResource, atQId, lookupFn, lookupFnName,
                     allNamesInModule, allNames,
                     readerFunctionType, readerMacroType,
@@ -237,8 +237,8 @@ readerMacroType (ModuleSynonym _) = Nothing
 readerMacroType (TraitValue _) = Nothing
 
 merge :: MonadError FactorError m => ReadOnlyState -> ReadOnlyState -> m ReadOnlyState
-merge (ReadOnlyState (Module m a t) r) (ReadOnlyState (Module m' a' t') r') =
-    ReadOnlyState <$> (Module <$> merged <*> pure (a ++ a') <*> pure (t || t')) <*> pure rtable
+merge (ReadOnlyState (Module m a t as) r) (ReadOnlyState (Module m' a' t' as') r') =
+    ReadOnlyState <$> (Module <$> merged <*> pure (a ++ a') <*> pure (t || t') <*> pure (as ++ as')) <*> pure rtable
         where failure = Merge.zipWithAMatched $ \k _ _ -> throwError (DuplicateDecl k)
               renamedm = fmap (+ resourceCount r) m'
               renamedr = modifyRIds (+ resourceCount r) r'
@@ -246,6 +246,6 @@ merge (ReadOnlyState (Module m a t) r) (ReadOnlyState (Module m' a' t') r') =
               rtable = r `catResources` renamedr
 
 mapToReader :: Map Id ReaderValue -> ReadOnlyState
-mapToReader m = ReadOnlyState (Module modl [] False) resources
+mapToReader m = ReadOnlyState (mapToModule modl) resources
     where (modl, resources) = runState (Map.traverseWithKey go m) newResourceTable
           go k v = appendResource' (QId [k]) v

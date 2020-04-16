@@ -5,8 +5,8 @@ module Factor.State.Types(EvalState(..), ReadOnlyState(ReadOnlyState), ReaderVal
                           Module(Module), AliasDecl(..), BuiltIn(..), BuiltInConstraints,
                           ResourceTable(..),
                           readerModule, readerNames, readerResources,
-                          moduleNames, moduleAliases, moduleIsType,
-                          newState, newReader, emptyModule, newResourceTable) where
+                          moduleNames, moduleAliases, moduleIsType, moduleAssertions,
+                          newState, newReader, emptyModule, mapToModule, newResourceTable) where
 
 import Factor.Error
 import Factor.Id
@@ -44,12 +44,16 @@ data ReaderValue = UDFunction PolyFunctionType Function -- User-defined function
 data Module = Module {
       _moduleNames :: Map Id RId,
       _moduleAliases :: [AliasDecl],
-      _moduleIsType :: Bool
+      _moduleIsType :: Bool,
+      _moduleAssertions :: [ModuleAssert]
     }
 
 data AliasDecl = Alias Id QId
                | Open QId
                  deriving (Show, Eq)
+
+data ModuleAssert = AssertTrait QId
+                    deriving (Show, Eq)
 
 type BuiltInConstraints m = (MonadReader ReadOnlyState m, MonadState EvalState m, MonadError FactorError m)
 
@@ -79,7 +83,10 @@ newReader :: ReadOnlyState
 newReader = ReadOnlyState emptyModule newResourceTable
 
 emptyModule :: Module
-emptyModule = Module Map.empty [] False
+emptyModule = Module Map.empty [] False []
+
+mapToModule :: Map Id RId -> Module
+mapToModule m = Module m [] False []
 
 newResourceTable :: ResourceTable a
 newResourceTable = ResourceTable Seq.Empty
