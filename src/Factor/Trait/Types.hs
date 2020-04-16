@@ -14,3 +14,7 @@ data TraitInfo = TraitFunction PolyFunctionType
                | TraitMacro PolyFunctionType
                | TraitModule [(Id, TraitInfo)]
                  deriving (Show, Eq)
+
+data UnsatisfiedTrait = MissingFromTrait QId TraitInfo
+                      | IncompatibleWithTrait QId TraitInfo
+                        deriving (Show, Eq)

@@ -8,6 +8,7 @@ import Factor.Id
 import Factor.Type.Error
 import Factor.Type
 import Factor.Code
+import Factor.Trait.Types
 
 import Text.Parsec(ParseError)
 import Control.Monad.Except
@@ -35,6 +36,7 @@ data FactorError = NoSuchFunction QId
                  | AmbiguousName Id [QId]
                  | MacroRecursionLimit Sequence
                  | LoadCycle [QId]
+                 | TraitError UnsatisfiedTrait
                    deriving (Eq)
 
 instance Show FactorError where
@@ -59,6 +61,10 @@ instance Show FactorError where
               ("Macro recursion limit" ++) -- TODO We don't use the argument right now
           LoadCycle ids ->
               ("Cyclic load error " ++) . shows ids
+          TraitError (MissingFromTrait qid info) ->
+              ("Trait requires " ++) . shows info . (" at " ++) . shows qid . (" (missing)" ++)
+          TraitError (IncompatibleWithTrait qid info) ->
+              ("Trait requires " ++) . shows info . (" at " ++) . shows qid . (" (type is incompatible)" ++)
 
 instance FromTypeError FactorError where
     fromTypeError = TypeError
