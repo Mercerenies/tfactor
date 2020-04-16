@@ -71,7 +71,7 @@ liftTypeError = liftEither . left TypeError
 
 assertBool :: MonadError FactorError m => Data -> m Bool
 assertBool (Bool x) = pure x
-assertBool v = throwError (RuntimeTypeError v (PrimType TBool))
+assertBool v = throwError (RuntimeTypeError v TBool)
 
 assertFunction :: MonadError FactorError m => Data -> m Function
 assertFunction (FunctionValue x) = pure x
@@ -79,11 +79,11 @@ assertFunction _ = throwError NotAFunction
 
 assertInt :: MonadError FactorError m => Data -> m Integer
 assertInt (Int x) = pure x
-assertInt v = throwError (RuntimeTypeError v (PrimType TInt))
+assertInt v = throwError (RuntimeTypeError v TInt)
 
 assertString :: MonadError FactorError m => Data -> m String
 assertString (String x) = pure x
-assertString v = throwError (RuntimeTypeError v (PrimType TString))
+assertString v = throwError (RuntimeTypeError v TString)
 
 assertRecord :: MonadError FactorError m => Data -> m (QId, Array Int Data)
 assertRecord (RecordInstance qid arr) = pure (qid, arr)

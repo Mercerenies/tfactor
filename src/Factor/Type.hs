@@ -1,6 +1,8 @@
+{-# LANGUAGE PatternSynonyms, ViewPatterns #-}
 
-module Factor.Type(Type(..), PolyFunctionType(..), FunctionType(..),
-                   StackDesc(..), RestVar(..), PrimType(..),
+module Factor.Type(Type(.., TInt, TAny, TNothing, TBool, TString, TSymbol),
+                   PolyFunctionType(..), FunctionType(..),
+                   StackDesc(..), RestVar(..),
                    emptyFnType, emptyPolyFnType, functionType, polyFunctionType,
                    liftFnType, quantifiedVars, underlyingFnType,
                    substitute, substituteUntilDone, substituteStack, substituteStackUntilDone,
@@ -11,16 +13,17 @@ module Factor.Type(Type(..), PolyFunctionType(..), FunctionType(..),
 import Factor.Id
 import Factor.Stack(Stack, FromTop(..))
 import qualified Factor.Stack as Stack
+import Factor.Names
 
 import Data.Map(Map)
 import qualified Data.Map as Map
 --import Data.Set(Set)
 import qualified Data.Set as Set
+import Control.Monad
 
 -- Note: Quantified variables can be specialized. Ground variables are
 -- ground and only unify with identical variables.
-data Type = PrimType PrimType
-          | FunType FunctionType
+data Type = FunType FunctionType
           | NamedType QId
           | GroundVar Id
           | QuantVar Id
@@ -39,18 +42,29 @@ data RestVar = RestGround Id
              | RestQuant Id
                deriving (Eq, Ord)
 
-data PrimType = TInt | TAny | TNothing | TBool | TString | TSymbol
-                deriving (Eq, Ord, Enum)
+pattern TInt :: Type
+pattern TInt <- NamedType ((\t -> guard (t == intType)) -> Just ())
+    where TInt = NamedType intType
 
-instance Show PrimType where
-    showsPrec _ x =
-        case x of
-          TInt -> ("Int" ++)
-          TAny -> ("Any" ++)
-          TNothing -> ("Nothing" ++)
-          TBool -> ("Bool" ++)
-          TString -> ("String" ++)
-          TSymbol -> ("Symbol" ++)
+pattern TAny :: Type
+pattern TAny <- NamedType ((\t -> guard (t == anyType)) -> Just ())
+    where TAny = NamedType anyType
+
+pattern TNothing :: Type
+pattern TNothing <- NamedType ((\t -> guard (t == nothingType)) -> Just ())
+    where TNothing = NamedType nothingType
+
+pattern TBool :: Type
+pattern TBool <- NamedType ((\t -> guard (t == boolType)) -> Just ())
+    where TBool = NamedType boolType
+
+pattern TString :: Type
+pattern TString <- NamedType ((\t -> guard (t == stringType)) -> Just ())
+    where TString = NamedType stringType
+
+pattern TSymbol :: Type
+pattern TSymbol <- NamedType ((\t -> guard (t == symbolType)) -> Just ())
+    where TSymbol = NamedType symbolType
 
 instance Show RestVar where
     showsPrec n (RestGround t) = ("'" ++) . showsPrec n t
@@ -61,7 +75,6 @@ instance Show StackDesc where
         where listOut = fmap (\t -> (" " ++) . showsPrec 10 t) . Stack.FromBottom
 
 instance Show Type where
-    showsPrec n (PrimType t) = showsPrec n t
     showsPrec n (FunType t) = showsPrec n t
     showsPrec n (NamedType t) = showsPrec n t
     showsPrec n (GroundVar t) = ("'" ++) . showsPrec n t
@@ -103,8 +116,7 @@ underlyingFnType (PolyFunctionType _ t) = t
 -- Ground, then Quant
 gensub :: (Id -> Type) -> (Id -> Type) -> Type -> Type
 gensub a b = go
-    where go (PrimType t) = PrimType t
-          go (FunType (FunctionType (StackDesc xs x) (StackDesc ys y))) =
+    where go (FunType (FunctionType (StackDesc xs x) (StackDesc ys y))) =
               FunType (FunctionType (StackDesc (fmap go xs) x) (StackDesc (fmap go ys) y))
           go (NamedType t) = NamedType t
           go (GroundVar v) = a v
@@ -122,8 +134,7 @@ substituteUntilDone m x = let x' = substitute m x in if x == x' then x else subs
 -- Ground, then Quant
 gensubstack :: (Id -> StackDesc) -> (Id -> StackDesc) -> (Type -> Type, StackDesc -> StackDesc)
 gensubstack a b = (go, go')
-    where go (PrimType t) = (PrimType t)
-          go (FunType (FunctionType arg ret)) = FunType (FunctionType (go' arg) (go' ret))
+    where go (FunType (FunctionType arg ret)) = FunType (FunctionType (go' arg) (go' ret))
           go (NamedType t) = NamedType t
           go (GroundVar v) = GroundVar v
           go (QuantVar v) = QuantVar v
@@ -170,8 +181,7 @@ toQuant ids = gensub test QuantVar
 
 allGroundVars :: Type -> [Id]
 allGroundVars = Set.toList . go
-    where go (PrimType {}) = Set.empty
-          go (FunType (FunctionType (StackDesc xs x) (StackDesc ys y))) =
+    where go (FunType (FunctionType (StackDesc xs x) (StackDesc ys y))) =
               foldMap go (FromTop xs) <> include x <> foldMap go (FromTop ys) <> include y
           go (NamedType _) = Set.empty
           go (GroundVar v) = Set.singleton v
@@ -181,8 +191,7 @@ allGroundVars = Set.toList . go
 
 allQuantVars :: Type -> [Id]
 allQuantVars = Set.toList . go
-    where go (PrimType {}) = Set.empty
-          go (FunType (FunctionType (StackDesc xs x) (StackDesc ys y))) =
+    where go (FunType (FunctionType (StackDesc xs x) (StackDesc ys y))) =
               foldMap go (FromTop xs) <> include x <> foldMap go (FromTop ys) <> include y
           go (NamedType _) = Set.empty
           go (GroundVar {}) = Set.empty

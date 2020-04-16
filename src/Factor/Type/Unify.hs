@@ -98,13 +98,12 @@ assume' :: MonadWriter AssumptionsAll m => Id -> StackDesc -> m ()
 assume' v s = tell (AssumptionsAll mempty (Map.singleton v [s]))
 
 _intersectionHandlesThisCase :: Type -> ()
-_intersectionHandlesThisCase (PrimType {}) = ()
 _intersectionHandlesThisCase (FunType {}) = ()
 _intersectionHandlesThisCase (NamedType _) = ()
 _intersectionHandlesThisCase (GroundVar {}) = ()
 _intersectionHandlesThisCase (QuantVar {}) = ()
 
--- GroundVar, NamedType, and (non-TAny) PrimType are trivial as
+-- GroundVar and (other than TAny, TNothing) NamedType are trivial as
 -- they're just an equality check, which is handled at the very
 -- beginning.
 
@@ -129,17 +128,17 @@ unionStack (StackDesc (Stack (a:as)) x) (StackDesc (Stack (b:bs)) y) = do
 union :: (FromTypeError e, MonadError e m, MonadWriter AssumptionsAll m) =>
          Type -> Type -> m Type
 union a b | a == b = pure a
-union (PrimType TNothing) (QuantVar b) = PrimType TNothing <$ assume b (PrimType TNothing)
-union (QuantVar a) (PrimType TNothing) = PrimType TNothing <$ assume a (PrimType TNothing)
-union (PrimType TNothing) t = pure t
-union t (PrimType TNothing) = pure t
+union TNothing (QuantVar b) = TNothing <$ assume b TNothing
+union (QuantVar a) TNothing = TNothing <$ assume a TNothing
+union TNothing t = pure t
+union t TNothing = pure t
 union (QuantVar a) (QuantVar b) =
     QuantVar a <$ (assume a (QuantVar b) >> assume b (QuantVar a))
 union (QuantVar a) b = b <$ assume a b
 union a (QuantVar b) = a <$ assume b a
 union (FunType (FunctionType args1 rets1)) (FunType (FunctionType args2 rets2)) =
     liftA2 (fmap FunType . FunctionType) (intersectionStack args1 args2) (unionStack rets1 rets2)
-union _ _ = pure (PrimType TAny)
+union _ _ = pure TAny
 
 intersectionStack :: (FromTypeError e, MonadError e m, MonadWriter AssumptionsAll m) =>
                      StackDesc -> StackDesc -> m StackDesc
@@ -162,17 +161,17 @@ intersectionStack (StackDesc (Stack (a:as)) x) (StackDesc (Stack (b:bs)) y) = do
 intersection :: (FromTypeError e, MonadError e m, MonadWriter AssumptionsAll m) =>
                 Type -> Type -> m Type
 intersection a b | a == b = pure a
-intersection (PrimType TAny) (QuantVar b) = PrimType TAny <$ assume b (PrimType TAny)
-intersection (QuantVar a) (PrimType TAny) = PrimType TAny <$ assume a (PrimType TAny)
-intersection (PrimType TAny) t = pure t
-intersection t (PrimType TAny) = pure t
+intersection TAny (QuantVar b) = TAny <$ assume b TAny
+intersection (QuantVar a) TAny = TAny <$ assume a TAny
+intersection TAny t = pure t
+intersection t TAny = pure t
 intersection (QuantVar a) (QuantVar b) =
     QuantVar a <$ (assume a (QuantVar b) >> assume b (QuantVar a))
 intersection (QuantVar a) b = b <$ assume a b
 intersection a (QuantVar b) = a <$ assume b a
 intersection (FunType (FunctionType args1 rets1)) (FunType (FunctionType args2 rets2)) =
     liftA2 (fmap FunType . FunctionType) (unionStack args1 args2) (intersectionStack rets1 rets2)
-intersection _ _ = pure (PrimType TNothing)
+intersection _ _ = pure TNothing
 
 isFnSubtypeOf :: (FromTypeError e, MonadError e m, MonadWriter AssumptionsAll m) =>
                  FunctionType -> FunctionType -> m ()

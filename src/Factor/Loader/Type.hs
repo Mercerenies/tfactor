@@ -13,7 +13,6 @@ import Control.Monad.Except
 import Control.Lens
 
 normalizeType :: (MonadReader ReadOnlyState m, MonadError FactorError m) => Type -> m Type
-normalizeType (PrimType t) = pure $ PrimType t
 normalizeType (FunType (FunctionType (StackDesc args a) (StackDesc rets r))) = do
   Stack.FromTop args' <- traverse normalizeType (Stack.FromTop args)
   Stack.FromTop rets' <- traverse normalizeType (Stack.FromTop rets)

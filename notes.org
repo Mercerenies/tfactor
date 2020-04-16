@@ -61,7 +61,7 @@ end
  2. [X] Module synonyms that are exported
  3. [-] All types are modules
     + [X] Types need to resolve to canonical names
-    + [ ] Primitive types are modules
+    + [X] Primitive types are modules
     + [ ] Function types are modules
  4. [ ] Traits
     + [ ] New declaration

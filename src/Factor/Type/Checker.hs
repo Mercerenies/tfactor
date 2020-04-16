@@ -42,10 +42,10 @@ typeOfValue :: (MonadError FactorError m, MonadReader ReadOnlyState m,
                 MonadWriter AssumptionsAll m) =>
                TypeCheckerPass -> Data -> StateT (Set Id) m Type
 typeOfValue tpass value = case value of
-                             Int _ -> return (PrimType TInt)
-                             Bool _ -> return (PrimType TBool)
-                             String _ -> return (PrimType TString)
-                             Symbol _ -> return (PrimType TSymbol)
+                             Int _ -> return TInt
+                             Bool _ -> return TBool
+                             String _ -> return TString
+                             Symbol _ -> return TSymbol
                              RecordInstance v _ -> return (NamedType v)
                              FunctionValue (Function _ ss) -> do
                                 (PolyFunctionType ids ss', AssumptionsAll w w') <-
@@ -128,7 +128,6 @@ checkDeclaredType tpass (PolyFunctionType ids declared) ss =
 
 checkIsWellDefined :: (MonadError FactorError m, MonadReader ReadOnlyState m) =>
                       Type -> m ()
-checkIsWellDefined (PrimType {}) = pure ()
 checkIsWellDefined (GroundVar {}) = pure ()
 checkIsWellDefined (QuantVar {}) = pure ()
 checkIsWellDefined (FunType (FunctionType (StackDesc args _) (StackDesc rets _))) =

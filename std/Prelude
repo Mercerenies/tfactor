@@ -2,6 +2,13 @@
 
 alias P = Primitives
 
+mod Int = P.Int end
+mod Any = P.Any end
+mod Nothing = P.Nothing end
+mod Bool = P.Bool end
+mod String = P.String end
+mod Symbol = P.Symbol end
+
 fun drop ( Any -- )
   P.drop
 end

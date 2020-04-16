@@ -178,7 +178,13 @@ polyFn args arg rets ret =
 
 builtins :: Map Id ReaderValue
 builtins = Map.fromList [
-            ("drop", polyFn [PrimType TAny] "R" [] "R" drop_),
+            ("Int", ModuleValue (Module Map.empty [] True)),
+            ("Any", ModuleValue (Module Map.empty [] True)),
+            ("Nothing", ModuleValue (Module Map.empty [] True)),
+            ("Bool", ModuleValue (Module Map.empty [] True)),
+            ("String", ModuleValue (Module Map.empty [] True)),
+            ("Symbol", ModuleValue (Module Map.empty [] True)),
+            ("drop", polyFn [TAny] "R" [] "R" drop_),
             ("dup", polyFn [QuantVar "a"] "R" [QuantVar "a", QuantVar "a"] "R" dup),
             ("over", polyFn [QuantVar "b", QuantVar "a"] "R" [QuantVar "a", QuantVar "b", QuantVar "a"] "R" over_),
             ("pick", polyFn [QuantVar "c", QuantVar "b", QuantVar "a"] "R" [QuantVar "a", QuantVar "c", QuantVar "b", QuantVar "a"] "R" pick),
@@ -186,21 +192,21 @@ builtins = Map.fromList [
             ("rot", polyFn [QuantVar "c", QuantVar "b", QuantVar "a"] "R" [QuantVar "a", QuantVar "c", QuantVar "b"] "R" rot),
             ("dip", polyFn [FunType (functionType [] (RestQuant "S") [] (RestQuant "T")), QuantVar "a"] "S" [QuantVar "a"] "T" dip),
             ("call", polyFn [FunType (functionType [] (RestQuant "S") [] (RestQuant "T"))] "S" [] "T" call),
-            ("if", polyFn [FunType (functionType [] (RestQuant "S") [] (RestQuant "T")), FunType (functionType [] (RestQuant "S") [] (RestQuant "T")), PrimType TBool] "S" [] "T" if_),
+            ("if", polyFn [FunType (functionType [] (RestQuant "S") [] (RestQuant "T")), FunType (functionType [] (RestQuant "S") [] (RestQuant "T")), TBool] "S" [] "T" if_),
             ("unsafe", polyFn [] "S" [] "T" unsafe),
             ("unsafe1", polyFn [QuantVar "a"] "S" [QuantVar "b"] "S" unsafe1),
-            ("unsafe-record-construct", polyFn [PrimType TString, PrimType TInt] "S" [PrimType TAny] "T" unsafeRecordConstruct),
-            ("unsafe-record-get", polyFn [PrimType TInt, PrimType TAny] "S" [PrimType TAny] "S" unsafeRecordGet),
-            ("+", polyFn [PrimType TInt, PrimType TInt] "R" [PrimType TInt] "R" $ binmathop (+)),
-            ("-", polyFn [PrimType TInt, PrimType TInt] "R" [PrimType TInt] "R" $ binmathop (-)),
-            ("*", polyFn [PrimType TInt, PrimType TInt] "R" [PrimType TInt] "R" $ binmathop (*)),
-            ("/", polyFn [PrimType TInt, PrimType TInt] "R" [PrimType TInt] "R" $ binmathop div),
-            ("=", polyFn [PrimType TInt, PrimType TInt] "R" [PrimType TBool] "R" $ binmathcmp (==)),
-            ("!=", polyFn [PrimType TInt, PrimType TInt] "R" [PrimType TBool] "R" $ binmathcmp (/=)),
-            ("<", polyFn [PrimType TInt, PrimType TInt] "R" [PrimType TBool] "R" $ binmathcmp (<)),
-            (">", polyFn [PrimType TInt, PrimType TInt] "R" [PrimType TBool] "R" $ binmathcmp (>)),
-            ("<=", polyFn [PrimType TInt, PrimType TInt] "R" [PrimType TBool] "R" $ binmathcmp (<=)),
-            (">=", polyFn [PrimType TInt, PrimType TInt] "R" [PrimType TBool] "R" $ binmathcmp (>=))
+            ("unsafe-record-construct", polyFn [TString, TInt] "S" [TAny] "T" unsafeRecordConstruct),
+            ("unsafe-record-get", polyFn [TInt, TAny] "S" [TAny] "S" unsafeRecordGet),
+            ("+", polyFn [TInt, TInt] "R" [TInt] "R" $ binmathop (+)),
+            ("-", polyFn [TInt, TInt] "R" [TInt] "R" $ binmathop (-)),
+            ("*", polyFn [TInt, TInt] "R" [TInt] "R" $ binmathop (*)),
+            ("/", polyFn [TInt, TInt] "R" [TInt] "R" $ binmathop div),
+            ("=", polyFn [TInt, TInt] "R" [TBool] "R" $ binmathcmp (==)),
+            ("!=", polyFn [TInt, TInt] "R" [TBool] "R" $ binmathcmp (/=)),
+            ("<", polyFn [TInt, TInt] "R" [TBool] "R" $ binmathcmp (<)),
+            (">", polyFn [TInt, TInt] "R" [TBool] "R" $ binmathcmp (>)),
+            ("<=", polyFn [TInt, TInt] "R" [TBool] "R" $ binmathcmp (<=)),
+            (">=", polyFn [TInt, TInt] "R" [TBool] "R" $ binmathcmp (>=))
            ]
 
 stdlibs :: ReadOnlyState

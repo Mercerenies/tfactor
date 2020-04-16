@@ -127,14 +127,6 @@ aliasDecl = do
 openDecl :: Parser QId
 openDecl = symbol "open" *> qualifiedId
 
-primType :: Parser PrimType
-primType = TInt <$ symbol "Int" <|>
-           TAny <$ symbol "Any" <|>
-           TNothing <$ symbol "Nothing" <|>
-           TBool <$ symbol "Bool" <|>
-           TString <$ symbol "String" <|>
-           TSymbol <$ symbol "Symbol"
-
 namedType :: Parser QId
 namedType = try $ do
   qid <- qualifiedId
@@ -152,8 +144,7 @@ restQuantType = satisfy go
           go _ = Nothing
 
 type_ :: Parser Type
-type_ = (PrimType <$> primType <?> "primitive type") <|>
-        (NamedType <$> namedType <?> "named type") <|>
+type_ = (NamedType <$> namedType <?> "named type") <|>
         (QuantVar <$> quantType <?> "type variable") <|>
         (FunType <$> functionType <?> "function type")
 
