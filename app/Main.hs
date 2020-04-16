@@ -13,6 +13,7 @@ import Factor.Error
 import Factor.Id
 import Factor.StdLib
 import Factor.Loader
+import Factor.Loader.Module
 
 import System.Environment
 import System.Exit
@@ -52,8 +53,9 @@ run filename = do
   newbindings' <-
       runReaderT (forOf (readerResources . traverseWithQId) newbindings $ \(q, v) -> resolveAliasesResource' aliases q v) fullbindings
   reader'' <- bindStdlibModule prelude newbindings'
-  reader''' <- loadEntities (allNames newbindings') reader''
-  (_, state) <- liftEither $ runEval (callFunction (QId [Id "main"])) reader''' newState
+  reader''' <- loadModules (allNames newbindings') reader''
+  reader'''' <- loadEntities (allNames newbindings') reader'''
+  (_, state) <- liftEither $ runEval (callFunction (QId [Id "main"])) reader'''' newState
   liftIO $ print state
 
 main :: IO ()

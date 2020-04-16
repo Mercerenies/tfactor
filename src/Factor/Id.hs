@@ -1,6 +1,7 @@
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 
-module Factor.Id(Id(..), QId(..), splitQualified, idName, qidName, freshVar) where
+module Factor.Id(Id(..), QId(..), splitQualified, idName, qidName, freshVar,
+                 prefixes, nonemptyPrefixes) where
 
 import Factor.Util
 
@@ -31,3 +32,9 @@ qidName (QId xs) = List.intercalate "." $ fmap idName xs
 
 freshVar :: String -> [Id] -> Id
 freshVar prefix vs = head [v | n <- [0 :: Int ..], let v = Id (prefix <> show n), v `notElem` vs]
+
+prefixes :: QId -> [QId]
+prefixes (QId xs) = init . fmap QId $ List.inits xs
+
+nonemptyPrefixes :: QId -> [QId]
+nonemptyPrefixes = tail . prefixes

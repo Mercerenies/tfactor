@@ -4,7 +4,7 @@ module Factor.State.Resource(ResourceTable(..), RId, newResourceTable,
                              appendResource, appendResource', appendResourceRO,
                              getResource, getResourceName, getResource', getResourceName',
                              defineResource, resourceCount, catResources,
-                             modifyRIds, traverseWithQId) where
+                             modifyRIds, traverseWithQId, mapWithQId) where
 
 import Factor.State.Types
 import Factor.Error
@@ -72,3 +72,6 @@ modifyRIds f (ResourceTable table) = ResourceTable $ fmap (over _2 go) table
 traverseWithQId :: Applicative f => ((QId, a) -> f b) -> ResourceTable a -> f (ResourceTable b)
 traverseWithQId f (ResourceTable table) =
     ResourceTable <$> traverse (\(q, a) -> fmap ((,) q) $ f (q, a)) table
+
+mapWithQId :: ((QId, a) -> b) -> ResourceTable a -> ResourceTable b
+mapWithQId f = runIdentity . traverseWithQId (Identity . f)

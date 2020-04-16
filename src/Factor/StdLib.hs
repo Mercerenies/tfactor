@@ -18,6 +18,7 @@ import Factor.Error
 import Factor.Code
 import Factor.Eval
 import Factor.Loader
+import Factor.Loader.Module
 import Factor.Parser.Token
 import Factor.Parser
 import Factor.Names
@@ -230,7 +231,8 @@ loadPreludeImpl = do
       runReaderT (forOf (readerResources . traverseWithQId) newbindings $ \(q, v) -> resolveAliasesResource' Map.empty q v)
       fullbindings
   reader <- bindPrimitives newbindings'
-  loadEntities (allNames newbindings') reader
+  reader' <- loadModules (allNames newbindings') reader
+  loadEntities (allNames newbindings') reader'
 
 loadPrelude :: (MonadError FactorError m, MonadIO m) => m Prelude
 loadPrelude = fmap Prelude loadPreludeImpl `catchError` (\e -> throwError (InternalError $ show e))
