@@ -59,7 +59,8 @@ end
 * TRAITS AND MODULE PARAMETERS PLAN
  1. [X] ~ResourceTable~ transition
  2. [X] Module synonyms that are exported
- 3. [ ] All types are modules
+ 3. [-] All types are modules
+    + [X] Types need to resolve to canonical names
     + [ ] Primitive types are modules
     + [ ] Function types are modules
  4. [ ] Traits
