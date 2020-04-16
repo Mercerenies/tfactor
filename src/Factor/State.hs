@@ -1,11 +1,11 @@
-{-# LANGUAGE FlexibleContexts, ViewPatterns, KindSignatures, RankNTypes #-}
+{-# LANGUAGE FlexibleContexts, ViewPatterns, KindSignatures, RankNTypes, TypeFamilies, ScopedTypeVariables #-}
 
 module Factor.State(ReadOnlyState(ReadOnlyState), ReaderValue(..),
                     Module(Module), AliasDecl(..),
                     readerModule, readerNames, readerResources,
                     moduleNames, moduleAliases, moduleIsType,
                     newReader, emptyModule,
-                    declsToReadOnly, atQId, lookupFn,
+                    declsToReadOnly, atQIdResource, atQId, lookupFn,
                     allNamesInModule, allNames,
                     readerFunctionType, readerMacroType,
                     merge, mapToReader) where
@@ -122,10 +122,32 @@ expandRecordDecl qid ds r = foldM go r ds
                     in declsToReadOnly qid [d] reader
                 RecordOrdinaryDecl d -> declsToReadOnly qid [d] reader
 
+-- TODO Is this whole thing valid from a Traversal law standpoint...?
+
 atRId :: RId -> Traversal' ReadOnlyState ReaderValue
 atRId rid = readerResources . ix rid
 
--- TODO Is this whole thing valid from a Traversal law standpoint...?
+moduleHelper :: Traversal' ReaderValue Module
+moduleHelper f (ModuleValue m) = ModuleValue <$> f m
+moduleHelper _ x = pure x
+
+atQIdResource0 :: forall f. Applicative f => QId -> (RId -> f RId) -> ReadOnlyState -> f ReadOnlyState
+atQIdResource0 (QId xs0) f r0 = go xs0 readerNames
+    where go :: [Id] -> Traversal' ReadOnlyState (Map Id RId) -> f ReadOnlyState
+          go [] _ = pure r0
+          go [x] r = (r . ix x) f r0
+          go (x:xs) r = case Map.lookup x (r0^.r) of
+                          Nothing -> pure r0
+                          Just rid -> go xs (readerResources . ix rid . moduleHelper . moduleNames)
+
+-- So for whatever reason, Haskell needed some help (in the form of
+-- ScopedTypeVariables) getting the type signatures of atQIdResource0
+-- right. So the type signature up there is messy, and this function
+-- acts simply as an assertion that it's still the traversal that I
+-- want.
+atQIdResource :: QId -> Traversal' ReadOnlyState RId
+atQIdResource = atQIdResource0
+
 atQId :: QId -> Traversal' ReadOnlyState ReaderValue
 atQId (QId xs0) f r0 = go xs0 (r0^.readerNames)
     where go [] _ = pure r0
