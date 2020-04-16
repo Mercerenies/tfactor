@@ -52,14 +52,14 @@ type BuiltInConstraints m = (MonadReader ReadOnlyState m, MonadState EvalState m
 
 newtype BuiltIn a = BuiltIn { unBuiltIn :: forall m. BuiltInConstraints m => m a }
 
-newtype ResourceTable a = ResourceTable (Seq a)
+newtype ResourceTable a = ResourceTable (Seq (QId, a))
     deriving (Functor, Foldable, Traversable)
 
 type instance Index (ResourceTable a) = Int
 type instance IxValue (ResourceTable a) = a
 
 instance Ixed (ResourceTable a) where
-    ix n f (ResourceTable s) = ResourceTable <$> ix n f s
+    ix n f (ResourceTable s) = ResourceTable <$> (ix n . _2) f s
 
 type RId = Int
 

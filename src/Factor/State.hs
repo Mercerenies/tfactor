@@ -38,37 +38,41 @@ declsToReadOnly qid ds r = foldM go r ds
                     throwError (InternalError "Unnamed top-level function")
                 FunctionDecl t (Function (Just v) def)
                  | Map.member v (reader^.moduleNames) -> throwError (DuplicateDecl v)
-                 | otherwise -> traverseOf moduleNames (defineFunction v t def) reader
+                 | otherwise ->
+                     let qid' = qid <> QId [v]
+                     in traverseOf moduleNames (defineFunction qid' v t def) reader
                 MacroDecl t (Macro v def)
                  | Map.member v (reader^.moduleNames) -> throwError (DuplicateDecl v)
-                 | otherwise -> traverseOf moduleNames (defineMacro v t def) reader
+                 | otherwise ->
+                     let qid' = qid <> QId [v]
+                     in traverseOf moduleNames (defineMacro qid' v t def) reader
                 ModuleDecl v def
                  | Map.member v (reader^.moduleNames) -> throwError (DuplicateDecl v)
                  | otherwise -> do
                           let qid' = qid <> QId [v]
                           inner <- declsToReadOnly qid' def emptyModule
-                          traverseOf moduleNames (defineModule v inner) reader
+                          traverseOf moduleNames (defineModule qid' v inner) reader
                 RecordDecl v def
                  | Map.member v (reader^.moduleNames) -> throwError (DuplicateDecl v)
                  | otherwise -> do
                           let qid' = qid <> QId [v]
                           inner <- expandRecordDecl qid' def emptyModule
                           let inner' = set moduleIsType True inner
-                          traverseOf moduleNames (defineModule v inner') reader
+                          traverseOf moduleNames (defineModule qid' v inner') reader
                 AliasDecl i j -> pure $ over moduleAliases (++ [Alias i j]) reader
                 OpenDecl j -> pure $ over moduleAliases (++ [Open j]) reader
 
 defineFunction :: MonadState (ResourceTable ReaderValue) m =>
-                  Id -> PolyFunctionType -> Sequence -> Map Id RId -> m (Map Id RId)
-defineFunction v t def = defineResource v (UDFunction t $ Function (Just v) def)
+                  QId -> Id -> PolyFunctionType -> Sequence -> Map Id RId -> m (Map Id RId)
+defineFunction q v t def = defineResource q v (UDFunction t $ Function (Just v) def)
 
 defineMacro :: MonadState (ResourceTable ReaderValue) m =>
-               Id -> PolyFunctionType -> Sequence -> Map Id RId -> m (Map Id RId)
-defineMacro v t def = defineResource v (UDMacro t $ Macro v def)
+               QId -> Id -> PolyFunctionType -> Sequence -> Map Id RId -> m (Map Id RId)
+defineMacro q v t def = defineResource q v (UDMacro t $ Macro v def)
 
 defineModule :: MonadState (ResourceTable ReaderValue) m =>
-                Id -> Module -> Map Id RId -> m (Map Id RId)
-defineModule v def = defineResource v (ModuleValue def)
+                QId -> Id -> Module -> Map Id RId -> m (Map Id RId)
+defineModule q v def = defineResource q v (ModuleValue def)
 
 -- TODO Mark which modules can be treated as types and which cannot,
 -- as a flag on the Module type itself.
@@ -188,4 +192,5 @@ merge (ReadOnlyState (Module m a t) r) (ReadOnlyState (Module m' a' t') r') =
 
 mapToReader :: Map Id ReaderValue -> ReadOnlyState
 mapToReader m = ReadOnlyState (Module modl [] False) resources
-    where (modl, resources) = runState (traverse appendResource' m) newResourceTable
+    where (modl, resources) = runState (Map.traverseWithKey go m) newResourceTable
+          go k v = appendResource' (QId [k]) v

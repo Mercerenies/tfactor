@@ -2,9 +2,9 @@
 
 module Factor.State.Resource(ResourceTable(..), RId, newResourceTable,
                              appendResource, appendResource', appendResourceRO,
-                             getResource, getResource',
+                             getResource, getResourceName, getResource', getResourceName',
                              defineResource, resourceCount, catResources,
-                             modifyRIds) where
+                             modifyRIds, traverseWithQId) where
 
 import Factor.State.Types
 import Factor.Error
@@ -18,31 +18,39 @@ import Control.Monad.Except
 import Control.Monad.State
 import Control.Lens
 
-appendResource :: a -> ResourceTable a -> (RId, ResourceTable a)
-appendResource value (ResourceTable table) =
+appendResource :: QId -> a -> ResourceTable a -> (RId, ResourceTable a)
+appendResource qid value (ResourceTable table) =
     let n = Seq.length table
-    in (n, ResourceTable $ table :|> value)
+    in (n, ResourceTable $ table :|> (qid, value))
 
-appendResource' :: MonadState (ResourceTable a) m => a -> m RId
-appendResource' value = state (appendResource value)
+appendResource' :: MonadState (ResourceTable a) m => QId -> a -> m RId
+appendResource' qid value = state (appendResource qid value)
 
-appendResourceRO :: ReaderValue -> ReadOnlyState -> (RId, ReadOnlyState)
-appendResourceRO value r =
-    let (rid, table) = appendResource value $ r^.readerResources
+appendResourceRO :: QId -> ReaderValue -> ReadOnlyState -> (RId, ReadOnlyState)
+appendResourceRO qid value r =
+    let (rid, table) = appendResource qid value $ r^.readerResources
     in (rid, set readerResources table r) -- TODO Can this be done strictly with lenses?
 
 getResource :: RId -> ResourceTable a -> Maybe a
-getResource i (ResourceTable table) = table !? i
+getResource i (ResourceTable table) = fmap snd $ table !? i
+
+getResourceName :: RId -> ResourceTable a -> Maybe QId
+getResourceName i (ResourceTable table) = fmap fst $ table !? i
 
 getResource' :: MonadError FactorError m => RId -> ResourceTable a -> m a
 getResource' i t = case getResource i t of
                      Nothing -> throwError (InternalError $ "Invalid resource ID " ++ show i)
                      Just x -> pure x
 
+getResourceName' :: MonadError FactorError m => RId -> ResourceTable a -> m QId
+getResourceName' i t = case getResourceName i t of
+                         Nothing -> throwError (InternalError $ "Invalid resource ID " ++ show i)
+                         Just x -> pure x
+
 defineResource :: MonadState (ResourceTable a) m =>
-                  Id -> a -> Map Id RId -> m (Map Id RId)
-defineResource name r m = do
-  id_ <- appendResource' r
+                  QId -> Id -> a -> Map Id RId -> m (Map Id RId)
+defineResource qid name r m = do
+  id_ <- appendResource' qid r
   return $ Map.insert name id_ m
 
 resourceCount :: ResourceTable a -> Int
@@ -55,8 +63,12 @@ modifyRIdsMod :: (RId -> RId) -> Module -> Module
 modifyRIdsMod f = moduleNames %~ fmap f
 
 modifyRIds :: (RId -> RId) -> ResourceTable ReaderValue -> ResourceTable ReaderValue
-modifyRIds f (ResourceTable table) = ResourceTable $ fmap go table
+modifyRIds f (ResourceTable table) = ResourceTable $ fmap (over _2 go) table
     where go (ModuleValue m) = ModuleValue $ modifyRIdsMod f m
           go (UDFunction t g) = UDFunction t g
           go (BIFunction t g) = BIFunction t g
           go (UDMacro t m) = UDMacro t m
+
+traverseWithQId :: Applicative f => ((QId, a) -> f b) -> ResourceTable a -> f (ResourceTable b)
+traverseWithQId f (ResourceTable table) =
+    ResourceTable <$> traverse (\(q, a) -> fmap ((,) q) $ f (q, a)) table

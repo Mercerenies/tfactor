@@ -206,8 +206,14 @@ stdlibs = mapToReader builtins
 
 bindPrimitives :: MonadError FactorError m => ReadOnlyState -> m ReadOnlyState
 bindPrimitives reader =
-    let (bindings, table) = runState (foldM (\m (k, v) -> defineResource k v m) Map.empty $ Map.toList builtins) newResourceTable
-        reader' = ReadOnlyState (Module bindings [] False) table
+    let go m (k, v) = defineResource (QId [primitivesModuleName, k]) k v m
+        (modl, table) = flip runState newResourceTable $ do
+                          bindings <- foldM go Map.empty $ Map.toList builtins
+                          let prim = Module bindings [] False
+                          outer <- defineResource (QId [primitivesModuleName]) primitivesModuleName
+                                   (ModuleValue prim) Map.empty
+                          return outer
+        reader' = ReadOnlyState (Module modl [] False) table
     in reader `merge` reader'
 
 loadPreludeImpl :: (MonadError FactorError m, MonadIO m) => m ReadOnlyState
@@ -221,7 +227,8 @@ loadPreludeImpl = do
     return $ ReadOnlyState definednames resourcetable
   fullbindings <- bindPrimitives newbindings
   newbindings' <-
-      runReaderT (forOf (readerResources . traverse) newbindings $ resolveAliasesResource Map.empty) fullbindings
+      runReaderT (forOf (readerResources . traverseWithQId) newbindings $ \(q, v) -> resolveAliasesResource' Map.empty q v)
+      fullbindings
   reader <- bindPrimitives newbindings'
   loadEntities (allNames newbindings') reader
 

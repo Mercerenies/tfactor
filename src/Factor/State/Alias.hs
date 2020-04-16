@@ -13,6 +13,7 @@ import qualified Factor.Stack as Stack
 
 import Data.Map(Map)
 import qualified Data.Map as Map
+import qualified Data.List as List
 import Control.Monad.Except
 import Control.Monad.Reader hiding (reader)
 import Control.Lens
@@ -101,6 +102,21 @@ resolveAliasesResource m (UDMacro t (Macro v ss)) = do
   t' <- resolveAliasesPolyFnType m t
   return $ UDMacro t' (Macro v ss')
 resolveAliasesResource _ (ModuleValue inner) = pure (ModuleValue inner)
+
+resolveAliasesResource' :: (MonadError FactorError m, MonadReader ReadOnlyState m) =>
+                           Map Id Alias -> QId -> ReaderValue -> m ReaderValue
+resolveAliasesResource' aliases0 (QId xs) r = do
+  let parents = init $ List.inits xs -- We want all nontrivial prefixes
+      handleParentModule aliases mname = do
+        m <- case mname of
+               [] -> asks (view readerModule)
+               mname' -> ask >>= lookupFn (QId mname') >>= \case
+                         ModuleValue m -> pure m
+                         _ -> throwError (NoSuchModule $ QId mname)
+        let aliases' = openModule (QId mname) m aliases
+        foldM handleAliasDecl aliases' (m^.moduleAliases)
+  aliases1 <- foldM handleParentModule aliases0 parents
+  resolveAliasesResource aliases1 r
 
 handleAliasDecl :: (MonadReader ReadOnlyState m, MonadError FactorError m) =>
                    Map Id Alias -> AliasDecl -> m (Map Id Alias)

@@ -50,7 +50,7 @@ run filename = do
   fullbindings <- bindStdlibModule prelude newbindings
   aliases <- bindDefaultAliases fullbindings Map.empty
   newbindings' <-
-      runReaderT (forOf (readerResources . traverse) newbindings $ resolveAliasesResource aliases) fullbindings
+      runReaderT (forOf (readerResources . traverseWithQId) newbindings $ \(q, v) -> resolveAliasesResource' aliases q v) fullbindings
   reader'' <- bindStdlibModule prelude newbindings'
   reader''' <- loadEntities (allNames newbindings') reader''
   (_, state) <- liftEither $ runEval (callFunction (QId [Id "main"])) reader''' newState
