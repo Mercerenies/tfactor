@@ -35,6 +35,7 @@ newtype Sequence = Sequence { unSequence :: [Statement] }
 data Declaration = FunctionDecl PolyFunctionType Function
                  | MacroDecl PolyFunctionType Macro
                  | ModuleDecl Id [Declaration]
+                 | ModuleSyn Id QId
                  | RecordDecl Id [RecordInfo]
                  | AliasDecl Id QId
                  | OpenDecl QId

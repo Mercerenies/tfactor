@@ -58,7 +58,7 @@ end
     the syntax and lots of stuff for those.
 * TRAITS AND MODULE PARAMETERS PLAN
  1. [X] ~ResourceTable~ transition
- 2. [ ] Module synonyms that are exported
+ 2. [X] Module synonyms that are exported
  3. [ ] All types are modules
     + [ ] Primitive types are modules
     + [ ] Function types are modules

@@ -1,0 +1,25 @@
+
+mod Container
+  alias AAA = A
+  mod Foo = AAA end
+end
+
+mod A
+
+  fun the-answer ( -- Int )
+    42
+  end
+
+end
+
+mod B = A end
+
+alias Con = Container
+
+# Should produce a cyclic load error
+# mod C = D end
+# mod D = C end
+
+fun main ( -- Int )
+  Con.Foo.the-answer
+end

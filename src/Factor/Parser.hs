@@ -64,6 +64,7 @@ seq_ = Sequence <$> many statement
 decl :: Parser Declaration
 decl = (\(t, s) -> FunctionDecl t s) <$> functionDecl <|>
        (\(t, s) -> MacroDecl t s) <$> macroDecl <|>
+       (\(i, j) -> ModuleSyn i j) <$> moduleSyn <|>
        (\(i, m) -> ModuleDecl i m) <$> moduleDecl <|>
        (\(i, d) -> RecordDecl i d) <$> recordDecl <|>
        (\(i, j) -> AliasDecl i j) <$> aliasDecl <|>
@@ -89,11 +90,17 @@ macroDecl = do
 
 moduleDecl :: Parser (Id, [Declaration])
 moduleDecl = do
-  _ <- symbol "mod"
-  name <- unqualifiedId
+  name <- try (symbol "mod" *> unqualifiedId <* notFollowedBy (symbol "="))
   decls <- many decl
   _ <- symbol "end"
   return (name, decls)
+
+moduleSyn :: Parser (Id, QId)
+moduleSyn = do
+  name <- try (symbol "mod" *> unqualifiedId <* symbol "=")
+  syn <- qualifiedId
+  _ <- symbol "end"
+  return (name, syn)
 
 recordDecl :: Parser (Id, [RecordInfo])
 recordDecl = do

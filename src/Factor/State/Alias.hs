@@ -18,6 +18,10 @@ import Control.Monad.Except
 import Control.Monad.Reader hiding (reader)
 import Control.Lens
 
+-- TODO Currently, we resolve aliases in declaration order. We could
+-- make a dependency graph like we do for modules or for macro
+-- resolution.
+
 data Alias = AliasValue QId
            | AmbiguousAlias [QId]
              deriving (Show, Eq)

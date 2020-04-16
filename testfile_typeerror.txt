@@ -1,0 +1,21 @@
+
+# This file should have an obvious type error.
+
+mod Outer
+
+  mod Inner
+
+    fun give-me-int ( -- Int )
+      4
+    end
+
+  end
+
+  fun this-function-is-wrong ( -- String )
+    Inner.give-me-int
+  end
+
+end
+
+fun main ( -- )
+end
