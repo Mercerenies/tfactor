@@ -14,6 +14,7 @@ data TraitInfo = TraitFunction PolyFunctionType
                | TraitMacro PolyFunctionType
                | TraitModule [(Id, TraitInfo)]
                | TraitInclude QId
+               | TraitDemandType -- This won't isn't allowed in the parser but is used in Primitives.
                  deriving (Show, Eq)
 
 data UnsatisfiedTrait = MissingFromTrait QId TraitInfo

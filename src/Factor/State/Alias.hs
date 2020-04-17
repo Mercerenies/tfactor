@@ -101,6 +101,7 @@ resolveAliasesTrait m (TraitMacro p) = TraitMacro <$> resolveAliasesPolyFnType m
 resolveAliasesTrait m (TraitModule xs) =
     TraitModule <$> mapM (\(i, t) -> ((,) i) <$> resolveAliasesTrait m t) xs
 resolveAliasesTrait m (TraitInclude q) = TraitInclude <$> resolveAlias m q
+resolveAliasesTrait _ TraitDemandType = pure TraitDemandType
 
 resolveAliasesAssert :: MonadError FactorError m =>
                         Map Id Alias -> ModuleDecl -> m ModuleDecl

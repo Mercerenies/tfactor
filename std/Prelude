@@ -2,6 +2,12 @@
 
 alias P = Primitives
 
+# TODO This is a hack. It would be nice if we had actual trait
+# synonyms like we do for modules.
+trait Type
+  include P.Type
+end
+
 mod Int = P.Int end
 mod Any = P.Any end
 mod Nothing = P.Nothing end

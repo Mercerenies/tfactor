@@ -1,6 +1,8 @@
 {-# LANGUAGE FlexibleContexts, ScopedTypeVariables, LambdaCase #-}
 
-module Factor.Trait where
+module Factor.Trait(Trait(..), TraitInfo(..), UnsatisfiedTrait(..),
+                    FromUnsatisfiedTrait(..),
+                    moduleSatisfies, moduleSatisfies') where
 
 import Factor.Trait.Types
 import Factor.State
@@ -55,6 +57,10 @@ moduleSatisfies reader (Trait reqs0) m0 = mapM_ (go (QId []) m0) reqs0
                    TraitInclude q -> lookupFn q reader >>= \case
                                      TraitValue t -> moduleSatisfies reader t m
                                      _ -> throwError (NoSuchTrait q)
+                   TraitDemandType -> if m0^.moduleIsType then
+                                          pure ()
+                                      else
+                                          throwError (TraitError $ MissingFromTrait qid info)
 
 moduleSatisfies' :: (MonadReader ReadOnlyState m, MonadError FactorError m) =>
                     Trait -> Module -> m ()

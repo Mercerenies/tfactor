@@ -23,6 +23,7 @@ import Factor.Loader.Type
 import Factor.Parser.Token
 import Factor.Parser
 import Factor.Names
+import Factor.Trait
 
 import Control.Monad
 import Control.Monad.Except
@@ -181,6 +182,7 @@ emptyTypeModule = set moduleIsType True emptyModule
 
 builtins :: Map Id ReaderValue
 builtins = Map.fromList [
+            ("Type", TraitValue (Trait [(Id "", TraitDemandType)])),
             ("Int", ModuleValue emptyTypeModule),
             ("Any", ModuleValue emptyTypeModule),
             ("Nothing", ModuleValue emptyTypeModule),

@@ -18,6 +18,9 @@ record Vector3
   field y Int
   field z Int
 
+  require Type # Wouldn't usually use this like
+               # this, but it's just a test here.
+
   fun dot ( Vector3 Vector3 -- Int )
     [ [ 1 ] dip2 [ Vector3.x * ] dup bi* ]
     [ [ 1 ] dip2 [ Vector3.y * ] dup bi* ]

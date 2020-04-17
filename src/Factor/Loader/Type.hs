@@ -36,6 +36,7 @@ normalizeTypesTrait (TraitMacro p) = TraitMacro <$> normalizePolyFnType p
 normalizeTypesTrait (TraitModule xs) =
     TraitModule <$> mapM (\(i, t) -> ((,) i) <$> normalizeTypesTrait t) xs
 normalizeTypesTrait (TraitInclude q) = pure $ TraitInclude q
+normalizeTypesTrait TraitDemandType = pure $ TraitDemandType
 
 normalizeTypesRes :: (MonadReader ReadOnlyState m, MonadError FactorError m) => ReaderValue -> m ReaderValue
 normalizeTypesRes (UDFunction t f) = UDFunction <$> normalizePolyFnType t <*> pure f
