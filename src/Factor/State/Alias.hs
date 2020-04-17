@@ -103,8 +103,10 @@ resolveAliasesTrait m (TraitModule xs) =
 resolveAliasesTrait m (TraitInclude q) = TraitInclude <$> resolveAlias m q
 
 resolveAliasesAssert :: MonadError FactorError m =>
-                        Map Id Alias -> ModuleAssert -> m ModuleAssert
+                        Map Id Alias -> ModuleDecl -> m ModuleDecl
 resolveAliasesAssert m (AssertTrait qid) = AssertTrait <$> resolveAlias m qid
+resolveAliasesAssert _ (Open q) = pure (Open q)
+resolveAliasesAssert _ (Alias i q) = pure (Alias i q)
 
 resolveAliasesResource :: MonadError FactorError m =>
                           Map Id Alias -> ReaderValue -> m ReaderValue
@@ -118,7 +120,7 @@ resolveAliasesResource m (UDMacro t (Macro v ss)) = do
   t' <- resolveAliasesPolyFnType m t
   return $ UDMacro t' (Macro v ss')
 resolveAliasesResource m (ModuleValue inner) =
-    ModuleValue <$> traverseOf (moduleAssertions.traverse) (resolveAliasesAssert m) inner
+    ModuleValue <$> traverseOf (moduleDecls.traverse) (resolveAliasesAssert m) inner
 resolveAliasesResource m (ModuleSynonym qid) = ModuleSynonym <$> resolveAlias m qid
 resolveAliasesResource m (TraitValue (Trait xs)) =
     TraitValue . Trait <$> mapM (\(i, t) -> ((,) i) <$> resolveAliasesTrait m t) xs
@@ -134,12 +136,12 @@ resolveAliasesResource' aliases0 (QId xs) r = do
                          ModuleValue m -> pure m
                          _ -> throwError (NoSuchModule $ QId mname)
         let aliases' = openModule (QId mname) m aliases
-        foldM handleAliasDecl aliases' (m^.moduleAliases)
+        foldM handleAliasDecl aliases' (m^.moduleDecls)
   aliases1 <- foldM handleParentModule aliases0 parents
   resolveAliasesResource aliases1 r
 
 handleAliasDecl :: (MonadReader ReadOnlyState m, MonadError FactorError m) =>
-                   Map Id Alias -> AliasDecl -> m (Map Id Alias)
+                   Map Id Alias -> ModuleDecl -> m (Map Id Alias)
 handleAliasDecl m a = case a of
                         Alias i j -> do
                                j' <- resolveAlias m j
@@ -150,6 +152,7 @@ handleAliasDecl m a = case a of
                                reader <- ask
                                mname' <- resolveAlias m mname
                                lookupAndOpenModule mname' reader m
+                        AssertTrait _ -> pure m
 
 bindDefaultAliases :: MonadError FactorError m => ReadOnlyState -> Map Id Alias -> m (Map Id Alias)
 bindDefaultAliases reader aliases =

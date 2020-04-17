@@ -2,10 +2,10 @@
     GeneralizedNewtypeDeriving, TypeFamilies, DeriveTraversable #-}
 
 module Factor.State.Types(EvalState(..), ReadOnlyState(ReadOnlyState), ReaderValue(..), RId,
-                          Module(Module), AliasDecl(..), ModuleAssert(..), BuiltIn(..), BuiltInConstraints,
+                          Module(Module), ModuleDecl(..), BuiltIn(..), BuiltInConstraints,
                           ResourceTable(..),
                           readerModule, readerNames, readerResources,
-                          moduleNames, moduleAliases, moduleIsType, moduleAssertions,
+                          moduleNames, moduleDecls, moduleIsType,
                           newState, newReader, emptyModule, mapToModule, newResourceTable) where
 
 import Factor.Error
@@ -43,17 +43,14 @@ data ReaderValue = UDFunction PolyFunctionType Function -- User-defined function
 
 data Module = Module {
       _moduleNames :: Map Id RId,
-      _moduleAliases :: [AliasDecl],
-      _moduleIsType :: Bool,
-      _moduleAssertions :: [ModuleAssert]
+      _moduleDecls :: [ModuleDecl],
+      _moduleIsType :: Bool
     } deriving (Show)
 
-data AliasDecl = Alias Id QId
-               | Open QId
-                 deriving (Show, Eq)
-
-data ModuleAssert = AssertTrait QId
-                    deriving (Show, Eq)
+data ModuleDecl = Alias Id QId
+                | Open QId
+                | AssertTrait QId
+                  deriving (Show, Eq)
 
 type BuiltInConstraints m = (MonadReader ReadOnlyState m, MonadState EvalState m, MonadError FactorError m)
 
@@ -91,10 +88,10 @@ newReader :: ReadOnlyState
 newReader = ReadOnlyState emptyModule newResourceTable
 
 emptyModule :: Module
-emptyModule = Module Map.empty [] False []
+emptyModule = mapToModule Map.empty
 
 mapToModule :: Map Id RId -> Module
-mapToModule m = Module m [] False []
+mapToModule m = Module m [] False
 
 newResourceTable :: ResourceTable a
 newResourceTable = ResourceTable Seq.Empty

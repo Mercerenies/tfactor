@@ -1,9 +1,9 @@
 {-# LANGUAGE FlexibleContexts, ViewPatterns, KindSignatures, RankNTypes, TypeFamilies, ScopedTypeVariables #-}
 
 module Factor.State(ReadOnlyState(ReadOnlyState), ReaderValue(..),
-                    Module(Module), AliasDecl(..), ModuleAssert(..),
+                    Module(Module), ModuleDecl(..),
                     readerModule, readerNames, readerResources,
-                    moduleNames, moduleAliases, moduleIsType, moduleAssertions,
+                    moduleNames, moduleDecls, moduleIsType,
                     newReader, emptyModule, mapToModule,
                     declsToReadOnly, atQIdResource, atQId, lookupFn, lookupFnName,
                     allNamesInModule, allNames,
@@ -69,9 +69,9 @@ declsToReadOnly qid ds r = foldM go r ds
                  | otherwise ->
                      let qid' = qid <> QId [v]
                      in traverseOf moduleNames (defineResource qid' v (TraitValue def)) reader
-                AliasDecl i j -> pure $ over moduleAliases (++ [Alias i j]) reader
-                OpenDecl j -> pure $ over moduleAliases (++ [Open j]) reader
-                RequireDecl j -> pure $ over moduleAssertions (++ [AssertTrait j]) reader
+                AliasDecl i j -> pure $ over moduleDecls (++ [Alias i j]) reader
+                OpenDecl j -> pure $ over moduleDecls (++ [Open j]) reader
+                RequireDecl j -> pure $ over moduleDecls (++ [AssertTrait j]) reader
 
 defineFunction :: MonadState (ResourceTable ReaderValue) m =>
                   QId -> Id -> PolyFunctionType -> Sequence -> Map Id RId -> m (Map Id RId)
@@ -238,8 +238,8 @@ readerMacroType (ModuleSynonym _) = Nothing
 readerMacroType (TraitValue _) = Nothing
 
 merge :: MonadError FactorError m => ReadOnlyState -> ReadOnlyState -> m ReadOnlyState
-merge (ReadOnlyState (Module m a t as) r) (ReadOnlyState (Module m' a' t' as') r') =
-    ReadOnlyState <$> (Module <$> merged <*> pure (a ++ a') <*> pure (t || t') <*> pure (as ++ as')) <*> pure rtable
+merge (ReadOnlyState (Module m a t) r) (ReadOnlyState (Module m' a' t') r') =
+    ReadOnlyState <$> (Module <$> merged <*> pure (a ++ a') <*> pure (t || t')) <*> pure rtable
         where failure = Merge.zipWithAMatched $ \k _ _ -> throwError (DuplicateDecl k)
               renamedm = fmap (+ resourceCount r) m'
               renamedr = modifyRIds (+ resourceCount r) r'
