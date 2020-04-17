@@ -226,6 +226,3 @@ renameToAvoidConflicts'' conflict t = fmap rename t
                                      , let v' = v <> Id (show n)
                                      , not (isConflicting v')]
           isConflicting v = conflict v || v `elem` t
-
--- TODO: Somewhere we need to check for cycles, so we know these
--- substitutions will terminate. Cyclic type assumptions are an error.

@@ -82,9 +82,6 @@ defineModule :: MonadState (ResourceTable ReaderValue) m =>
                 QId -> Id -> Module -> Map Id RId -> m (Map Id RId)
 defineModule q v def = defineResource q v (ModuleValue def)
 
--- TODO Mark which modules can be treated as types and which cannot,
--- as a flag on the Module type itself.
-
 -- Hopefully, somewhere down the road, record declarations will be
 -- able to be a declaration macro defined in Prelude, and then they'll
 -- just translate inside the language. But for now, it's special

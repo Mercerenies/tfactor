@@ -53,7 +53,7 @@ produceDependencyGraph qids reader =
                                      UDFunction _ (Function _ ss) -> namesToEdges $ findDependenciesSeq ss
                                      BIFunction {} -> []
                                      UDMacro _ (Macro _ ss) -> namesToEdges $ findDependenciesSeq ss
-                                     ModuleValue {} -> [] -- TODO Right now, modules have no dependencies because they have no load phase
+                                     ModuleValue {} -> []
                                      TraitValue {} -> []
                            inner = case v of
                                      ModuleValue m -> fold (Map.mapWithKey (go' k) (m^.moduleNames))
