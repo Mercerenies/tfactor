@@ -45,7 +45,7 @@ produceModuleDepGraph qids reader =
                              BIFunction {} -> []
                              UDMacro {} -> []
                              ModuleValue {} -> []
-                             ModuleSynonym dest -> [(qid, GraphEdge dest)]
+                             ModuleSynonym dest -> [(qid, GraphEdge dest') | dest' <- allPrefixes dest]
                              TraitValue {} -> []
               in parents ++ others
 

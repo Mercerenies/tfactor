@@ -1,0 +1,20 @@
+
+mod A
+  mod B
+    mod C
+      fun foo ( -- Int ) 10 end
+    end
+  end
+end
+
+mod D
+  mod E = A.B end
+end
+
+mod F
+  mod G = D.E.C end
+end
+
+fun main ( -- Int )
+  F.G.foo
+end
