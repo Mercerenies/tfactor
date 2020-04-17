@@ -70,7 +70,7 @@ end
     + [X] Syntactic assertion, i.e. ~require~
     + [ ] Traits are modules (??)
     + [ ] Alternatively, trait synonyms (??)
-    + [ ] Trait includes
+    + [X] Trait includes
     + [ ] While we're at it, module includes
  5. [ ] Parameterized traits
     + [ ] Parameterization

@@ -18,7 +18,7 @@ type Parser = Parsec [Token] ()
 
 keywords :: [String]
 keywords = ["true", "false", "fun", "mod", "end", "macro", "alias", "open",
-            "field", "constructor", "val", "require"]
+            "field", "constructor", "val", "require", "include"]
 
 -- (Unused right now)
 _id_ :: Parser Id
@@ -138,7 +138,7 @@ trait :: Parser (Id, Trait)
 trait = symbol "trait" *> ((,) <$> unqualifiedId <*> (Trait <$> many traitInfo)) <* symbol "end"
 
 traitInfo :: Parser (Id, TraitInfo)
-traitInfo = traitInfoFun <|> traitInfoMod
+traitInfo = traitInfoFun <|> traitInfoMod <|> traitInfoInclude -- TODO Macro declarations in traits
 
 traitInfoFun :: Parser (Id, TraitInfo)
 traitInfoFun = do
@@ -154,6 +154,12 @@ traitInfoMod = do
   inner <- many traitInfo
   _ <- symbol "end"
   return (name, TraitModule inner)
+
+traitInfoInclude :: Parser (Id, TraitInfo)
+traitInfoInclude = do
+  _ <- symbol "include"
+  name <- qualifiedId
+  return (Id "", TraitInclude name) -- TODO Reorganize Trait so that the empty Id isn't necessary here.
 
 namedType :: Parser QId
 namedType = try $ do

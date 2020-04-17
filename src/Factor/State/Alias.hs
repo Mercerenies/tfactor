@@ -100,6 +100,7 @@ resolveAliasesTrait m (TraitFunction p) = TraitFunction <$> resolveAliasesPolyFn
 resolveAliasesTrait m (TraitMacro p) = TraitMacro <$> resolveAliasesPolyFnType m p
 resolveAliasesTrait m (TraitModule xs) =
     TraitModule <$> mapM (\(i, t) -> ((,) i) <$> resolveAliasesTrait m t) xs
+resolveAliasesTrait m (TraitInclude q) = TraitInclude <$> resolveAlias m q
 
 resolveAliasesAssert :: MonadError FactorError m =>
                         Map Id Alias -> ModuleAssert -> m ModuleAssert

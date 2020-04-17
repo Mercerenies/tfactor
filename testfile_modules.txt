@@ -47,13 +47,33 @@ trait HasInnerModule
 
 end
 
+trait HasInnerModule1
+  include HasInnerModule
+end
+
 mod OuterModule
   require HasInnerModule
+  require HasInnerModule1
 
   mod Inner
     fun foo ( 'a -- 'a ) id end
   end
 
+end
+
+trait OuterTrait
+  mod Inner
+    include KnowsTheAnswer
+  end
+end
+
+mod OuterModule1
+  require OuterTrait
+  mod Inner
+    fun the-answer ( -- Int )
+      42
+    end
+  end
 end
 
 fun main ( -- Int )

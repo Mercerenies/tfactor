@@ -24,6 +24,7 @@ import Data.Array.IArray
 data FactorError = NoSuchFunction QId
                  | NoSuchModule QId
                  | NoSuchType QId
+                 | NoSuchTrait QId
                  | StackUnderflow
                  | DuplicateDecl Id
                  | InternalError String
@@ -45,6 +46,7 @@ instance Show FactorError where
           NoSuchFunction v -> ("No such function " ++) . shows v
           NoSuchModule v -> ("No such module " ++) . shows v
           NoSuchType v -> ("No such type " ++) . shows v
+          NoSuchTrait v -> ("No such trait " ++) . shows v
           StackUnderflow -> ("Stack underflow" ++)
           DuplicateDecl v -> ("Duplicate declaration " ++) . shows v
           InternalError str ->
@@ -68,6 +70,9 @@ instance Show FactorError where
 
 instance FromTypeError FactorError where
     fromTypeError = TypeError
+
+instance FromUnsatisfiedTrait FactorError where
+    fromUnsatisfiedTrait = TraitError
 
 liftParseError :: MonadError FactorError m => Either ParseError a -> m a
 liftParseError = liftEither . left ParseError
