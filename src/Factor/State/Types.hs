@@ -32,7 +32,7 @@ data EvalState = EvalState {
 data ReadOnlyState = ReadOnlyState {
       _readerModule :: Module,
       _readerResources :: ResourceTable ReaderValue
-    }
+    } deriving (Show)
 
 data ReaderValue = UDFunction PolyFunctionType Function -- User-defined function
                  | BIFunction PolyFunctionType (BuiltIn ()) -- Built-in function
@@ -46,7 +46,7 @@ data Module = Module {
       _moduleAliases :: [AliasDecl],
       _moduleIsType :: Bool,
       _moduleAssertions :: [ModuleAssert]
-    }
+    } deriving (Show)
 
 data AliasDecl = Alias Id QId
                | Open QId
@@ -60,13 +60,21 @@ type BuiltInConstraints m = (MonadReader ReadOnlyState m, MonadState EvalState m
 newtype BuiltIn a = BuiltIn { unBuiltIn :: forall m. BuiltInConstraints m => m a }
 
 newtype ResourceTable a = ResourceTable (Seq (QId, a))
-    deriving (Functor, Foldable, Traversable)
+    deriving (Show, Functor, Foldable, Traversable)
 
 type instance Index (ResourceTable a) = Int
 type instance IxValue (ResourceTable a) = a
 
 instance Ixed (ResourceTable a) where
     ix n f (ResourceTable s) = ResourceTable <$> (ix n . _2) f s
+
+instance Show ReaderValue where
+    showsPrec _ (UDFunction p _) = ("<UDFunction " ++) . shows p . (">" ++)
+    showsPrec _ (BIFunction p _) = ("<BIFunction " ++) . shows p . (">" ++)
+    showsPrec _ (UDMacro p _) = ("<UDMacro " ++) . shows p . (">" ++)
+    showsPrec _ (ModuleValue m) = ("<ModuleValue " ++) . shows m . (">" ++)
+    showsPrec _ (ModuleSynonym m) = ("<ModuleSynonym " ++) . shows m . (">" ++)
+    showsPrec _ (TraitValue t) = ("<Trait " ++) . shows t . (">" ++)
 
 type RId = Int
 
