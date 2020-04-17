@@ -52,11 +52,7 @@ declsToReadOnly qid ds r = foldM go r ds
                           let qid' = qid <> QId [v]
                           inner <- declsToReadOnly qid' def emptyModule
                           traverseOf moduleNames (defineModule qid' v inner) reader
-                ModuleSyn v dest
-                 | Map.member v (reader^.moduleNames) -> throwError (DuplicateDecl v)
-                 | otherwise ->
-                     let qid' = qid <> QId [v]
-                     in traverseOf moduleNames (defineResource qid' v (ModuleSynonym dest)) reader
+                ModuleSyn v dest -> pure $ over moduleDecls (++ [ModuleSynonym v dest]) reader
                 RecordDecl v def
                  | Map.member v (reader^.moduleNames) -> throwError (DuplicateDecl v)
                  | otherwise -> do
@@ -205,8 +201,6 @@ allNamesInModule resources k0 = fold . Map.mapWithKey go' . view moduleNames
                                  BIFunction {} -> []
                                  UDMacro {} -> []
                                  ModuleValue m' -> allNamesInModule resources k m'
-                                 ModuleSynonym {} -> [] -- Can't look them up yet, as the
-                                                        -- synonym hasn't been resolved.
                                  TraitValue {} -> []
               in k : innernames
           go' :: Id -> RId -> [QId]
@@ -226,7 +220,6 @@ readerFunctionType (UDFunction t _) = Just t
 readerFunctionType (BIFunction t _) = Just t
 readerFunctionType (UDMacro _ _) = Nothing
 readerFunctionType (ModuleValue _) = Nothing
-readerFunctionType (ModuleSynonym _) = Nothing
 readerFunctionType (TraitValue _) = Nothing
 
 readerMacroType :: ReaderValue -> Maybe PolyFunctionType
@@ -234,7 +227,6 @@ readerMacroType (UDFunction _ _) = Nothing
 readerMacroType (BIFunction _ _) = Nothing
 readerMacroType (UDMacro t _) = Just t
 readerMacroType (ModuleValue _) = Nothing
-readerMacroType (ModuleSynonym _) = Nothing
 readerMacroType (TraitValue _) = Nothing
 
 merge :: MonadError FactorError m => ReadOnlyState -> ReadOnlyState -> m ReadOnlyState

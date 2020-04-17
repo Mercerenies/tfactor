@@ -14,6 +14,12 @@ import Control.Monad.Except
 import Control.Monad.Reader
 import Control.Lens
 
+-- TODO If the canonical name of a thing and the name we're using to
+-- access it don't match, then we probably shouldn't load (or resolve
+-- aliases, for that matter) as the scoping is going to be all wrong.
+-- It may be okay. Think about it, and about the order in which things
+-- happen.
+
 validateTraits :: (MonadError FactorError m, MonadReader ReadOnlyState m) => Module -> m ()
 validateTraits m =
     forM_ (m^.moduleDecls) $ \case
@@ -23,6 +29,7 @@ validateTraits m =
                                                                 -- no better error right now.
         Alias _ _ -> pure ()
         Open _ -> pure ()
+        ModuleSynonym _ _ -> pure ()
 
 loadEntity :: (MonadError FactorError m, MonadReader ReadOnlyState m) => ReaderValue -> m ReaderValue
 loadEntity r = do

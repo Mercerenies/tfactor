@@ -38,7 +38,6 @@ data ReaderValue = UDFunction PolyFunctionType Function -- User-defined function
                  | BIFunction PolyFunctionType (BuiltIn ()) -- Built-in function
                  | UDMacro PolyFunctionType Macro -- User-defined macro
                  | ModuleValue Module
-                 | ModuleSynonym QId
                  | TraitValue Trait
 
 data Module = Module {
@@ -50,6 +49,7 @@ data Module = Module {
 data ModuleDecl = Alias Id QId
                 | Open QId
                 | AssertTrait QId
+                | ModuleSynonym Id QId
                   deriving (Show, Eq)
 
 type BuiltInConstraints m = (MonadReader ReadOnlyState m, MonadState EvalState m, MonadError FactorError m)
@@ -70,7 +70,6 @@ instance Show ReaderValue where
     showsPrec _ (BIFunction p _) = ("<BIFunction " ++) . shows p . (">" ++)
     showsPrec _ (UDMacro p _) = ("<UDMacro " ++) . shows p . (">" ++)
     showsPrec _ (ModuleValue m) = ("<ModuleValue " ++) . shows m . (">" ++)
-    showsPrec _ (ModuleSynonym m) = ("<ModuleSynonym " ++) . shows m . (">" ++)
     showsPrec _ (TraitValue t) = ("<Trait " ++) . shows t . (">" ++)
 
 type RId = Int

@@ -18,21 +18,36 @@ import Control.Lens
 newtype GraphEdge = GraphEdge QId
     deriving (Show, Eq, Ord)
 
-loadModule :: (MonadError FactorError m, MonadReader ReadOnlyState m) => RId -> m RId
-loadModule r = view (readerResources . possibly (ix r)) >>= \case
-               Nothing -> throwError (InternalError $ "No such resource " ++ show r)
-               Just (UDFunction {}) -> pure r
-               Just (BIFunction {}) -> pure r
-               Just (UDMacro {}) -> pure r
-               Just (ModuleValue {}) -> pure r
-               Just (ModuleSynonym dest) ->
-                   view (possibly $ atQIdResource dest) >>= \case
-                        Nothing -> throwError (NoSuchModule dest)
-                        Just r' -> pure r'
-               Just (TraitValue {}) -> pure r
+resolveModuleDecl :: (MonadError FactorError m, MonadReader ReadOnlyState m) =>
+                     ModuleDecl -> Module -> m Module
+resolveModuleDecl decl m =
+    case decl of
+      ModuleSynonym i dest -> view (possibly $ atQIdResource dest) >>= \case
+                              Nothing -> throwError (NoSuchModule dest)
+                              Just r -> forOf (moduleNames.at i) m $ \case
+                                        Nothing -> pure (Just r)
+                                        Just _ -> throwError (DuplicateDecl i)
+      Alias _ _ -> pure m
+      Open _ -> pure m
+      AssertTrait _ -> pure m
+
+loadModule :: (MonadError FactorError m, MonadReader ReadOnlyState m) => ReaderValue -> m ReaderValue
+loadModule r =
+    case r of
+      UDFunction {} -> pure r
+      BIFunction {} -> pure r
+      UDMacro {} -> pure r
+      ModuleValue m -> ModuleValue <$> foldM (flip resolveModuleDecl) m (m^.moduleDecls)
+      TraitValue {} -> pure r
 
 loadModuleAt :: MonadError FactorError m => QId -> ReadOnlyState -> m ReadOnlyState
-loadModuleAt qid r = traverseOf (atQIdResource qid) (\v -> runReaderT (loadModule v) r) r
+loadModuleAt qid r = traverseOf (atQId qid) (\v -> runReaderT (loadModule v) r) r
+
+dependenciesFromModuleDecl :: ModuleDecl -> [GraphEdge]
+dependenciesFromModuleDecl (ModuleSynonym _ dest) = [GraphEdge dest' | dest' <- allPrefixes dest]
+dependenciesFromModuleDecl (Alias _ _) = []
+dependenciesFromModuleDecl (Open _) = []
+dependenciesFromModuleDecl (AssertTrait _) = []
 
 produceModuleDepGraph :: [QId] -> ReadOnlyState -> Graph QId GraphEdge
 produceModuleDepGraph qids reader =
@@ -44,8 +59,8 @@ produceModuleDepGraph qids reader =
                              UDFunction {} -> []
                              BIFunction {} -> []
                              UDMacro {} -> []
-                             ModuleValue {} -> []
-                             ModuleSynonym dest -> [(qid, GraphEdge dest') | dest' <- allPrefixes dest]
+                             ModuleValue m -> [(qid, e) | decl <- m^.moduleDecls
+                                                        , e <- dependenciesFromModuleDecl decl]
                              TraitValue {} -> []
               in parents ++ others
 

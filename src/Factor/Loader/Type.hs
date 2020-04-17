@@ -42,7 +42,6 @@ normalizeTypesRes (UDFunction t f) = UDFunction <$> normalizePolyFnType t <*> pu
 normalizeTypesRes (BIFunction t f) = BIFunction <$> normalizePolyFnType t <*> pure f
 normalizeTypesRes (UDMacro t f) = UDMacro <$> normalizePolyFnType t <*> pure f
 normalizeTypesRes (ModuleValue v) = pure $ ModuleValue v
-normalizeTypesRes (ModuleSynonym v) = pure $ ModuleSynonym v
 normalizeTypesRes (TraitValue (Trait xs)) =
     TraitValue . Trait <$> mapM (\(i, t) -> ((,) i) <$> normalizeTypesTrait t) xs
 

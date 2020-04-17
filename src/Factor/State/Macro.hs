@@ -46,7 +46,6 @@ evalMacrosStmt (Call v) = do
     Just (BIFunction {}) -> defaultBehavior
     Just (UDMacro _ (Macro _ ss)) -> evalSeq ss
     Just (ModuleValue {}) -> defaultBehavior
-    Just (ModuleSynonym {}) -> defaultBehavior
     Just (TraitValue {}) -> defaultBehavior
    where defaultBehavior = pushStack (Stack.singleton $ Symbol $ qidName v)
 
@@ -87,5 +86,4 @@ augmentWithMacros rv =
       BIFunction {} -> pure rv
       UDMacro {} -> pure rv -- TODO Augment this with macros
       ModuleValue {} -> pure rv
-      ModuleSynonym {} -> pure rv
       TraitValue {} -> pure rv

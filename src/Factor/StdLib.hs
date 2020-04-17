@@ -242,8 +242,9 @@ loadPreludeImpl = do
       fullbindings
   reader <- bindPrimitives newbindings'
   reader' <- loadModules (allNames newbindings') reader
-  reader'' <- normalizeAllTypes (allNames newbindings') reader'
-  loadEntities (allNames newbindings') reader''
+  reader'' <- runReaderT (forOf (readerResources.traverseWithQId) reader' $ \(q, v) -> resolveAliasesResource' Map.empty q v) reader'
+  reader''' <- normalizeAllTypes (allNames newbindings') reader''
+  loadEntities (allNames newbindings') reader'''
 
 loadPrelude :: (MonadError FactorError m, MonadIO m) => m Prelude
 loadPrelude = fmap Prelude loadPreludeImpl `catchError` (\e -> throwError (InternalError $ show e))

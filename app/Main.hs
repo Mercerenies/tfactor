@@ -55,9 +55,10 @@ run filename = do
       runReaderT (forOf (readerResources . traverseWithQId) newbindings $ \(q, v) -> resolveAliasesResource' aliases q v) fullbindings
   reader'' <- bindStdlibModule prelude newbindings'
   reader''' <- loadModules (allNames newbindings') reader''
-  reader'''' <- normalizeAllTypes (allNames newbindings') reader'''
-  reader''''' <- loadEntities (allNames newbindings') reader''''
-  (_, state) <- liftEither $ runEval (callFunction (QId [Id "main"])) reader''''' newState
+  reader'''' <- runReaderT (forOf (readerResources.traverseWithQId) reader''' $ \(q, v) -> resolveAliasesResource' aliases q v) reader'''
+  reader''''' <- normalizeAllTypes (allNames newbindings') reader''''
+  reader'''''' <- loadEntities (allNames newbindings') reader'''''
+  (_, state) <- liftEither $ runEval (callFunction (QId [Id "main"])) reader'''''' newState
   liftIO $ print state
 
 main :: IO ()
