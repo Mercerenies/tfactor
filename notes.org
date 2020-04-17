@@ -56,6 +56,20 @@ end
 ** Arrays
   + Don't forget that we still don't have arrays. Need to decide on
     the syntax and lots of stuff for those.
+** Error Messages
+   I know it to be true but I might as well write it down here to be
+   sure. Error messages are /awful/ right now. They need to be vastly
+   improved.
+   + Parser errors are actually quite good, because they come from
+     parsec. No major action need be taken there.
+   + Errors should show where they came from: at the very least a name
+     of module or function, and ideally a line number.
+   + Some errors are being overused, such as ~NoSuchFunction~.
+   + Lots of errors don't convey enough information, like
+     ~NotAFunction~ or ~NotAModule~.
+   + Generally, errors need to be prettied up in the form they show to
+     the user, even when they do technically convey the right info.
+   + Internal errors probably shouldn't nest.
 * TRAITS AND MODULE PARAMETERS PLAN
  1. [X] ~ResourceTable~ transition
  2. [X] Module synonyms that are exported
