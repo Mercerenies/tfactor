@@ -30,6 +30,7 @@ validateTraits m =
         Alias _ _ -> pure ()
         Open _ -> pure ()
         ModuleSynonym _ _ -> pure ()
+        IncludeModule _ -> pure ()
 
 loadEntity :: (MonadError FactorError m, MonadReader ReadOnlyState m) => ReaderValue -> m ReaderValue
 loadEntity r = do

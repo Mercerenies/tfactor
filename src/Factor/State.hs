@@ -68,6 +68,7 @@ declsToReadOnly qid ds r = foldM go r ds
                 AliasDecl i j -> pure $ over moduleDecls (++ [Alias i j]) reader
                 OpenDecl j -> pure $ over moduleDecls (++ [Open j]) reader
                 RequireDecl j -> pure $ over moduleDecls (++ [AssertTrait j]) reader
+                IncludeDecl q -> pure $ over moduleDecls (++ [IncludeModule q]) reader
 
 defineFunction :: MonadState (ResourceTable ReaderValue) m =>
                   QId -> Id -> PolyFunctionType -> Sequence -> Map Id RId -> m (Map Id RId)

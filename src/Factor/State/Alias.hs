@@ -106,6 +106,9 @@ resolveAliasesAssert :: MonadError FactorError m =>
                         Map Id Alias -> ModuleDecl -> m ModuleDecl
 resolveAliasesAssert m (AssertTrait qid) = AssertTrait <$> resolveAlias m qid
 resolveAliasesAssert m (ModuleSynonym i qid) = ModuleSynonym i <$> resolveAlias m qid
+resolveAliasesAssert m (IncludeModule q) = IncludeModule <$> resolveAlias m q
+-- Note that we do nothing with these two, since they've already been
+-- resolved by this point, so it honestly doesn't matter that much.
 resolveAliasesAssert _ (Open q) = pure (Open q)
 resolveAliasesAssert _ (Alias i q) = pure (Alias i q)
 
@@ -157,6 +160,7 @@ handleAliasDecl m a = case a of
                                lookupAndOpenModule mname' reader m
                         AssertTrait _ -> pure m
                         ModuleSynonym _ _ -> pure m
+                        IncludeModule _ -> pure m
 
 bindDefaultAliases :: MonadError FactorError m => ReadOnlyState -> Map Id Alias -> m (Map Id Alias)
 bindDefaultAliases reader aliases =

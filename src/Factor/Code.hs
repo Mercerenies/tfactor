@@ -42,6 +42,7 @@ data Declaration = FunctionDecl PolyFunctionType Function
                  | AliasDecl Id QId
                  | OpenDecl QId
                  | RequireDecl QId
+                 | IncludeDecl QId
                    deriving (Show, Eq)
 
 data RecordInfo = RecordConstructor Id

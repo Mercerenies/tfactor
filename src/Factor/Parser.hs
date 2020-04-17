@@ -72,7 +72,8 @@ decl = (\(t, s) -> FunctionDecl t s) <$> functionDecl <|>
        (\(i, d) -> RecordDecl i d) <$> recordDecl <|>
        (\(i, j) -> AliasDecl i j) <$> aliasDecl <|>
        (\i -> OpenDecl i) <$> openDecl <|>
-       (\i -> RequireDecl i) <$> requireDecl
+       (\i -> RequireDecl i) <$> requireDecl <|>
+       (\i -> IncludeDecl i) <$> includeDecl
 
 functionDecl :: Parser (PolyFunctionType, Function)
 functionDecl = do
@@ -133,6 +134,9 @@ openDecl = symbol "open" *> qualifiedId
 
 requireDecl :: Parser QId
 requireDecl = symbol "require" *> qualifiedId
+
+includeDecl :: Parser QId
+includeDecl = symbol "include" *> qualifiedId
 
 trait :: Parser (Id, Trait)
 trait = symbol "trait" *> ((,) <$> unqualifiedId <*> (Trait <$> many traitInfo)) <* symbol "end"

@@ -50,6 +50,7 @@ data ModuleDecl = Alias Id QId
                 | Open QId
                 | AssertTrait QId
                 | ModuleSynonym Id QId
+                | IncludeModule QId
                   deriving (Show, Eq)
 
 type BuiltInConstraints m = (MonadReader ReadOnlyState m, MonadState EvalState m, MonadError FactorError m)

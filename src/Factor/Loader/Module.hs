@@ -13,6 +13,7 @@ import Factor.Error
 import Control.Monad.Except
 import Control.Monad.Reader hiding (reader)
 import Control.Lens
+import qualified Data.Map as Map
 
 -- Right now, we need no additional information.
 newtype GraphEdge = GraphEdge QId
@@ -27,6 +28,13 @@ resolveModuleDecl decl m =
                               Just r -> forOf (moduleNames.at i) m $ \case
                                         Nothing -> pure (Just r)
                                         Just _ -> throwError (DuplicateDecl i)
+      IncludeModule dest -> view (possibly $ atQId dest) >>= \case
+                            Just (ModuleValue m') ->
+                                let go m1 (k, v) = forOf (moduleNames.at k) m1 $ \case
+                                                   Nothing -> pure (Just v)
+                                                   Just _ -> throwError (DuplicateDecl k)
+                                in foldM go m (Map.toList $ m'^.moduleNames)
+                            _ -> throwError (NoSuchModule dest)
       Alias _ _ -> pure m
       Open _ -> pure m
       AssertTrait _ -> pure m
@@ -45,6 +53,7 @@ loadModuleAt qid r = traverseOf (atQId qid) (\v -> runReaderT (loadModule v) r) 
 
 dependenciesFromModuleDecl :: ModuleDecl -> [GraphEdge]
 dependenciesFromModuleDecl (ModuleSynonym _ dest) = [GraphEdge dest' | dest' <- allPrefixes dest]
+dependenciesFromModuleDecl (IncludeModule dest) = [GraphEdge dest' | dest' <- allPrefixes dest]
 dependenciesFromModuleDecl (Alias _ _) = []
 dependenciesFromModuleDecl (Open _) = []
 dependenciesFromModuleDecl (AssertTrait _) = []

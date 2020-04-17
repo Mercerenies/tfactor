@@ -1,0 +1,25 @@
+
+mod A
+
+  mod B
+    fun bar ( -- String )
+      "Hi"
+    end
+  end
+
+  fun foo ( -- Int )
+    30
+  end
+
+end
+
+mod C
+  include A
+  fun baz ( -- Int )
+    101
+  end
+end
+
+fun main ( -- Int String Int )
+  C.foo C.B.bar C.baz
+end
