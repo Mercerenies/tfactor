@@ -2,7 +2,7 @@
     GeneralizedNewtypeDeriving, TypeFamilies, DeriveTraversable #-}
 
 module Factor.State.Types(EvalState(..), ReadOnlyState(ReadOnlyState), ReaderValue(..), RId,
-                          Module(Module), ParameterizedModule(..), ModuleDecl(..),
+                          Module(Module), ParameterizedModule(..), FunctorInfo(..), ModuleDecl(..),
                           BuiltIn(..), BuiltInConstraints,
                           ResourceTable(..),
                           readerModule, readerNames, readerResources,
