@@ -14,7 +14,7 @@ trait Ord { X : Type }
 
 end
 
-mod IntIsEq
+mod IntIsOrd
   require Ord { Int }
 
   fun == ( Int Int -- Bool )
@@ -27,5 +27,27 @@ mod IntIsEq
 
 end
 
-fun main ( -- )
+record Tuple2
+  constructor make
+  field proj1 Int
+  field proj2 Int
+end
+
+fun && ( Bool Bool -- Bool )
+  [ ] [ drop false ] if
+end
+
+mod Tuple2IsEq
+  require Eq { Tuple2 }
+
+  fun == ( Tuple2 Tuple2 -- Bool )
+    [ [ Tuple2.proj1 ] [ Tuple2.proj1 ] bi* IntIsOrd.== ]
+    [ [ Tuple2.proj2 ] [ Tuple2.proj2 ] bi* IntIsOrd.== ]
+    bi2 &&
+  end
+
+end
+
+fun main ( -- Bool )
+  10 20 Tuple2.make 20 10 Tuple2.make Tuple2IsEq.==
 end
