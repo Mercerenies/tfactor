@@ -8,7 +8,7 @@ module Factor.Trait(Trait(..), ParameterizedTrait(..), TraitInfo(..), Unsatisfie
 
 import Factor.Trait.Types
 import Factor.Trait.Argument
-import Factor.State
+import Factor.State.Reader
 import Factor.Error
 import Factor.Id
 import Factor.Util

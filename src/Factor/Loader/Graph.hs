@@ -2,7 +2,7 @@
 
 module Factor.Loader.Graph where
 
-import Factor.State
+import Factor.State.Reader
 import Factor.Code
 import Factor.Id
 import Factor.Util

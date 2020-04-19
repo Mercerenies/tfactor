@@ -4,6 +4,7 @@ module Factor.Type.Checker where
 
 import Factor.Code
 import Factor.State
+import Factor.State.Reader
 import Factor.Type
 import Factor.Type.Unify
 import Factor.Error

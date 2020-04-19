@@ -2,7 +2,7 @@
 
 module Factor.State.Macro where
 
-import Factor.State
+import Factor.State.Reader
 import Factor.State.Stack
 import Factor.Eval
 import Factor.Error

@@ -7,7 +7,7 @@ module Factor.Eval(EvalT, Eval,
 
 import Factor.Code
 import Factor.Error
-import Factor.State
+import Factor.State.Reader
 import Factor.State.Stack
 import Factor.State.Types(BuiltIn(..))
 import Factor.Id

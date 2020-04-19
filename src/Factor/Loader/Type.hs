@@ -3,7 +3,7 @@
 module Factor.Loader.Type where
 
 import Factor.Type
-import Factor.State
+import Factor.State.Reader
 import qualified Factor.Stack as Stack
 import Factor.Error
 import Factor.Trait

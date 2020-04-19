@@ -8,6 +8,7 @@ module Factor.StdLib(Prelude(),
 import Factor.Stack(Stack(..))
 import qualified Factor.Stack as Stack
 import Factor.State
+import Factor.State.Reader
 import Factor.State.Alias
 import Factor.State.Stack
 import Factor.State.Types(BuiltIn(..))

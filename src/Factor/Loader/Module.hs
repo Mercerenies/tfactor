@@ -2,7 +2,7 @@
 
 module Factor.Loader.Module where
 
-import Factor.State
+import Factor.State.Reader
 import Factor.State.Resource
 import Factor.Id
 import Factor.Util

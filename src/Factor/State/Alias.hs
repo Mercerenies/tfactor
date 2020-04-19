@@ -2,7 +2,7 @@
 
 module Factor.State.Alias where
 
-import Factor.State
+import Factor.State.Reader
 import Factor.Id
 import Factor.Util
 import Factor.Error

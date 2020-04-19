@@ -2,7 +2,7 @@
 
 module Factor.Loader where
 
-import Factor.State
+import Factor.State.Reader
 import Factor.State.Macro
 import Factor.Type.Checker
 import Factor.Error
