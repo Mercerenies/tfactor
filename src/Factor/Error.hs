@@ -39,6 +39,7 @@ data FactorError = NoSuchFunction QId
                  | LoadCycle [QId]
                  | TraitError UnsatisfiedTrait
                  | TraitArgError QId Int Int
+                 | FunctorArgError QId Int Int
                    deriving (Eq)
 
 instance Show FactorError where
@@ -70,6 +71,9 @@ instance Show FactorError where
               ("Trait requires " ++) . shows info . (" at " ++) . shows qid . (" (type is incompatible)" ++)
           TraitArgError t expected actual ->
               ("Expected " ++) . shows expected . (" arguments to trait " ++) . shows t .
+              (", got " ++) . shows actual
+          FunctorArgError t expected actual ->
+              ("Expected " ++) . shows expected . (" arguments to functor " ++) . shows t .
               (", got " ++) . shows actual
 
 instance FromTypeError FactorError where
