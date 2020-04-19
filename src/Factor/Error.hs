@@ -38,6 +38,7 @@ data FactorError = NoSuchFunction QId
                  | MacroRecursionLimit Sequence
                  | LoadCycle [QId]
                  | TraitError UnsatisfiedTrait
+                 | TraitArgError QId Int Int
                    deriving (Eq)
 
 instance Show FactorError where
@@ -67,6 +68,9 @@ instance Show FactorError where
               ("Trait requires " ++) . shows info . (" at " ++) . shows qid . (" (missing)" ++)
           TraitError (IncompatibleWithTrait qid info) ->
               ("Trait requires " ++) . shows info . (" at " ++) . shows qid . (" (type is incompatible)" ++)
+          TraitArgError t expected actual ->
+              ("Expected " ++) . shows expected . (" arguments to trait " ++) . shows t .
+              (", got " ++) . shows actual
 
 instance FromTypeError FactorError where
     fromTypeError = TypeError
