@@ -7,10 +7,22 @@ trait Eq { X : Type }
 
 end
 
+trait Ord { X : Type }
+  include Eq { X }
+
+  val lt ( X X -- Bool )
+
+end
+
 mod IntIsEq
+  require Ord { Int }
 
   fun == ( Int Int -- Bool )
     Prelude.=
+  end
+
+  fun lt ( Int Int -- Bool )
+    Prelude.<
   end
 
 end

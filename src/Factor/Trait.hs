@@ -3,9 +3,11 @@
 module Factor.Trait(Trait(..), ParameterizedTrait(..), TraitInfo(..), UnsatisfiedTrait(..),
                     FromUnsatisfiedTrait(..),
                     traitDemandsType, mergeTraits, nestedTrait, nestedTraitDeep,
-                    moduleSatisfies, moduleSatisfies') where
+                    moduleSatisfies, moduleSatisfies',
+                    bindTrait) where
 
 import Factor.Trait.Types
+import Factor.Trait.Argument
 import Factor.State
 import Factor.Error
 import Factor.Id
@@ -19,6 +21,7 @@ import Control.Monad.Reader hiding (reader)
 import Control.Monad.Except
 import Control.Monad.Writer
 import Control.Lens
+import qualified Data.Map as Map
 
 requireSubtype :: (FromUnsatisfiedTrait e, MonadError e m) => QId -> TraitInfo -> Type -> Type -> m ()
 requireSubtype q t a b =
@@ -37,12 +40,12 @@ traitDemandsType r (Trait xs) = getAny <$> foldMapM go xs
                 TraitFunction {} -> pure $ Any False
                 TraitMacro {} -> pure $ Any False
                 TraitModule {} -> pure $ Any False
-                TraitInclude q -> lookupFn q r >>= \case
-                                  TraitValue (ParameterizedTrait [] t) -> Any <$> traitDemandsType r t
-                                  TraitValue (ParameterizedTrait ys _) ->
-                                      -- TODO This
-                                      throwError (TraitArgError q (length ys) 0)
-                                  _ -> throwError (NoSuchTrait q)
+                TraitInclude (TraitRef q args) ->
+                    lookupFn q r >>= \case
+                             TraitValue pt -> do
+                               t <- runReaderT (bindTrait q pt args) r
+                               Any <$> traitDemandsType r t
+                             _ -> throwError (NoSuchTrait q)
                 TraitDemandType -> pure $ Any True
 
 mergeTraits :: Trait -> Trait -> Trait
@@ -58,12 +61,13 @@ nestedTrait r (Trait xs) y = foldMapM check xs >>= \case
                 TraitMacro {} -> pure []
                 TraitModule m | v == y -> pure [Trait m]
                               | otherwise -> pure []
-                TraitInclude q -> lookupFn q r >>= \case
-                                  TraitValue (ParameterizedTrait [] t) -> (\x -> [x]) <$> nestedTrait r t y
-                                  TraitValue (ParameterizedTrait ys _) ->
-                                      -- TODO This
-                                      throwError (TraitArgError q (length ys) 0)
-                                  _ -> throwError (NoSuchTrait q)
+                TraitInclude (TraitRef q args) ->
+                    lookupFn q r >>= \case
+                             TraitValue pt -> do
+                               t <- runReaderT (bindTrait q pt args) r
+                               result <- nestedTrait r t y
+                               return [result]
+                             _ -> throwError (NoSuchTrait q)
                 TraitDemandType -> pure []
 
 nestedTraitDeep :: MonadError FactorError m => ReadOnlyState -> Trait -> QId -> m Trait
@@ -98,12 +102,12 @@ moduleSatisfies reader (Trait reqs0) m0 = mapM_ (go (QId []) m0) reqs0
                              case value' of
                                ModuleValue m' -> mapM_ (go qid' m') reqs
                                _ -> throwError (TraitError $ MissingFromTrait qid' info)
-                   TraitInclude q -> lookupFn q reader >>= \case
-                                     TraitValue (ParameterizedTrait [] t) -> moduleSatisfies reader t m
-                                     TraitValue (ParameterizedTrait xs _) ->
-                                         -- TODO This
-                                         throwError (TraitArgError qid' (length xs) 0)
-                                     _ -> throwError (NoSuchTrait q)
+                   TraitInclude (TraitRef q args) ->
+                       lookupFn q reader >>= \case
+                                TraitValue pt -> do
+                                  t <- runReaderT (bindTrait q pt args) reader
+                                  moduleSatisfies reader t m
+                                _ -> throwError (NoSuchTrait q)
                    TraitDemandType -> if m0^.moduleIsType then
                                           pure ()
                                       else
@@ -112,3 +116,25 @@ moduleSatisfies reader (Trait reqs0) m0 = mapM_ (go (QId []) m0) reqs0
 moduleSatisfies' :: (MonadReader ReadOnlyState m, MonadError FactorError m) =>
                     Trait -> Module -> m ()
 moduleSatisfies' t m = ask >>= \r -> moduleSatisfies r t m
+
+bindTrait :: (MonadReader ReadOnlyState m, MonadError FactorError m) =>
+             QId -> ParameterizedTrait -> [QId] -> m Trait
+bindTrait qid (ParameterizedTrait params trait) args
+    | length params /= length args = throwError $ TraitArgError qid (length params) (length args)
+    | otherwise = do
+        zipped <- forM (zip params args) $ \(ModuleArg param (TraitRef req innerargs), arg) -> do
+                    traittype <- ask >>= lookupFn arg >>= \case
+                                 ModuleValue m -> pure m
+                                 _ -> throwError (NoSuchModule arg)
+                    req' <- ask >>= lookupFn req >>= \case
+                            TraitValue pt -> bindTrait req pt innerargs
+                                             -- TODO The above case can DEFINITELY cause
+                                             -- infinite loop issues in the compiler that
+                                             -- we need to detect and err out of.
+                            _ -> throwError (NoSuchTrait req)
+                    moduleSatisfies' req' traittype
+                    return (param, arg)
+        let submap = Map.fromList zipped
+            subfn k = maybe (QId [k]) id (Map.lookup k submap)
+            trait' = substituteTrait subfn trait
+        return trait'

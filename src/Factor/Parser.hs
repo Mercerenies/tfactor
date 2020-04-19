@@ -132,11 +132,21 @@ aliasDecl = do
 openDecl :: Parser QId
 openDecl = symbol "open" *> qualifiedId
 
-requireDecl :: Parser QId
-requireDecl = symbol "require" *> qualifiedId
+requireDecl :: Parser TraitRef
+requireDecl = symbol "require" *> traitRef
 
 includeDecl :: Parser QId
 includeDecl = symbol "include" *> qualifiedId
+
+traitRef :: Parser TraitRef
+traitRef = do
+  name <- qualifiedId
+  args <- option [] $ do
+             _ <- symbol "{"
+             args <- sepBy qualifiedId (symbol ",")
+             _ <- symbol "}"
+             return args
+  return $ TraitRef name args
 
 trait :: Parser (Id, ParameterizedTrait)
 trait = do
@@ -147,7 +157,7 @@ trait = do
               let singleparam = do
                           argname <- unqualifiedId
                           _ <- symbol ":"
-                          argtype <- qualifiedId
+                          argtype <- traitRef
                           return $ ModuleArg argname argtype
               params <- sepBy singleparam (symbol ",")
               _ <- symbol "}"
@@ -177,7 +187,7 @@ traitInfoMod = do
 traitInfoInclude :: Parser (Id, TraitInfo)
 traitInfoInclude = do
   _ <- symbol "include"
-  name <- qualifiedId
+  name <- traitRef
   return (Id "", TraitInclude name) -- TODO Reorganize Trait so that the empty Id isn't necessary here.
 
 namedType :: Parser QId

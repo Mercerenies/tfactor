@@ -41,7 +41,7 @@ data Declaration = FunctionDecl PolyFunctionType Function
                  | TraitDecl Id ParameterizedTrait
                  | AliasDecl Id QId
                  | OpenDecl QId
-                 | RequireDecl QId
+                 | RequireDecl TraitRef
                  | IncludeDecl QId
                    deriving (Show, Eq)
 

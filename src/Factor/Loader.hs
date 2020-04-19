@@ -8,7 +8,9 @@ import Factor.Type.Checker
 import Factor.Error
 import Factor.Id
 import Factor.Loader.Graph
+import Factor.Loader.Type
 import Factor.Trait
+import Factor.Trait.Argument
 
 import Control.Monad.Except
 import Control.Monad.Reader
@@ -23,13 +25,10 @@ import Control.Lens
 validateTraits :: (MonadError FactorError m, MonadReader ReadOnlyState m) => Module -> m ()
 validateTraits m =
     forM_ (m^.moduleDecls) $ \case
-        AssertTrait qid -> ask >>= lookupFn qid >>= \case
-                           TraitValue (ParameterizedTrait [] t) -> moduleSatisfies' t m
-                           TraitValue (ParameterizedTrait xs _) ->
-                               -- TODO This
-                               throwError (TraitArgError qid (length xs) 0)
-                           _ -> throwError (NoSuchFunction qid) -- TODO NoSuchFunction...? *sigh* There's
-                                                                -- no better error right now.
+        AssertTrait (TraitRef qid args) ->
+            ask >>= lookupFn qid >>= \case
+                TraitValue pt -> bindTraitAndNormalize qid pt args >>= \t -> moduleSatisfies' t m
+                _ -> throwError (NoSuchTrait qid)
         Alias _ _ -> pure ()
         Open _ -> pure ()
         ModuleSynonym _ _ -> pure ()

@@ -100,12 +100,18 @@ resolveAliasesTrait m (TraitFunction p) = TraitFunction <$> resolveAliasesPolyFn
 resolveAliasesTrait m (TraitMacro p) = TraitMacro <$> resolveAliasesPolyFnType m p
 resolveAliasesTrait m (TraitModule xs) =
     TraitModule <$> mapM (\(i, t) -> ((,) i) <$> resolveAliasesTrait m t) xs
-resolveAliasesTrait m (TraitInclude q) = TraitInclude <$> resolveAlias m q
+resolveAliasesTrait m (TraitInclude (TraitRef qid args)) = do
+  qid' <- resolveAlias m qid
+  args' <- mapM (resolveAlias m) args
+  return (TraitInclude (TraitRef qid' args'))
 resolveAliasesTrait _ TraitDemandType = pure TraitDemandType
 
 resolveAliasesAssert :: MonadError FactorError m =>
                         Map Id Alias -> ModuleDecl -> m ModuleDecl
-resolveAliasesAssert m (AssertTrait qid) = AssertTrait <$> resolveAlias m qid
+resolveAliasesAssert m (AssertTrait (TraitRef qid args)) = do
+  qid' <- resolveAlias m qid
+  args' <- mapM (resolveAlias m) args
+  return (AssertTrait (TraitRef qid' args'))
 resolveAliasesAssert m (ModuleSynonym i qid) = ModuleSynonym i <$> resolveAlias m qid
 resolveAliasesAssert m (IncludeModule q) = IncludeModule <$> resolveAlias m q
 -- Note that we do nothing with these two, since they've already been
@@ -126,10 +132,13 @@ resolveAliasesResource m (UDMacro t (Macro v ss)) = do
   return $ UDMacro t' (Macro v ss')
 resolveAliasesResource m (ModuleValue inner) =
     ModuleValue <$> traverseOf (moduleDecls.traverse) (resolveAliasesAssert m) inner
-resolveAliasesResource m (TraitValue (ParameterizedTrait args (Trait xs))) = do
+resolveAliasesResource m (TraitValue (ParameterizedTrait params (Trait xs))) = do
   xs' <- mapM (\(i, t) -> ((,) i) <$> resolveAliasesTrait m t) xs
-  args' <- mapM (\(ModuleArg i q) -> ModuleArg i <$> resolveAlias m q) args
-  return (TraitValue (ParameterizedTrait args' (Trait xs')))
+  params' <- forM params $ \(ModuleArg i (TraitRef name args)) -> do
+               name' <- resolveAlias m name
+               args' <- mapM (resolveAlias m) args
+               return (ModuleArg i (TraitRef name' args'))
+  return (TraitValue (ParameterizedTrait params' (Trait xs')))
 
 resolveAliasesResource' :: (MonadError FactorError m, MonadReader ReadOnlyState m) =>
                            Map Id Alias -> QId -> ReaderValue -> m ReaderValue

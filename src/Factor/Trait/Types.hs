@@ -7,11 +7,14 @@ import Factor.Id
 data Trait = Trait [(Id, TraitInfo)]
              deriving (Show, Eq)
 
-data ModuleArg = ModuleArg Id QId
+data ModuleArg = ModuleArg Id TraitRef
                  deriving (Show, Eq)
 
 data ParameterizedTrait = ParameterizedTrait [ModuleArg] Trait
                           deriving (Show, Eq)
+
+data TraitRef = TraitRef QId [QId]
+                deriving (Show, Eq)
 
 -- Note that, for the moment, macros cannot appear as members of a
 -- trait using the parser. I'll change this soon, but it's here for
@@ -19,7 +22,7 @@ data ParameterizedTrait = ParameterizedTrait [ModuleArg] Trait
 data TraitInfo = TraitFunction PolyFunctionType
                | TraitMacro PolyFunctionType
                | TraitModule [(Id, TraitInfo)]
-               | TraitInclude QId
+               | TraitInclude TraitRef
                | TraitDemandType -- This won't isn't allowed in the parser but is used in Primitives.
                  deriving (Show, Eq)
 
@@ -36,5 +39,11 @@ instance FromUnsatisfiedTrait UnsatisfiedTrait where
 moduleArgName :: ModuleArg -> Id
 moduleArgName (ModuleArg i _) = i
 
-moduleArgTraitName :: ModuleArg -> QId
+moduleArgTraitName :: ModuleArg -> TraitRef
 moduleArgTraitName (ModuleArg _ q) = q
+
+traitRefName :: TraitRef -> QId
+traitRefName (TraitRef q _) = q
+
+traitRefArgs :: TraitRef -> [QId]
+traitRefArgs (TraitRef _ qs) = qs
