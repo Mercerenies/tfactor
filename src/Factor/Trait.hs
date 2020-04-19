@@ -123,16 +123,16 @@ bindTrait qid (ParameterizedTrait params trait) args
     | length params /= length args = throwError $ TraitArgError qid (length params) (length args)
     | otherwise = do
         zipped <- forM (zip params args) $ \(ModuleArg param (TraitRef req innerargs), arg) -> do
-                    traittype <- ask >>= lookupFn arg >>= \case
-                                 ModuleValue m -> pure m
-                                 _ -> throwError (NoSuchModule arg)
+                    modl <- ask >>= lookupFn arg >>= \case
+                            ModuleValue m -> pure m
+                            _ -> throwError (NoSuchModule arg)
                     req' <- ask >>= lookupFn req >>= \case
                             TraitValue pt -> bindTrait req pt innerargs
                                              -- TODO The above case can DEFINITELY cause
                                              -- infinite loop issues in the compiler that
                                              -- we need to detect and err out of.
                             _ -> throwError (NoSuchTrait req)
-                    moduleSatisfies' req' traittype
+                    moduleSatisfies' req' modl
                     return (param, arg)
         let submap = Map.fromList zipped
             subfn k = maybe (QId [k]) id (Map.lookup k submap)
