@@ -1,7 +1,7 @@
 {-# LANGUAGE RankNTypes #-}
 
 module Factor.Util(sepBy, padLeft, foldM1, insertOrUpdate, errorToMaybe, setFilterMap,
-                   possibly, possibly') where
+                   possibly, possibly', foldMapM) where
 
 import Control.Monad
 import Control.Monad.Except
@@ -42,3 +42,6 @@ possibly t = possibly' (First . Just) t . to getFirst
 
 possibly' :: Monoid b => (a -> b) -> Traversal' s a -> Getter s b
 possibly' f t = to $ getConst . t (Const . f)
+
+foldMapM :: (Foldable t, Monad m, Monoid b) => (a -> m b) -> t a -> m b
+foldMapM f = foldM (\acc val -> fmap (acc <>) $ f val) mempty
