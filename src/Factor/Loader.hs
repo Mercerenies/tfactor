@@ -24,7 +24,10 @@ validateTraits :: (MonadError FactorError m, MonadReader ReadOnlyState m) => Mod
 validateTraits m =
     forM_ (m^.moduleDecls) $ \case
         AssertTrait qid -> ask >>= lookupFn qid >>= \case
-                           TraitValue t -> moduleSatisfies' t m
+                           TraitValue (ParameterizedTrait [] t) -> moduleSatisfies' t m
+                           TraitValue (ParameterizedTrait xs _) ->
+                               -- TODO This
+                               throwError (TraitArgError qid (length xs) 0)
                            _ -> throwError (NoSuchFunction qid) -- TODO NoSuchFunction...? *sigh* There's
                                                                 -- no better error right now.
         Alias _ _ -> pure ()

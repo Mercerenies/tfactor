@@ -182,7 +182,7 @@ emptyTypeModule = set moduleIsType True emptyModule
 
 builtins :: Map Id ReaderValue
 builtins = Map.fromList [
-            ("Type", TraitValue (Trait [(Id "", TraitDemandType)])),
+            ("Type", TraitValue (ParameterizedTrait [] $ Trait [(Id "", TraitDemandType)])),
             ("Int", ModuleValue emptyTypeModule),
             ("Any", ModuleValue emptyTypeModule),
             ("Nothing", ModuleValue emptyTypeModule),

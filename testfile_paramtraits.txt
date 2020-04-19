@@ -1,0 +1,19 @@
+
+trait Silly end
+
+trait Eq { X : Type }
+
+  val == ( X X -- Bool )
+
+end
+
+mod IntIsEq
+
+  fun == ( Int Int -- Bool )
+    Prelude.=
+  end
+
+end
+
+fun main ( -- )
+end

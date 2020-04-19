@@ -126,8 +126,10 @@ resolveAliasesResource m (UDMacro t (Macro v ss)) = do
   return $ UDMacro t' (Macro v ss')
 resolveAliasesResource m (ModuleValue inner) =
     ModuleValue <$> traverseOf (moduleDecls.traverse) (resolveAliasesAssert m) inner
-resolveAliasesResource m (TraitValue (Trait xs)) =
-    TraitValue . Trait <$> mapM (\(i, t) -> ((,) i) <$> resolveAliasesTrait m t) xs
+resolveAliasesResource m (TraitValue (ParameterizedTrait args (Trait xs))) = do
+  xs' <- mapM (\(i, t) -> ((,) i) <$> resolveAliasesTrait m t) xs
+  args' <- mapM (\(ModuleArg i q) -> ModuleArg i <$> resolveAlias m q) args
+  return (TraitValue (ParameterizedTrait args' (Trait xs')))
 
 resolveAliasesResource' :: (MonadError FactorError m, MonadReader ReadOnlyState m) =>
                            Map Id Alias -> QId -> ReaderValue -> m ReaderValue

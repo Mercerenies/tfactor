@@ -38,7 +38,7 @@ data Declaration = FunctionDecl PolyFunctionType Function
                  | ModuleDecl Id [Declaration]
                  | ModuleSyn Id QId
                  | RecordDecl Id [RecordInfo]
-                 | TraitDecl Id Trait
+                 | TraitDecl Id ParameterizedTrait
                  | AliasDecl Id QId
                  | OpenDecl QId
                  | RequireDecl QId

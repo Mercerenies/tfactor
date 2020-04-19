@@ -97,9 +97,9 @@ end
     + [ ] Alternatively, trait synonyms (??)
     + [X] Trait includes
     + [X] While we're at it, module includes
- 5. [ ] Parameterized traits
-    + [ ] Parameterization
-    + [ ] Syntax: ~trait~ declarations can take parameters
+ 5. [-] Parameterized traits
+    + [X] Parameterization
+    + [X] Syntax: ~trait~ declarations can take parameters
     + [ ] Syntax: ~require~ declarations can take parameters
     + [ ] Syntax: ~include~ declarations can take parameters
  6. [ ] Parameterized modules

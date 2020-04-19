@@ -138,8 +138,23 @@ requireDecl = symbol "require" *> qualifiedId
 includeDecl :: Parser QId
 includeDecl = symbol "include" *> qualifiedId
 
-trait :: Parser (Id, Trait)
-trait = symbol "trait" *> ((,) <$> unqualifiedId <*> (Trait <$> many traitInfo)) <* symbol "end"
+trait :: Parser (Id, ParameterizedTrait)
+trait = do
+  _ <- symbol "trait"
+  name <- unqualifiedId
+  params <- option [] $ do
+              _ <- symbol "{"
+              let singleparam = do
+                          argname <- unqualifiedId
+                          _ <- symbol ":"
+                          argtype <- qualifiedId
+                          return $ ModuleArg argname argtype
+              params <- sepBy singleparam (symbol ",")
+              _ <- symbol "}"
+              return params
+  properties <- Trait <$> many traitInfo
+  _ <- symbol "end"
+  return (name, ParameterizedTrait params properties)
 
 traitInfo :: Parser (Id, TraitInfo)
 traitInfo = traitInfoFun <|> traitInfoMod <|> traitInfoInclude -- TODO Macro declarations in traits

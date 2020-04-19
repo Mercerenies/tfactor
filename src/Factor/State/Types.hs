@@ -38,7 +38,7 @@ data ReaderValue = UDFunction PolyFunctionType Function -- User-defined function
                  | BIFunction PolyFunctionType (BuiltIn ()) -- Built-in function
                  | UDMacro PolyFunctionType Macro -- User-defined macro
                  | ModuleValue Module
-                 | TraitValue Trait
+                 | TraitValue ParameterizedTrait
 
 data Module = Module {
       _moduleNames :: Map Id RId,
