@@ -9,7 +9,7 @@ import Factor.Code
 data Declaration = FunctionDecl PolyFunctionType Function
                  | MacroDecl PolyFunctionType Macro
                  | ModuleDecl Id [Declaration]
-                 | ModuleSyn Id QId
+                 | ModuleSyn Id (Either QId TraitRef)
                  | RecordDecl Id [RecordInfo]
                  | TraitDecl Id ParameterizedTrait
                  | FunctorDecl Id ParameterizedModule

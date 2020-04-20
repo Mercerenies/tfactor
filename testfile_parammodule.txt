@@ -5,5 +5,10 @@ mod GoofyId { A : Type }
   end
 end
 
-fun main ( -- )
+mod Container
+  mod GoofyInstance = GoofyId { String } end
+end
+
+fun main ( -- String Int String )
+  "FOO" Container.GoofyInstance.id
 end

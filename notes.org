@@ -81,6 +81,11 @@ end
      type signatures coincide (we do need to make a merge step on this
      when including traits in other traits; right now it technically
      works, I think, but is awkward)
+** Top-Level Module
+   Lots of awkwardness here. It's not a "real" module which
+   complicates things. For one, it's never actually module loaded,
+   which means module synonyms and functor instantiations at the top
+   level just... fail silently. How do we deal with this?
 * TRAITS AND MODULE PARAMETERS PLAN
  1. [X] ~ResourceTable~ transition
  2. [X] Module synonyms that are exported
@@ -104,8 +109,8 @@ end
     + [X] Syntax: ~include~ declarations can take parameters
  6. [-] Parameterized modules
     + [X] Declaring functors
-    + [ ] Parameterization
-    + [ ] Actualizing functors into modules
+    + [X] Parameterization
+    + [X] Actualizing functors into modules
     + [X] Type checking inside of a functor
     + [ ] Ability to have nested functors
     + [ ] Normalize the type names to behave more intuitively

@@ -51,7 +51,7 @@ data Module = Module {
 data ModuleDecl = Alias Id QId
                 | Open QId
                 | AssertTrait TraitRef
-                | ModuleSynonym Id QId
+                | ModuleSynonym Id (Either QId TraitRef)
                 | IncludeModule QId
                   deriving (Show, Eq)
 

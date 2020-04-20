@@ -105,12 +105,17 @@ moduleDecl = do
   _ <- symbol "end"
   return (name, decls)
 
-moduleSyn :: Parser (Id, QId)
+moduleSyn :: Parser (Id, Either QId TraitRef)
 moduleSyn = do
   name <- try (symbol "mod" *> unqualifiedId <* symbol "=")
   syn <- qualifiedId
+  args <- option (Left syn) $ do
+              _ <- symbol "{"
+              args <- sepBy qualifiedId (symbol ",")
+              _ <- symbol "}"
+              return (Right $ TraitRef syn args)
   _ <- symbol "end"
-  return (name, syn)
+  return (name, args)
 
 recordDecl :: Parser (Id, [RecordInfo])
 recordDecl = do

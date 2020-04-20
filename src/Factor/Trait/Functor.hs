@@ -12,6 +12,7 @@ import Factor.Id
 import Factor.Util
 import Factor.Names
 import Factor.Code
+import Factor.Loader.Type
 
 import Control.Monad.State
 import Control.Monad.Except
@@ -27,7 +28,7 @@ makeMinimalModule qid pm = do
   let ParameterizedModule params _ = pm
   args <- forM params $ \(ModuleArg _ (TraitRef req innerargs)) -> do
                              req' <- get >>= lookupFn req >>= \case
-                                     TraitValue pt -> get >>= runReaderT (bindTrait req pt innerargs)
+                                     TraitValue pt -> get >>= runReaderT (bindTraitAndNormalize req pt innerargs)
                                      _ -> throwError (NoSuchTrait req)
                              let Id traitname = lastname req
                              modlname <- makeFreshModuleName ("Tmp" ++ traitname) <$> get
@@ -61,7 +62,7 @@ makeMinimalModuleFor qid (Trait info) = do
                    return $ set (moduleNames.at i) (Just rid) modl
                TraitInclude (TraitRef innername innerargs) -> do
                    innername' <- get >>= lookupFn innername >>= \case
-                                 TraitValue pt -> get >>= runReaderT (bindTrait innername pt innerargs)
+                                 TraitValue pt -> get >>= runReaderT (bindTraitAndNormalize innername pt innerargs)
                                  _ -> throwError (NoSuchTrait innername)
                    let Trait innerinfo = innername'
                    foldM go modl innerinfo
@@ -83,7 +84,7 @@ bindModule mqid fnqid (ParameterizedModule params info) args
                             ModuleValue m -> pure m
                             _ -> throwError (NoSuchModule arg)
                     req' <- get >>= lookupFn req >>= \case
-                            TraitValue pt -> get >>= runReaderT (bindTrait req pt innerargs)
+                            TraitValue pt -> get >>= runReaderT (bindTraitAndNormalize req pt innerargs)
                             _ -> throwError (NoSuchTrait req)
                     get >>= runReaderT (moduleSatisfies' req' modl)
                     return (param, arg)
@@ -97,21 +98,27 @@ bindFunctorInfo :: (MonadState ReadOnlyState m, MonadError FactorError m) =>
 bindFunctorInfo subfn qid info =
     case info of
       FunctorUDFunction ptype (Function v ss) ->
-          appendResourceRO' qid (UDFunction (subArgInPolyFnType subfn ptype) (Function v $ subArgInSeq subfn ss))
+          let res = UDFunction (subArgInPolyFnType subfn ptype) (Function v $ subArgInSeq subfn ss)
+          in normalizeTypesRes' res >>= appendResourceRO' qid
       FunctorUDMacro ptype (Macro v ss) ->
-          appendResourceRO' qid (UDMacro (subArgInPolyFnType subfn ptype) (Macro v $ subArgInSeq subfn ss))
+          let res = UDMacro (subArgInPolyFnType subfn ptype) (Macro v $ subArgInSeq subfn ss)
+          in normalizeTypesRes' res >>= appendResourceRO' qid
       FunctorModule m -> do
                 modl <- Map.traverseWithKey (\k v -> bindFunctorInfo subfn (qid <> QId [k]) v) m
-                appendResourceRO' qid (ModuleValue $ mapToModule modl)
+                normalizeTypesRes' (ModuleValue $ mapToModule modl) >>= appendResourceRO' qid
       FunctorTrait (ParameterizedTrait args t) ->
           let -- We don't want to substitute any names bound by the
               -- (parameterized) trait itself.
               subfn' k = if any (\(ModuleArg k' _) -> k == k') args then QId [k] else subfn k
+              res = TraitValue (ParameterizedTrait args (substituteTrait subfn' t))
           in -- TODO Substitute in args
-             appendResourceRO' qid (TraitValue (ParameterizedTrait args (substituteTrait subfn' t)))
+             normalizeTypesRes' res >>= appendResourceRO' qid
 
 appendResourceRO' :: MonadState ReadOnlyState m => QId -> ReaderValue -> m RId
 appendResourceRO' qid value = state (appendResourceRO qid value)
+
+normalizeTypesRes' :: (MonadState ReadOnlyState m, MonadError FactorError m) => ReaderValue -> m ReaderValue
+normalizeTypesRes' rv = get >>= runReaderT (normalizeTypesRes rv)
 
 makeFreshModuleName :: String -> ReadOnlyState -> Id
 makeFreshModuleName prefix reader = head [name | v <- [0 :: Int ..]
