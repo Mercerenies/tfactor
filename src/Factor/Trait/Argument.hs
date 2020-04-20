@@ -2,6 +2,7 @@
 
 module Factor.Trait.Argument(ModuleArg(..), TraitRef(..),
                              moduleArgName, moduleArgTraitName, traitRefName, traitRefArgs,
+                             subArg, subArgInType, subArgInFnType, subArgInPolyFnType,
                              substituteTrait) where
 
 import Factor.Trait.Types
