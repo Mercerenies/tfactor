@@ -1,7 +1,7 @@
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 
 module Factor.Id(Id(..), QId(..), splitQualified, idName, qidName, freshVar,
-                 allPrefixes, prefixes, nonemptyPrefixes) where
+                 allPrefixes, prefixes, nonemptyPrefixes, lastname) where
 
 import Factor.Util
 
@@ -41,3 +41,7 @@ prefixes = init . allPrefixes
 
 nonemptyPrefixes :: QId -> [QId]
 nonemptyPrefixes = tail . prefixes
+
+lastname :: QId -> Id
+lastname (QId []) = Id ""
+lastname (QId xs) = last xs
