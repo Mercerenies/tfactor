@@ -49,6 +49,7 @@ library
       Factor.StdLib
       Factor.Trait
       Factor.Trait.Argument
+      Factor.Trait.Functor
       Factor.Trait.Types
       Factor.Type
       Factor.Type.Checker
