@@ -3,11 +3,13 @@
 module Factor.Trait.Argument(ModuleArg(..), TraitRef(..),
                              moduleArgName, moduleArgTraitName, traitRefName, traitRefArgs,
                              subArg, subArgInType, subArgInFnType, subArgInPolyFnType,
+                             subArgInStmt, subArgInSeq,
                              substituteTrait) where
 
 import Factor.Trait.Types
 import Factor.Type
 import Factor.Id
+import Factor.Code
 
 import Control.Lens
 
@@ -31,6 +33,22 @@ subArgInFnType f (FunctionType (StackDesc args a) (StackDesc rets r)) =
 subArgInPolyFnType :: (Id -> QId) -> PolyFunctionType -> PolyFunctionType
 subArgInPolyFnType f (PolyFunctionType bindings t) =
     PolyFunctionType bindings $ subArgInFnType f t
+
+subArgInData :: (Id -> QId) -> Data -> Data
+subArgInData f lit = case lit of
+                       Int {} -> lit
+                       FunctionValue (Function v ss) -> FunctionValue $ Function v (subArgInSeq f ss)
+                       Bool {} -> lit
+                       String {} -> lit
+                       Symbol {} -> lit
+                       RecordInstance qid arr -> RecordInstance (subArg f qid) (fmap (subArgInData f) arr)
+
+subArgInStmt :: (Id -> QId) -> Statement -> Statement
+subArgInStmt f (Call qid) = Call (subArg f qid)
+subArgInStmt f (Literal lit) = Literal (subArgInData f lit)
+
+subArgInSeq :: (Id -> QId) -> Sequence -> Sequence
+subArgInSeq f (Sequence xs) = Sequence $ fmap (subArgInStmt f) xs
 
 substituteTrait :: (Id -> QId) -> Trait -> Trait
 substituteTrait f (Trait ts) = Trait $ fmap (_2 %~ go) ts

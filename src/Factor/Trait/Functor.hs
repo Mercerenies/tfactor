@@ -96,9 +96,10 @@ bindFunctorInfo :: (MonadState ReadOnlyState m, MonadError FactorError m) =>
                    (Id -> QId) -> QId -> FunctorInfo -> m RId
 bindFunctorInfo subfn qid info =
     case info of
-      -- TODO Substitute in the function sequences too
-      FunctorUDFunction ptype fn -> appendResourceRO' qid (UDFunction (subArgInPolyFnType subfn ptype) fn)
-      FunctorUDMacro ptype fn -> appendResourceRO' qid (UDMacro (subArgInPolyFnType subfn ptype) fn)
+      FunctorUDFunction ptype (Function v ss) ->
+          appendResourceRO' qid (UDFunction (subArgInPolyFnType subfn ptype) (Function v $ subArgInSeq subfn ss))
+      FunctorUDMacro ptype (Macro v ss) ->
+          appendResourceRO' qid (UDMacro (subArgInPolyFnType subfn ptype) (Macro v $ subArgInSeq subfn ss))
       FunctorModule m -> do
                 modl <- Map.traverseWithKey (\k v -> bindFunctorInfo subfn (qid <> QId [k]) v) m
                 appendResourceRO' qid (ModuleValue $ mapToModule modl)
