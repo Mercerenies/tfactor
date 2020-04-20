@@ -1,0 +1,13 @@
+
+# TODO Treat this as a cyclic load issue, because... well, it's an issue.
+
+mod A
+
+  mod B
+    include A
+  end
+
+end
+
+fun main ( -- )
+end
