@@ -17,6 +17,7 @@ import Factor.Id
 import Factor.Type
 import Factor.Error
 import Factor.Code
+import Factor.Code.Decl
 import Factor.Eval
 import Factor.Loader
 import Factor.Loader.Module

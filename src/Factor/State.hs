@@ -9,6 +9,7 @@ module Factor.State(ReadOnlyState(ReadOnlyState), ReaderValue(..),
 
 import Factor.Error
 import Factor.Code
+import Factor.Code.Decl
 import Factor.Id
 import Factor.Type
 import Factor.Names

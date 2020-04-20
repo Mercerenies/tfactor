@@ -3,6 +3,7 @@ module Factor.Parser(parseStmt, parseSeq, parseDecl, parseFile) where
 
 import Factor.Id
 import Factor.Code
+import Factor.Code.Decl
 import Factor.Type hiding (functionType)
 import Factor.Stack(Stack)
 import qualified Factor.Stack as Stack

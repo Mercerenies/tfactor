@@ -1,11 +1,9 @@
 
 module Factor.Code(Function(..), Macro(..), Data(..), Statement(..),
-                   Sequence(..), Declaration(..), RecordInfo(..),
+                   Sequence(..),
                    functionName, functionSeq, makeRecord, recordGetField) where
 
 import Factor.Id
-import Factor.Type
-import Factor.Trait.Types
 
 import Data.Ix
 import Data.Array.IArray
@@ -32,23 +30,6 @@ data Statement = Call QId
 
 newtype Sequence = Sequence { unSequence :: [Statement] }
     deriving (Show, Eq)
-
-data Declaration = FunctionDecl PolyFunctionType Function
-                 | MacroDecl PolyFunctionType Macro
-                 | ModuleDecl Id [Declaration]
-                 | ModuleSyn Id QId
-                 | RecordDecl Id [RecordInfo]
-                 | TraitDecl Id ParameterizedTrait
-                 | AliasDecl Id QId
-                 | OpenDecl QId
-                 | RequireDecl TraitRef
-                 | IncludeDecl QId
-                   deriving (Show, Eq)
-
-data RecordInfo = RecordConstructor Id
-                | RecordField Id Type
-                | RecordOrdinaryDecl Declaration
-                  deriving (Show, Eq)
 
 functionName :: Function -> Maybe Id
 functionName (Function i _) = i
