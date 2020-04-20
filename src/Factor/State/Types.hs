@@ -51,7 +51,6 @@ data ParameterizedModule = ParameterizedModule [ModuleArg] (Map Id FunctorInfo)
                            deriving (Show)
 
 data FunctorInfo = FunctorUDFunction PolyFunctionType Function
-                 | FunctorBIFunction PolyFunctionType (BuiltIn ())
                  | FunctorUDMacro PolyFunctionType Macro
                  | FunctorModule (Map Id FunctorInfo)
                  | FunctorTrait ParameterizedTrait
@@ -85,7 +84,6 @@ instance Show ReaderValue where
 
 instance Show FunctorInfo where
     showsPrec _ (FunctorUDFunction p _) = ("<FunctorUDFunction " ++) . shows p . (">" ++)
-    showsPrec _ (FunctorBIFunction p _) = ("<FunctorBIFunction " ++) . shows p . (">" ++)
     showsPrec _ (FunctorUDMacro p _) = ("<FunctorUDMacro " ++) . shows p . (">" ++)
     showsPrec _ (FunctorModule m) = ("<FunctorModule " ++) . shows m . (">" ++)
     showsPrec _ (FunctorTrait t) = ("<FunctorTrait " ++) . shows t . (">" ++)

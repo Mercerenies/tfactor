@@ -40,7 +40,6 @@ bindFunctorInfo subfn qid info =
     case info of
       -- TODO Substitute in the function sequences too
       FunctorUDFunction ptype fn -> appendResourceRO' qid (UDFunction (subArgInPolyFnType subfn ptype) fn)
-      FunctorBIFunction ptype fn -> appendResourceRO' qid (BIFunction (subArgInPolyFnType subfn ptype) fn)
       FunctorUDMacro ptype fn -> appendResourceRO' qid (UDMacro (subArgInPolyFnType subfn ptype) fn)
       FunctorModule m -> do
                 modl <- Map.traverseWithKey (\k v -> bindFunctorInfo subfn (qid <> QId [k]) v) m
