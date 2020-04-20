@@ -1,7 +1,7 @@
 {-# LANGUAGE ScopedTypeVariables, FlexibleContexts, RankNTypes #-}
 
 module Factor.State.Reader(ReadOnlyState(ReadOnlyState), ReaderValue(..),
-                           Module(Module), ParameterizedModule(..), FunctorInfo(..), ModuleDecl(..),
+                           Module(Module), ModuleDecl(..),
                            readerModule, readerNames, readerResources,
                            moduleNames, moduleDecls, moduleIsType,
                            newReader, emptyModule, mapToModule,

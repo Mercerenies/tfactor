@@ -2,7 +2,7 @@
     GeneralizedNewtypeDeriving, TypeFamilies, DeriveTraversable #-}
 
 module Factor.State.Types(EvalState(..), ReadOnlyState(ReadOnlyState), ReaderValue(..), RId,
-                          Module(Module), ParameterizedModule(..), FunctorInfo(..), ModuleDecl(..),
+                          Module(Module), ModuleDecl(..),
                           BuiltIn(..), BuiltInConstraints,
                           ResourceTable(..),
                           readerModule, readerNames, readerResources,
@@ -47,14 +47,6 @@ data Module = Module {
       _moduleIsType :: Bool
     } deriving (Show)
 
-data ParameterizedModule = ParameterizedModule [ModuleArg] (Map Id FunctorInfo)
-                           deriving (Show)
-
-data FunctorInfo = FunctorUDFunction PolyFunctionType Function
-                 | FunctorUDMacro PolyFunctionType Macro
-                 | FunctorModule (Map Id FunctorInfo)
-                 | FunctorTrait ParameterizedTrait
-
 data ModuleDecl = Alias Id QId
                 | Open QId
                 | AssertTrait TraitRef
@@ -81,12 +73,6 @@ instance Show ReaderValue where
     showsPrec _ (UDMacro p _) = ("<UDMacro " ++) . shows p . (">" ++)
     showsPrec _ (ModuleValue m) = ("<ModuleValue " ++) . shows m . (">" ++)
     showsPrec _ (TraitValue t) = ("<TraitValue " ++) . shows t . (">" ++)
-
-instance Show FunctorInfo where
-    showsPrec _ (FunctorUDFunction p _) = ("<FunctorUDFunction " ++) . shows p . (">" ++)
-    showsPrec _ (FunctorUDMacro p _) = ("<FunctorUDMacro " ++) . shows p . (">" ++)
-    showsPrec _ (FunctorModule m) = ("<FunctorModule " ++) . shows m . (">" ++)
-    showsPrec _ (FunctorTrait t) = ("<FunctorTrait " ++) . shows t . (">" ++)
 
 type RId = Int
 
