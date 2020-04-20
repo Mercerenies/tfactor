@@ -1,6 +1,6 @@
 {-# LANGUAGE FlexibleContexts, LambdaCase #-}
 
-module Factor.Trait.Functor(bindModule) where
+module Factor.Trait.Functor(makeMinimalModule, bindModule, makeFreshModuleName) where
 
 import Factor.Trait
 import Factor.Trait.Types
@@ -9,11 +9,69 @@ import Factor.State.Reader
 import Factor.State.Resource
 import Factor.Error
 import Factor.Id
+import Factor.Util
+import Factor.Names
+import Factor.Code
 
 import Control.Monad.State
 import Control.Monad.Except
-import Control.Monad.Reader
+import Control.Monad.Reader hiding (reader)
+import Control.Lens
 import qualified Data.Map as Map
+import Data.Maybe
+
+-- Makes a minimal module for a functor, used for type-checking.
+makeMinimalModule :: (MonadState ReadOnlyState m, MonadError FactorError m) =>
+                     QId -> ParameterizedModule -> m (Module, RId)
+makeMinimalModule qid pm = do
+  let ParameterizedModule params _ = pm
+  args <- forM params $ \(ModuleArg _ (TraitRef req innerargs)) -> do
+                             req' <- get >>= lookupFn req >>= \case
+                                     TraitValue pt -> get >>= runReaderT (bindTrait req pt innerargs)
+                                     _ -> throwError (NoSuchTrait req)
+                             let Id traitname = lastname req
+                             modlname <- makeFreshModuleName ("Tmp" ++ traitname) <$> get
+                             (_, rid) <- makeMinimalModuleFor (QId [modlname]) req'
+                             readerNames.at modlname .= Just rid
+                             return (QId [modlname])
+  -- TODO Require the functor name as an argument here (requires a bit
+  -- of tweaking in Functor.Type.Checker)
+  rid <- bindModule qid (QId []) pm args
+  get >>= \r -> case r^.readerResources.possibly (ix rid) of
+                  Just (ModuleValue m) -> return (m, rid)
+                  _ -> error "Internal error in makeMinimalModule (unexpected shape after bindModule)"
+
+-- TODO Handle merges (traits with the same name declared multiple
+-- times should merge the requirements)
+makeMinimalModuleFor :: (MonadState ReadOnlyState m, MonadError FactorError m) =>
+                        QId -> Trait -> m (Module, RId)
+makeMinimalModuleFor qid (Trait info) = do
+  let go modl (i, v) =
+          let qid' = qid <> QId [i]
+          in case v of
+               TraitFunction p -> do
+                      rid <- appendResourceRO' qid' (UDFunction p (Function (Just i) unsafeImpl))
+                      return $ set (moduleNames.at i) (Just rid) modl
+               TraitMacro p -> do
+                      rid <- appendResourceRO' qid' (UDMacro p (Macro i unsafeImpl))
+                      return $ set (moduleNames.at i) (Just rid) modl
+               TraitModule m -> do
+                   modlname <- makeFreshModuleName ("Tmp" ++ unId i) <$> get
+                   (_, rid) <- makeMinimalModuleFor (QId [modlname]) (Trait m)
+                   return $ set (moduleNames.at i) (Just rid) modl
+               TraitInclude (TraitRef innername innerargs) -> do
+                   innername' <- get >>= lookupFn innername >>= \case
+                                 TraitValue pt -> get >>= runReaderT (bindTrait innername pt innerargs)
+                                 _ -> throwError (NoSuchTrait innername)
+                   let Trait innerinfo = innername'
+                   foldM go modl innerinfo
+               TraitDemandType -> return $ set moduleIsType True modl
+  dat <- foldM go emptyModule info
+  rid <- appendResourceRO' qid (ModuleValue dat)
+  return (dat, rid)
+
+unsafeImpl :: Sequence
+unsafeImpl = Sequence [Call $ QId [primitivesModuleName, Id "unsafe"]] -- TODO Factor.Names this
 
 bindModule :: (MonadState ReadOnlyState m, MonadError FactorError m) =>
               QId -> QId -> ParameterizedModule -> [QId] -> m RId
@@ -53,3 +111,8 @@ bindFunctorInfo subfn qid info =
 
 appendResourceRO' :: MonadState ReadOnlyState m => QId -> ReaderValue -> m RId
 appendResourceRO' qid value = state (appendResourceRO qid value)
+
+makeFreshModuleName :: String -> ReadOnlyState -> Id
+makeFreshModuleName prefix reader = head [name | v <- [0 :: Int ..]
+                                               , let name = Id (prefix ++ show v)
+                                               , isNothing (reader^.readerNames.at name)]

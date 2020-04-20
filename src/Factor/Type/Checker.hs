@@ -10,13 +10,14 @@ import Factor.Type.Unify
 import Factor.Error
 import Factor.Id
 import qualified Factor.Stack as Stack
+import Factor.Trait.Functor
 
 import Data.Set(Set)
 import qualified Data.Set as Set
 import Data.Map(Map)
 import qualified Data.Map as Map
 import Control.Monad.Writer
-import Control.Monad.Reader
+import Control.Monad.Reader hiding (reader)
 import Control.Monad.State
 import Control.Monad.Except
 import Control.Lens
@@ -139,6 +140,18 @@ checkIsWellDefined (NamedType t) =
         ModuleValue m | m^.moduleIsType -> pure ()
         _ -> throwError (NoSuchType t)
 
+{-
+checkTypeOfFunctor :: (MonadError FactorError m, MonadReader ReadOnlyState m) =>
+                      TypeCheckerPass -> FunctorInfo -> m ()
+checkTypeOfFunctor tpass (FunctorUDFunction t (Function v ss)) =
+    checkTypeOf tpass (UDFunction t (Function v ss))
+checkTypeOfFunctor tpass (FunctorUDMacro t (Macro v ss)) =
+    checkTypeOf tpass (UDMacro t (Macro v ss))
+checkTypeOfFunctor tpass (FunctorModule info) =
+    mapM_ (checkTypeOfFunctor tpass) info
+checkTypeOfFunctor _ (FunctorTrait _) = pure () -- Nothing to do here.
+-}
+
 -- TODO We make up some variables here. It's safe right now, but once
 -- modules start taking type arguments, it will cease to be safe.
 checkTypeOf :: (MonadError FactorError m, MonadReader ReadOnlyState m) =>
@@ -166,7 +179,17 @@ checkTypeOf tpass (UDMacro t (Macro _ ss)) =
           in checkDeclaredType tpass t0 ss
 checkTypeOf _ (ModuleValue _) = pure () -- Nothing to do with the module as a whole (yet).
 checkTypeOf _ (TraitValue _) = pure ()
-checkTypeOf _ (FunctorValue {}) = pure () -- TODO Oh, boy, there's lots to do here...
+checkTypeOf tpass (FunctorValue pm) = do
+  reader <- ask
+  let newname = makeFreshModuleName "Tmp" reader -- TODO Use the actual name of the functor here
+  ((modl, rid), reader') <- runStateT (makeMinimalModule (QId [newname]) pm) reader
+  let reader'' = set (readerNames.at newname) (Just rid) reader'
+  -- TODO This misses the generated module itself right now. I don't
+  -- think that matters since typechecking on a module is a no-op, but
+  -- just worth noting in case it causes issues.
+  let names = allNamesInModule (reader''^.readerResources) (QId [newname]) modl
+  local (const reader'') $ do
+    forM_ names $ \q -> ask >>= lookupFn q >>= checkTypeOf tpass
 
 checkTypes :: (MonadError FactorError m, MonadReader ReadOnlyState m) =>
               TypeCheckerPass -> Map Id ReaderValue -> m ()

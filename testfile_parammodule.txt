@@ -1,6 +1,7 @@
 
 mod GoofyId { A : Type }
-  fun id ( A -- A )
+  fun id ( A -- A Int A )
+    dup 100 swap
   end
 end
 

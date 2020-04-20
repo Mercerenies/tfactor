@@ -106,8 +106,12 @@ end
     + [X] Declaring functors
     + [ ] Parameterization
     + [ ] Actualizing functors into modules
-    + [ ] Type checking inside of a functor
+    + [X] Type checking inside of a functor
     + [ ] Ability to have nested functors
     + [ ] Normalize the type names to behave more intuitively
-    + [ ] A functor should depend on anything its inner declarations depend on (for module loading)
+    + [ ] A functor should depend on anything its inner declarations
+      depend on (for module loading)
+    + [ ] Need to pay special attention to aliases inside a functor to
+      other names defined inside that functor, because they have to
+      expand to names that don't yet exist
  7. [ ] Functions can take module arguments
