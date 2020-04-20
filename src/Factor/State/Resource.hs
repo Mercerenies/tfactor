@@ -74,6 +74,8 @@ modifyRIds f (ResourceTable table) = ResourceTable $ fmap (over _2 go) table
           go (BIFunction t g) = BIFunction t g
           go (UDMacro t m) = UDMacro t m
           go (TraitValue t) = TraitValue t
+          go (FunctorValue m) = FunctorValue m -- Nothing in here has an allocated RId yet,
+                                               -- so there's nothing to modify.
 
 traverseWithQId :: Applicative f => ((QId, a) -> f b) -> ResourceTable a -> f (ResourceTable b)
 traverseWithQId f (ResourceTable table) =

@@ -47,6 +47,7 @@ loadModule r =
       UDMacro {} -> pure r
       ModuleValue m -> ModuleValue <$> foldM (flip resolveModuleDecl) m (m^.moduleDecls)
       TraitValue {} -> pure r
+      FunctorValue {} -> pure r -- TODO Nothing to do here right now, but there will be stuff later.
 
 loadModuleAt :: MonadError FactorError m => QId -> ReadOnlyState -> m ReadOnlyState
 loadModuleAt qid r = traverseOf (atQId qid) (\v -> runReaderT (loadModule v) r) r
@@ -71,6 +72,7 @@ produceModuleDepGraph qids reader =
                              ModuleValue m -> [(qid, e) | decl <- m^.moduleDecls
                                                         , e <- dependenciesFromModuleDecl decl]
                              TraitValue {} -> []
+                             FunctorValue {} -> [] -- TODO This
               in parents ++ others
 
 -- As in Factor.Loader.Graph, we reverse the top sort order since we

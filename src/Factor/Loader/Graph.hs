@@ -42,6 +42,7 @@ filterAndClassify qids r = setFilterMap go
                      Right (UDMacro {}) -> Just $ GraphEdge qid StrongDependency
                      Right (ModuleValue {}) -> Just $ GraphEdge qid WeakDependency -- TODO Not sure about this one?
                      Right (TraitValue {}) -> Nothing -- TODO Not sure about this one either?
+                     Right (FunctorValue {}) -> Just $ GraphEdge qid WeakDependency -- TODO ???
 
 produceDependencyGraph :: [QId] -> ReadOnlyState -> Graph QId GraphEdge
 produceDependencyGraph qids reader =
@@ -55,6 +56,7 @@ produceDependencyGraph qids reader =
                                      UDMacro _ (Macro _ ss) -> namesToEdges $ findDependenciesSeq ss
                                      ModuleValue {} -> []
                                      TraitValue {} -> []
+                                     FunctorValue {} -> []
                            inner = case v of
                                      ModuleValue m -> fold (Map.mapWithKey (go' k) (m^.moduleNames))
                                      _ -> []

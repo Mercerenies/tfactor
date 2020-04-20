@@ -166,6 +166,7 @@ checkTypeOf tpass (UDMacro t (Macro _ ss)) =
           in checkDeclaredType tpass t0 ss
 checkTypeOf _ (ModuleValue _) = pure () -- Nothing to do with the module as a whole (yet).
 checkTypeOf _ (TraitValue _) = pure ()
+checkTypeOf _ (FunctorValue {}) = pure () -- TODO Oh, boy, there's lots to do here...
 
 checkTypes :: (MonadError FactorError m, MonadReader ReadOnlyState m) =>
               TypeCheckerPass -> Map Id ReaderValue -> m ()

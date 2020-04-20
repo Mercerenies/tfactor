@@ -52,3 +52,4 @@ callFunction v = ask >>= lookupFn v >>= go
           go (UDMacro _ _) = throwError NotAFunction
           go (ModuleValue _) = throwError NotAFunction
           go (TraitValue _) = throwError NotAFunction
+          go (FunctorValue _) = throwError NotAFunction

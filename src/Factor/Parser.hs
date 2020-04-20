@@ -12,8 +12,11 @@ import Factor.Parser.Token
 
 import Text.Parsec hiding (many, (<|>), string, satisfy)
 import Data.Char
+import Data.Maybe
 import Control.Applicative
 import Control.Monad
+import Data.Map(Map)
+import qualified Data.Map as Map
 
 type Parser = Parsec [Token] ()
 
@@ -71,6 +74,7 @@ decl = (\(t, s) -> FunctionDecl t s) <$> functionDecl <|>
        (\(i, m) -> ModuleDecl i m) <$> moduleDecl <|>
        (\(i, t) -> TraitDecl i t) <$> trait <|>
        (\(i, d) -> RecordDecl i d) <$> recordDecl <|>
+       (\(i, f) -> FunctorDecl i f) <$> functorDecl <|>
        (\(i, j) -> AliasDecl i j) <$> aliasDecl <|>
        (\i -> OpenDecl i) <$> openDecl <|>
        (\i -> RequireDecl i) <$> requireDecl <|>
@@ -96,7 +100,7 @@ macroDecl = do
 
 moduleDecl :: Parser (Id, [Declaration])
 moduleDecl = do
-  name <- try (symbol "mod" *> unqualifiedId <* notFollowedBy (symbol "="))
+  name <- try (symbol "mod" *> unqualifiedId <* notFollowedBy (symbol "=" <|> symbol "{"))
   decls <- many decl
   _ <- symbol "end"
   return (name, decls)
@@ -121,6 +125,37 @@ recordInfo =
     RecordConstructor <$> (symbol "constructor" *> unqualifiedId) <|>
     RecordField <$> (symbol "field" *> unqualifiedId) <*> type_ <|>
     RecordOrdinaryDecl <$> decl
+
+functorInfo :: Parser (Id, FunctorInfo)
+functorInfo = (\(t, s) -> (fromJust $ functionName s, FunctorUDFunction t s)) <$> functionDecl <|>
+              (\(t, s) -> (macroName s, FunctorUDMacro t s)) <$> macroDecl <|>
+              (\(i, m) -> (i, FunctorModule m)) <$> modWithinFunctor <|>
+              (\(i, t) -> (i, FunctorTrait t)) <$> trait
+
+modWithinFunctor :: Parser (Id, Map Id FunctorInfo)
+modWithinFunctor = do
+  _ <- symbol "mod"
+  name <- unqualifiedId
+  decls <- many functorInfo
+  _ <- symbol "end"
+  return (name, Map.fromList decls)
+
+functorDecl :: Parser (Id, ParameterizedModule)
+functorDecl = do
+  name <- try (symbol "mod" *> unqualifiedId <* lookAhead (symbol "{"))
+  params <- option [] $ do
+              _ <- symbol "{"
+              let singleparam = do
+                          argname <- unqualifiedId
+                          _ <- symbol ":"
+                          argtype <- traitRef
+                          return $ ModuleArg argname argtype
+              params <- sepBy singleparam (symbol ",")
+              _ <- symbol "}"
+              return params
+  info <- Map.fromList <$> many functorInfo
+  _ <- symbol "end"
+  return (name, ParameterizedModule params info)
 
 aliasDecl :: Parser (Id, QId)
 aliasDecl = do

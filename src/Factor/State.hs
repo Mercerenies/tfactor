@@ -61,6 +61,11 @@ declsToReadOnly qid ds r = foldM go r ds
                  | otherwise ->
                      let qid' = qid <> QId [v]
                      in traverseOf moduleNames (defineResource qid' v (TraitValue def)) reader
+                FunctorDecl v def
+                 | Map.member v (reader^.moduleNames) -> throwError (DuplicateDecl v)
+                 | otherwise ->
+                     let qid' = qid <> QId [v]
+                     in traverseOf moduleNames (defineResource qid' v (FunctorValue def)) reader
                 AliasDecl i j -> pure $ over moduleDecls (++ [Alias i j]) reader
                 OpenDecl j -> pure $ over moduleDecls (++ [Open j]) reader
                 RequireDecl j -> pure $ over moduleDecls (++ [AssertTrait j]) reader

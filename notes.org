@@ -97,12 +97,17 @@ end
     + [ ] Alternatively, trait synonyms (??)
     + [X] Trait includes
     + [X] While we're at it, module includes
- 5. [-] Parameterized traits
+ 5. [X] Parameterized traits
     + [X] Parameterization
     + [X] Syntax: ~trait~ declarations can take parameters
     + [X] Syntax: ~require~ declarations can take parameters
     + [X] Syntax: ~include~ declarations can take parameters
-    + [ ] Test a bit more (~/////~)
- 6. [ ] Parameterized modules
+ 6. [-] Parameterized modules
+    + [X] Declaring functors
     + [ ] Parameterization
+    + [ ] Actualizing functors into modules
+    + [ ] Type checking inside of a functor
+    + [ ] Ability to have nested functors
+    + [ ] Normalize the type names to behave more intuitively
+    + [ ] A functor should depend on anything its inner declarations depend on (for module loading)
  7. [ ] Functions can take module arguments

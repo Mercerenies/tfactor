@@ -8,6 +8,7 @@ import qualified Factor.Stack as Stack
 import Factor.Error
 import Factor.Trait
 import Factor.Trait.Argument
+import Factor.Trait.Types
 import Factor.Id
 
 import Control.Monad.Reader hiding (reader)
@@ -57,6 +58,26 @@ normalizeTypesTrait :: (MonadReader ReadOnlyState m, MonadError FactorError m) =
 normalizeTypesTrait names (Trait xs) =
     Trait <$> mapM (\(i, t) -> ((,) i) <$> normalizeTypesTraitInfo names t) xs
 
+normalizeTypesFunctorInfo :: (MonadReader ReadOnlyState m, MonadError FactorError m) =>
+                             Map Id Trait -> FunctorInfo -> m FunctorInfo
+normalizeTypesFunctorInfo names (FunctorUDFunction t f) =
+    FunctorUDFunction <$> normalizePolyFnType names t <*> pure f
+normalizeTypesFunctorInfo names (FunctorUDMacro t f) =
+    FunctorUDMacro <$> normalizePolyFnType names t <*> pure f
+normalizeTypesFunctorInfo names (FunctorModule inner) = FunctorModule <$> normalizeTypesFunctor names inner
+normalizeTypesFunctorInfo names (FunctorTrait (ParameterizedTrait args t)) = do
+  reader <- ask
+  names' <- forM args $ \(ModuleArg i (TraitRef q innerargs)) -> lookupFn q reader >>= \case
+           TraitValue pt -> fmap ((,) i) $ bindTraitAndNormalize q pt innerargs
+           _ -> throwError (NoSuchTrait q)
+  let names'' = Map.fromList names' <> names
+  t' <- normalizeTypesTrait names'' t
+  return (FunctorTrait (ParameterizedTrait args t'))
+
+normalizeTypesFunctor :: (MonadReader ReadOnlyState m, MonadError FactorError m) =>
+                         Map Id Trait -> Map Id FunctorInfo -> m (Map Id FunctorInfo)
+normalizeTypesFunctor names = mapM (normalizeTypesFunctorInfo names)
+
 normalizeTypesRes :: (MonadReader ReadOnlyState m, MonadError FactorError m) => ReaderValue -> m ReaderValue
 normalizeTypesRes (UDFunction t f) = UDFunction <$> normalizePolyFnType Map.empty t <*> pure f
 normalizeTypesRes (BIFunction t f) = BIFunction <$> normalizePolyFnType Map.empty t <*> pure f
@@ -70,6 +91,14 @@ normalizeTypesRes (TraitValue (ParameterizedTrait args t)) = do
   let names' = Map.fromList names
   t' <- normalizeTypesTrait names' t
   return $ TraitValue (ParameterizedTrait args t')
+normalizeTypesRes (FunctorValue (ParameterizedModule args t)) = do
+  reader <- ask
+  names <- forM args $ \(ModuleArg i (TraitRef q innerargs)) -> lookupFn q reader >>= \case
+           TraitValue pt -> fmap ((,) i) $ bindTraitAndNormalize q pt innerargs
+           _ -> throwError (NoSuchTrait q)
+  let names' = Map.fromList names
+  t' <- normalizeTypesFunctor names' t
+  return $ FunctorValue (ParameterizedModule args t')
 
 normalizeTypesAt :: MonadError FactorError m => QId -> ReadOnlyState -> m ReadOnlyState
 normalizeTypesAt qid r = traverseOf (atQId qid) (\v -> runReaderT (normalizeTypesRes v) r) r

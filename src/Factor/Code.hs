@@ -1,7 +1,8 @@
 
 module Factor.Code(Function(..), Macro(..), Data(..), Statement(..),
                    Sequence(..),
-                   functionName, functionSeq, makeRecord, recordGetField) where
+                   functionName, functionSeq, macroName, macroSeq,
+                   makeRecord, recordGetField) where
 
 import Factor.Id
 
@@ -36,6 +37,12 @@ functionName (Function i _) = i
 
 functionSeq :: Function -> Sequence
 functionSeq (Function _ s) = s
+
+macroName :: Macro -> Id
+macroName (Macro i _) = i
+
+macroSeq :: Macro -> Sequence
+macroSeq (Macro _ s) = s
 
 makeRecord :: QId -> [Data] -> Data
 makeRecord qid xs = RecordInstance qid $ listArray (0, length xs - 1) xs

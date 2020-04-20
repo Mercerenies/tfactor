@@ -98,6 +98,7 @@ allNamesInModule resources k0 = fold . Map.mapWithKey go' . view moduleNames
                                  UDMacro {} -> []
                                  ModuleValue m' -> allNamesInModule resources k m'
                                  TraitValue {} -> []
+                                 FunctorValue {} -> [] -- Nothing allocated yet.
               in k : innernames
           go' :: Id -> RId -> [QId]
           go' k v = case getResource v resources of
@@ -117,6 +118,7 @@ readerFunctionType (BIFunction t _) = Just t
 readerFunctionType (UDMacro _ _) = Nothing
 readerFunctionType (ModuleValue _) = Nothing
 readerFunctionType (TraitValue _) = Nothing
+readerFunctionType (FunctorValue _) = Nothing
 
 readerMacroType :: ReaderValue -> Maybe PolyFunctionType
 readerMacroType (UDFunction _ _) = Nothing
@@ -124,6 +126,7 @@ readerMacroType (BIFunction _ _) = Nothing
 readerMacroType (UDMacro t _) = Just t
 readerMacroType (ModuleValue _) = Nothing
 readerMacroType (TraitValue _) = Nothing
+readerMacroType (FunctorValue _) = Nothing
 
 merge :: MonadError FactorError m => ReadOnlyState -> ReadOnlyState -> m ReadOnlyState
 merge (ReadOnlyState (Module m a t) r) (ReadOnlyState (Module m' a' t') r') =

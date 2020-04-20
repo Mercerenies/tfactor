@@ -1,0 +1,8 @@
+
+mod GoofyId { A : Type }
+  fun id ( A -- A )
+  end
+end
+
+fun main ( -- )
+end

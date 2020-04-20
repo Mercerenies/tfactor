@@ -20,7 +20,7 @@ data TraitRef = TraitRef QId [QId]
                 deriving (Show, Eq)
 
 data ParameterizedModule = ParameterizedModule [ModuleArg] (Map Id FunctorInfo)
-                           deriving (Show)
+                           deriving (Show, Eq)
 
 -- Note that, for the moment, macros cannot appear as members of a
 -- trait using the parser. I'll change this soon, but it's here for
@@ -36,6 +36,7 @@ data FunctorInfo = FunctorUDFunction PolyFunctionType Function
                  | FunctorUDMacro PolyFunctionType Macro
                  | FunctorModule (Map Id FunctorInfo)
                  | FunctorTrait ParameterizedTrait
+                   deriving (Eq)
 
 data UnsatisfiedTrait = MissingFromTrait QId TraitInfo
                       | IncompatibleWithTrait QId TraitInfo

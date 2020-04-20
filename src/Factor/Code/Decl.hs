@@ -12,7 +12,7 @@ data Declaration = FunctionDecl PolyFunctionType Function
                  | ModuleSyn Id QId
                  | RecordDecl Id [RecordInfo]
                  | TraitDecl Id ParameterizedTrait
---                 | FunctorDecl Id ParameterizedModule
+                 | FunctorDecl Id ParameterizedModule
                  | AliasDecl Id QId
                  | OpenDecl QId
                  | RequireDecl TraitRef

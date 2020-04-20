@@ -119,6 +119,26 @@ resolveAliasesAssert m (IncludeModule q) = IncludeModule <$> resolveAlias m q
 resolveAliasesAssert _ (Open q) = pure (Open q)
 resolveAliasesAssert _ (Alias i q) = pure (Alias i q)
 
+resolveAliasesFunctorInfo :: MonadError FactorError m =>
+                             Map Id Alias -> FunctorInfo -> m FunctorInfo
+resolveAliasesFunctorInfo m (FunctorUDFunction t (Function v ss)) = do
+  ss' <- resolveAliasesSeq m ss
+  t' <- resolveAliasesPolyFnType m t
+  return $ FunctorUDFunction t' (Function v ss')
+resolveAliasesFunctorInfo m (FunctorUDMacro t (Macro v ss)) = do
+  ss' <- resolveAliasesSeq m ss
+  t' <- resolveAliasesPolyFnType m t
+  return $ FunctorUDMacro t' (Macro v ss')
+resolveAliasesFunctorInfo m (FunctorModule inner) = FunctorModule <$> mapM (resolveAliasesFunctorInfo m) inner
+resolveAliasesFunctorInfo m (FunctorTrait (ParameterizedTrait params (Trait xs))) = do
+  xs' <- mapM (\(i, t) -> ((,) i) <$> resolveAliasesTrait m t) xs
+  -- TODO Shadowing issues with the names bound by the trait? Or do we care?
+  params' <- forM params $ \(ModuleArg i (TraitRef name args)) -> do
+               name' <- resolveAlias m name
+               args' <- mapM (resolveAlias m) args
+               return (ModuleArg i (TraitRef name' args'))
+  return (FunctorTrait (ParameterizedTrait params' (Trait xs')))
+
 resolveAliasesResource :: MonadError FactorError m =>
                           Map Id Alias -> ReaderValue -> m ReaderValue
 resolveAliasesResource m (UDFunction t (Function v ss)) = do
@@ -134,11 +154,20 @@ resolveAliasesResource m (ModuleValue inner) =
     ModuleValue <$> traverseOf (moduleDecls.traverse) (resolveAliasesAssert m) inner
 resolveAliasesResource m (TraitValue (ParameterizedTrait params (Trait xs))) = do
   xs' <- mapM (\(i, t) -> ((,) i) <$> resolveAliasesTrait m t) xs
+  -- TODO Shadowing issues with the names bound by the trait? Or do we care?
   params' <- forM params $ \(ModuleArg i (TraitRef name args)) -> do
                name' <- resolveAlias m name
                args' <- mapM (resolveAlias m) args
                return (ModuleArg i (TraitRef name' args'))
   return (TraitValue (ParameterizedTrait params' (Trait xs')))
+resolveAliasesResource m (FunctorValue (ParameterizedModule params info)) = do
+  info' <- mapM (resolveAliasesFunctorInfo m) info
+  -- TODO Shadowing issues with the names bound by the functor? Or do we care?
+  params' <- forM params $ \(ModuleArg i (TraitRef name args)) -> do
+               name' <- resolveAlias m name
+               args' <- mapM (resolveAlias m) args
+               return (ModuleArg i (TraitRef name' args'))
+  return (FunctorValue (ParameterizedModule params' info'))
 
 resolveAliasesResource' :: (MonadError FactorError m, MonadReader ReadOnlyState m) =>
                            Map Id Alias -> QId -> ReaderValue -> m ReaderValue
