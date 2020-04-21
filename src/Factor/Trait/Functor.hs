@@ -1,6 +1,6 @@
 {-# LANGUAGE FlexibleContexts, LambdaCase #-}
 
-module Factor.Trait.Functor(makeMinimalModule, bindModule, makeFreshModuleName) where
+module Factor.Trait.Functor(functorToTrait, makeMinimalModule, bindModule, makeFreshModuleName) where
 
 import Factor.Trait
 import Factor.Trait.Types
@@ -20,6 +20,20 @@ import Control.Monad.Reader hiding (reader)
 import Control.Lens
 import qualified Data.Map as Map
 import Data.Maybe
+
+functorToTrait :: QId -> ParameterizedModule -> ParameterizedTrait
+functorToTrait qid0 (ParameterizedModule params info0) =
+    ParameterizedTrait params (toTrait qid0 info0)
+        where toTrait qid info =
+                  let go _ (FunctorUDFunction p _) = [TraitFunction p]
+                      go _ (FunctorUDMacro p _) = [TraitMacro p]
+                      go i (FunctorModule info') =
+                          let qid' = qid <> QId [i]
+                              Trait inner = toTrait qid' info'
+                          in [TraitModule inner]
+                      go _ (FunctorTrait {}) = [] -- TODO These can't appear in traits right
+                                                  -- now. Will this be supported later?
+                  in Trait $ concatMap (\(i, v) -> map ((,) i) $ go i v) (Map.toList info)
 
 -- Makes a minimal module for a functor, used for type-checking.
 makeMinimalModule :: (MonadState ReadOnlyState m, MonadError FactorError m) =>
