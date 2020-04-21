@@ -73,6 +73,7 @@ normalizeTypesFunctorInfo names (FunctorTrait (ParameterizedTrait args t)) = do
   let names'' = Map.fromList names' <> names
   t' <- normalizeTypesTrait names'' t
   return (FunctorTrait (ParameterizedTrait args t'))
+normalizeTypesFunctorInfo _ FunctorDemandType = pure $ FunctorDemandType
 
 normalizeTypesFunctor :: (MonadReader ReadOnlyState m, MonadError FactorError m) =>
                          Map Id Trait -> Map Id FunctorInfo -> m (Map Id FunctorInfo)

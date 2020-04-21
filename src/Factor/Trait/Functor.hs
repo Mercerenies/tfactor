@@ -33,6 +33,7 @@ functorToTrait qid0 (ParameterizedModule params info0) =
                           in [TraitModule inner]
                       go _ (FunctorTrait {}) = [] -- TODO These can't appear in traits right
                                                   -- now. Will this be supported later?
+                      go _ FunctorDemandType = [TraitDemandType]
                   in Trait $ concatMap (\(i, v) -> map ((,) i) $ go i v) (Map.toList info)
 
 -- Makes a minimal module for a functor, used for type-checking.
@@ -104,29 +105,38 @@ bindModule mqid fnqid (ParameterizedModule params info) args
                     return (param, arg)
         let submap = Map.fromList zipped
             subfn k = maybe (QId [k]) id (Map.lookup k submap)
-        modl <- Map.traverseWithKey (\k v -> bindFunctorInfo subfn (mqid <> QId [k]) v) info
-        appendResourceRO' mqid (ModuleValue $ mapToModule modl)
+        modl <- foldM (\m (k, v) -> bindFunctorInfo subfn (mqid <> QId [k]) k v m) emptyModule $ Map.toList info
+        appendResourceRO' mqid (ModuleValue modl)
 
 bindFunctorInfo :: (MonadState ReadOnlyState m, MonadError FactorError m) =>
-                   (Id -> QId) -> QId -> FunctorInfo -> m RId
-bindFunctorInfo subfn qid info =
+                   (Id -> QId) -> QId -> Id -> FunctorInfo -> Module -> m Module
+bindFunctorInfo subfn qid name info m =
     case info of
-      FunctorUDFunction ptype (Function v ss) ->
+      FunctorUDFunction ptype (Function v ss) -> do
           let res = UDFunction (subArgInPolyFnType subfn ptype) (Function v $ subArgInSeq subfn ss)
-          in normalizeTypesRes' res >>= appendResourceRO' qid
-      FunctorUDMacro ptype (Macro v ss) ->
+          res' <- normalizeTypesRes' res
+          rid <- appendResourceRO' qid res'
+          return $ set (moduleNames.at name) (Just rid) m
+      FunctorUDMacro ptype (Macro v ss) -> do
           let res = UDMacro (subArgInPolyFnType subfn ptype) (Macro v $ subArgInSeq subfn ss)
-          in normalizeTypesRes' res >>= appendResourceRO' qid
-      FunctorModule m -> do
-                modl <- Map.traverseWithKey (\k v -> bindFunctorInfo subfn (qid <> QId [k]) v) m
-                normalizeTypesRes' (ModuleValue $ mapToModule modl) >>= appendResourceRO' qid
-      FunctorTrait (ParameterizedTrait args t) ->
+          res' <- normalizeTypesRes' res
+          rid <- appendResourceRO' qid res'
+          return $ set (moduleNames.at name) (Just rid) m
+      FunctorModule m1 -> do
+                modl <- foldM (\m' (k, v) -> bindFunctorInfo subfn (qid <> QId [k]) k v m') emptyModule $ Map.toList m1
+                modl' <- normalizeTypesRes' (ModuleValue modl)
+                rid <- appendResourceRO' qid modl'
+                return $ set (moduleNames.at name) (Just rid) m
+      FunctorTrait (ParameterizedTrait args t) -> do
           let -- We don't want to substitute any names bound by the
               -- (parameterized) trait itself.
               subfn' k = if any (\(ModuleArg k' _) -> k == k') args then QId [k] else subfn k
               res = TraitValue (ParameterizedTrait args (substituteTrait subfn' t))
-          in -- TODO Substitute in args
-             normalizeTypesRes' res >>= appendResourceRO' qid
+          -- TODO Substitute in args
+          res' <- normalizeTypesRes' res
+          rid <- appendResourceRO' qid res'
+          return $ set (moduleNames.at name) (Just rid) m
+      FunctorDemandType -> return $ set moduleIsType True m
 
 appendResourceRO' :: MonadState ReadOnlyState m => QId -> ReaderValue -> m RId
 appendResourceRO' qid value = state (appendResourceRO qid value)

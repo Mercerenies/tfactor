@@ -29,13 +29,14 @@ data TraitInfo = TraitFunction PolyFunctionType
                | TraitMacro PolyFunctionType
                | TraitModule [(Id, TraitInfo)]
                | TraitInclude TraitRef
-               | TraitDemandType -- This won't isn't allowed in the parser but is used in Primitives.
+               | TraitDemandType -- This won't be allowed in the parser but is used in Primitives.
                  deriving (Show, Eq)
 
 data FunctorInfo = FunctorUDFunction PolyFunctionType Function
                  | FunctorUDMacro PolyFunctionType Macro
                  | FunctorModule (Map Id FunctorInfo)
                  | FunctorTrait ParameterizedTrait
+                 | FunctorDemandType -- This won't be allowed in the parser either.
                    deriving (Eq)
 
 data UnsatisfiedTrait = MissingFromTrait QId TraitInfo
@@ -65,3 +66,4 @@ instance Show FunctorInfo where
     showsPrec _ (FunctorUDMacro p _) = ("<FunctorUDMacro " ++) . shows p . (">" ++)
     showsPrec _ (FunctorModule m) = ("<FunctorModule " ++) . shows m . (">" ++)
     showsPrec _ (FunctorTrait t) = ("<FunctorTrait " ++) . shows t . (">" ++)
+    showsPrec _ FunctorDemandType = ("<FunctorDemandType>" ++)

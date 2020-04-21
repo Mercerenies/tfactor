@@ -143,6 +143,7 @@ resolveAliasesFunctorInfo m (FunctorTrait (ParameterizedTrait params (Trait xs))
                args' <- mapM (resolveAlias m) args
                return (ModuleArg i (TraitRef name' args'))
   return (FunctorTrait (ParameterizedTrait params' (Trait xs')))
+resolveAliasesFunctorInfo _ FunctorDemandType = pure FunctorDemandType
 
 resolveAliasesResource :: MonadError FactorError m =>
                           Map Id Alias -> ReaderValue -> m ReaderValue
