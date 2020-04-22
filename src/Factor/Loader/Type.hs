@@ -101,7 +101,8 @@ normalizeTypesRes :: (MonadReader ReadOnlyState m, MonadError FactorError m) => 
 normalizeTypesRes (UDFunction t f) = UDFunction <$> normalizePolyFnType Map.empty t <*> pure f
 normalizeTypesRes (BIFunction t f) = BIFunction <$> normalizePolyFnType Map.empty t <*> pure f
 normalizeTypesRes (UDMacro t f) = UDMacro <$> normalizePolyFnType Map.empty t <*> pure f
-normalizeTypesRes (ModuleValue v) = pure $ ModuleValue v
+normalizeTypesRes (ModuleValue v) =
+    ModuleValue <$> traverseOf (moduleType._Just.typeParent) (normalizeType Map.empty) v
 normalizeTypesRes (TraitValue (ParameterizedTrait args t)) = do
   reader <- ask
   names <- forM args $ \(ModuleArg i (TraitRef q innerargs)) -> lookupFn q reader >>= \case
