@@ -105,6 +105,14 @@ resolveAliasesTrait m (TraitInclude (TraitRef qid args)) = do
   args' <- mapM (resolveAlias m) args
   return (TraitInclude (TraitRef qid' args'))
 resolveAliasesTrait _ TraitDemandType = pure TraitDemandType
+resolveAliasesTrait m (TraitFunctor args xs) = do
+  args' <- forM args $ \(ModuleArg name (TraitRef tname innerargs)) -> do
+                           tname' <- resolveAlias m tname
+                           innerargs' <- mapM (resolveAlias m) innerargs
+                           return $ ModuleArg name (TraitRef tname' innerargs')
+  -- TODO Again, do we care about shadowing here? (See comments below in this file)
+  xs' <- forM xs $ \(i, t) -> (,) i <$> resolveAliasesTrait m t
+  return (TraitFunctor args' xs')
 
 resolveAliasesAssert :: MonadError FactorError m =>
                         Map Id Alias -> ModuleDecl -> m ModuleDecl

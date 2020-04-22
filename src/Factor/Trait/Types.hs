@@ -28,6 +28,7 @@ data ParameterizedModule = ParameterizedModule [ModuleArg] (Map Id FunctorInfo)
 data TraitInfo = TraitFunction PolyFunctionType
                | TraitMacro PolyFunctionType
                | TraitModule [(Id, TraitInfo)]
+               | TraitFunctor [ModuleArg] [(Id, TraitInfo)]
                | TraitInclude TraitRef
                | TraitDemandType -- This won't be allowed in the parser but is used in Primitives.
                  deriving (Show, Eq)

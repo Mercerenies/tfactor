@@ -59,3 +59,11 @@ substituteTrait f (Trait ts) = Trait $ fmap (_2 %~ go) ts
                 TraitModule xs -> TraitModule $ fmap (_2 %~ go) xs
                 TraitInclude (TraitRef q args) -> TraitInclude (TraitRef q (fmap (subArg f) args))
                 TraitDemandType -> TraitDemandType
+                TraitFunctor args xs ->
+                    let handleArg (ModuleArg s (TraitRef q innerargs)) =
+                            ModuleArg s (TraitRef q $ fmap (subArg f) innerargs)
+                        argnames = fmap (\(ModuleArg s _) -> s) args
+                        args' = fmap handleArg args
+                        f' v = if v `elem` argnames then QId [v] else f v
+                        Trait xs' = substituteTrait f' (Trait xs)
+                    in TraitFunctor args' xs'

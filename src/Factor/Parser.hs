@@ -231,7 +231,8 @@ trait = do
   return (name, ParameterizedTrait params properties)
 
 traitInfo :: Parser (Id, TraitInfo)
-traitInfo = traitInfoFun <|> traitInfoMod <|> traitInfoInclude -- TODO Macro declarations in traits
+traitInfo = traitInfoFun <|> traitInfoMod <|> -- TODO Macro declarations in traits
+            traitInfoInclude <|> traitInfoFunctor
 
 traitInfoFun :: Parser (Id, TraitInfo)
 traitInfoFun = do
@@ -242,11 +243,27 @@ traitInfoFun = do
 
 traitInfoMod :: Parser (Id, TraitInfo)
 traitInfoMod = do
-  _ <- symbol "mod"
-  name <- unqualifiedId
+  name <- try (symbol "mod" *> unqualifiedId <* notFollowedBy (symbol "{"))
   inner <- many traitInfo
   _ <- symbol "end"
   return (name, TraitModule inner)
+
+traitInfoFunctor :: Parser (Id, TraitInfo)
+traitInfoFunctor = do
+  name <- try (symbol "mod" *> unqualifiedId <* lookAhead (symbol "{"))
+  params <- option [] $ do
+              _ <- symbol "{"
+              let singleparam = do
+                          argname <- unqualifiedId
+                          _ <- symbol ":"
+                          argtype <- traitRef
+                          return $ ModuleArg argname argtype
+              params <- sepBy singleparam (symbol ",")
+              _ <- symbol "}"
+              return params
+  inner <- many traitInfo
+  _ <- symbol "end"
+  return (name, TraitFunctor params inner)
 
 traitInfoInclude :: Parser (Id, TraitInfo)
 traitInfoInclude = do

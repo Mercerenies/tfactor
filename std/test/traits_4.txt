@@ -1,0 +1,26 @@
+
+trait HasFunctor
+  mod Inner { A : Type }
+    val foo ( A -- A )
+  end
+end
+
+mod IsHasFunctor
+  require HasFunctor
+
+  mod Inner { B : Type }
+    fun foo ( B -- B )
+      id
+    end
+  end
+
+end
+
+# Issue #8
+mod M
+  mod Instance = IsHasFunctor.Inner { Int } end
+end
+
+fun test ( -- Bool )
+  100 M.Instance.foo 100 =
+end

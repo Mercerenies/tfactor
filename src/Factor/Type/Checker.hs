@@ -182,7 +182,7 @@ checkTypeOf _ (TraitValue _) = pure ()
 checkTypeOf tpass (FunctorValue pm) = do
   reader <- ask
   let newname = makeFreshModuleName "Tmp" reader -- TODO Use the actual name of the functor here
-  ((modl, rid), reader') <- runStateT (makeMinimalModule (QId [newname]) pm) reader
+  ((modl, rid, _), reader') <- runStateT (makeMinimalModule (QId [newname]) pm) reader
   let reader'' = set (readerNames.at newname) (Just rid) reader'
   -- TODO This misses the generated module itself right now. I don't
   -- think that matters since typechecking on a module is a no-op, but

@@ -52,6 +52,16 @@ normalizeTypesTraitInfo names (TraitInclude (TraitRef q args)) = do
               _ -> error "Internal error (shape changed) in normalizeTypesTraitInfo"
   return $ TraitInclude (TraitRef q args')
 normalizeTypesTraitInfo _ TraitDemandType = pure $ TraitDemandType
+normalizeTypesTraitInfo names (TraitFunctor args xs) = do
+  reader <- ask
+  names' <- forM args $ \(ModuleArg i (TraitRef q innerargs)) -> lookupFn q reader >>= \case
+            TraitValue pt -> fmap ((,) i) $ bindTraitAndNormalize q pt innerargs
+            _ -> throwError (NoSuchTrait q)
+  -- TODO QId [].... yeah
+  let selftrait = Trait xs
+      names'' = Map.singleton (Id "Self") selftrait <> Map.fromList names' <> names
+  xs' <- mapM (traverseOf _2 $ normalizeTypesTraitInfo names'') xs
+  return $ TraitFunctor args xs'
 
 normalizeTypesTrait :: (MonadReader ReadOnlyState m, MonadError FactorError m) =>
                        Map Id Trait -> Trait -> m Trait

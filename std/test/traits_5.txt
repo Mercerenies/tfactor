@@ -1,0 +1,15 @@
+
+trait Trivial end
+
+trait HasFunctor
+  mod SillyFunctor { X : Trivial } end
+end
+
+mod IsHasFunctor
+  require HasFunctor
+  mod SillyFunctor { Y : Trivial } end
+end
+
+fun test ( -- Bool )
+  true
+end
