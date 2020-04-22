@@ -201,3 +201,27 @@ end
 fun >= ( Int Int -- Bool )
   P.>=
 end
+
+fun and ( Bool Bool -- Bool )
+  [ ] [ drop false ] if
+end
+
+fun or ( Bool Bool -- Bool )
+  [ drop true ] [ ] if
+end
+
+fun not ( Bool -- Bool )
+  [ false ] [ true ] if
+end
+
+fun xor ( Bool Bool -- Bool )
+  [ not ] [ ] if
+end
+
+fun andthen ( 'S ( 'S -- 'T Bool ) ( 'T -- 'T Bool ) -- 'T Bool )
+  [ call ] dip [ false ] if
+end
+
+fun orelse ( 'S ( 'S -- 'T Bool ) ( 'T -- 'T Bool ) -- 'T Bool )
+  [ call ] dip [ true ] swap if
+end

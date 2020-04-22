@@ -92,4 +92,4 @@ testCombinators p = TestLabel "testCombinators" $ TestList [
                      TestCase (runAndMatch p "1 2 3 4 5 6 [ + ] [ * ] [ < ] tri2*" "3 12 true")
                     ]
 
--- TODO Test the basic integer math operators
+-- TODO Test the basic integer math operators and Boolean operators
