@@ -7,6 +7,6 @@ fun factorial ( Int -- Int )
   ] if
 end
 
-fun main ( -- Int )
-  5 factorial
+fun test ( -- Bool )
+  5 factorial 120 =
 end
