@@ -288,8 +288,8 @@ traitInfoInclude = do
   name <- traitRef
   return (Id "", TraitInclude name) -- TODO Reorganize Trait so that the empty Id isn't necessary here.
 
-namedType :: Parser QId
-namedType = try $ do
+moduleType :: Parser QId
+moduleType = try $ do
   qid <- qualifiedId
   when (qid == QId [Id "--"]) $ unexpected "--"
   return qid
@@ -305,7 +305,7 @@ restQuantType = satisfy go
           go _ = Nothing
 
 type_ :: Parser Type
-type_ = (NamedType <$> namedType <?> "named type") <|>
+type_ = (ModuleType <$> moduleType <?> "named type") <|>
         (QuantVar <$> quantType <?> "type variable") <|>
         (FunType <$> functionType <?> "function type")
 

@@ -114,7 +114,7 @@ expandRecordDecl qid ds r = foldM go r ds
                     let var = unusedTypeVar
                         args = reverse $ fmap (\(_, t) -> t) collectedFields
                         fntype = polyFunctionType [var] args (RestQuant var)
-                                                        [NamedType qid] (RestQuant var)
+                                                        [ModuleType qid] (RestQuant var)
                         impl = Sequence [
                                 Literal (Int . toInteger $ length collectedFields),
                                 Literal (String $ qidName qid),
@@ -125,7 +125,7 @@ expandRecordDecl qid ds r = foldM go r ds
                     in declsToReadOnly qid [d] reader
                 RecordField i t ->
                     let var = unusedTypeVar
-                        fntype = polyFunctionType [var] [NamedType qid] (RestQuant var)
+                        fntype = polyFunctionType [var] [ModuleType qid] (RestQuant var)
                                                         [t] (RestQuant var)
                         -- We're iterating over the exact same data
                         -- used to construct collectedFields, so the
@@ -155,7 +155,7 @@ expandRecordFunDecl qid ds r = foldl go r ds
                         args = reverse $ fmap (\(_, t) -> t) collectedFields
                         fntype = polyFunctionType [var] args (RestQuant var)
                                                         -- TODO Put Self in Factor.Names
-                                                        [NamedType (QId [Id "Self"])] (RestQuant var)
+                                                        [ModuleType (QId [Id "Self"])] (RestQuant var)
                         impl = Sequence [
                                 Literal (Int . toInteger $ length collectedFields),
                                 Literal (String $ qidName qid), -- TODO This is the wrong name!
@@ -166,7 +166,7 @@ expandRecordFunDecl qid ds r = foldl go r ds
                     in Map.insert v d reader
                 RecordFunField i t ->
                     let var = unusedTypeVar
-                        fntype = polyFunctionType [var] [NamedType (QId [Id "Self"])] (RestQuant var)
+                        fntype = polyFunctionType [var] [ModuleType (QId [Id "Self"])] (RestQuant var)
                                                         [t] (RestQuant var)
                         -- We're iterating over the exact same data
                         -- used to construct collectedFields, so the
