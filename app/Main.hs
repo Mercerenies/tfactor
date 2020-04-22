@@ -6,24 +6,17 @@ import Factor.Parser
 import Factor.Parser.Token
 import Factor.Eval
 import Factor.State
-import Factor.State.Reader
 import Factor.State.Stack
-import Factor.State.Alias
 import Factor.State.Resource
 import Factor.Error
 import Factor.Id
 import Factor.StdLib
-import Factor.Loader
-import Factor.Loader.Module
-import Factor.Loader.Type
+import Factor.Manager
 
 import System.Environment
 import System.Exit
 import Control.Monad.Except
-import Control.Monad.Reader hiding (reader)
 import Control.Monad.State hiding (state)
-import Control.Lens
-import qualified Data.Map as Map
 
 -- TODO The rule for right now is that macro definitions can't
 -- themselves invoke macros. As in, macro resolution literally doesn't
@@ -40,8 +33,6 @@ import qualified Data.Map as Map
 -- TODO Some form of "quoted" functions that are always treated as
 -- data and don't contribute to recursion checks.
 
--- TODO WTF is all of this reader'''''''''''''''''''' stuff?
-
 run :: FilePath -> ExceptT FactorError IO ()
 run filename = do
   prelude <- loadPrelude
@@ -52,17 +43,8 @@ run filename = do
       definednames <- declsToReadOnly (QId []) decls emptyModule
       resourcetable <- get
       return $ ReadOnlyState definednames resourcetable
-  fullbindings <- bindStdlibModule prelude newbindings
-  aliases <- bindDefaultAliases fullbindings Map.empty
-  newbindings' <-
-      runReaderT (forOf (readerResources . traverseWithQId) newbindings $ \(q, v) -> resolveAliasesResource' aliases q v) fullbindings
-  reader'' <- bindStdlibModule prelude newbindings'
-  reader''' <- loadModules (allNames newbindings') reader''
-  reader'''' <- runReaderT (forOf (readerResources.traverseWithQId) reader''' $ \(q, v) -> resolveAliasesResource' aliases q v) reader'''
-  let updatednames = concatMap (allChildrenOf reader'''') $ allNames newbindings'
-  reader''''' <- normalizeAllTypes updatednames reader''''
-  reader'''''' <- loadEntities updatednames reader'''''
-  (_, state) <- liftEither $ runEval (callFunction (QId [Id "main"])) reader'''''' newState
+  reader <- fullyLoadBindings (bindStdlibModule prelude) newbindings
+  (_, state) <- liftEither $ runEval (callFunction (QId [Id "main"])) reader newState
   liftIO $ print state
 
 main :: IO ()
