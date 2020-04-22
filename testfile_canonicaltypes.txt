@@ -7,17 +7,18 @@ mod Module1
   end
 end
 
-mod Module2 = Module1 end
-
-mod Bar = Module1.Foo end
+mod M
+  mod Module2 = Module1 end
+  mod Bar = Module1.Foo end
+end
 
 record DistinctType
   constructor dt
 end
 
-fun convert1 ( Module1.Foo -- Module2.Foo ) end
-fun convert2 ( Module2.Foo -- Bar ) end
-fun convert3 ( Bar -- Module1.Foo ) end
+fun convert1 ( Module1.Foo -- M.Module2.Foo ) end
+fun convert2 ( M.Module2.Foo -- M.Bar ) end
+fun convert3 ( M.Bar -- Module1.Foo ) end
 
 # fun failedconvert ( Bar -- DistinctType ) end
 
