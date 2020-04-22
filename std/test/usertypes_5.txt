@@ -1,0 +1,23 @@
+
+record Trivial { A : Type }
+  constructor make
+  field x A
+end
+
+# Issue #8
+mod M
+  mod Trivial1 = Trivial { Int } end
+  mod Trivial2 = Trivial { Int } end
+end
+
+fun convert1->2 ( M.Trivial1 -- M.Trivial2 )
+  id
+end
+
+fun convert2->1 ( M.Trivial2 -- M.Trivial1 )
+  id
+end
+
+fun test ( -- Bool )
+  10 M.Trivial1.make convert1->2 M.Trivial2.x =
+end

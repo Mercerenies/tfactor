@@ -30,6 +30,7 @@ tests p = TestLabel "Factor.Test.Files" $ TestList [
            testFile p "std/test/usertypes_2.txt",
            testFile p "std/test/usertypes_3.txt",
            testFile p "std/test/usertypes_4.txt",
+--           testFile p "std/test/usertypes_5.txt",
            testFile p "std/test/traits_1.txt",
            testFile p "std/test/traits_2.txt",
            testFile p "std/test/traits_3.txt",
