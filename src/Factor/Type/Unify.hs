@@ -6,12 +6,14 @@ import Factor.Util
 import Factor.Id
 import Factor.Type
 import Factor.Type.Error
+import Factor.State.Reader
 import Factor.Stack(Stack(..))
 import qualified Factor.Stack as Stack
 import qualified Factor.Util.Graph as Graph
 
 import Control.Monad.Except
 import Control.Monad.Writer
+import Control.Monad.Reader hiding (reader)
 import Control.Applicative
 import Data.Function
 import Data.Maybe(fromJust)
@@ -77,14 +79,16 @@ occursCheck (Assumptions m m') =
              let zipped = zip vs (fmap fst es) in
              throwError (fromTypeError $ OccursCheck zipped)
 
-consolidate :: (FromTypeError e, MonadError e m, MonadWriter AssumptionsAll m) =>
+consolidate :: (FromTypeError e, MonadError e m,
+                MonadWriter AssumptionsAll m, MonadReader ReadOnlyState m) =>
                AssumptionsAll -> m Assumptions
 consolidate (AssumptionsAll m0 m1) =
     Assumptions <$>
         mapM (foldM1 intersection) m0 <*>
         mapM (foldM1 intersectionStack) m1
 
-consolidateUntilDone :: (FromTypeError e, MonadError e m) => AssumptionsAll -> m Assumptions
+consolidateUntilDone :: (FromTypeError e, MonadError e m, MonadReader ReadOnlyState m) =>
+                        AssumptionsAll -> m Assumptions
 consolidateUntilDone asm = fmap removeSynonyms (go asm) >>= \asm' -> occursCheck asm' >> pure asm'
     where go x = runWriterT (consolidate x) >>=
                  \case
@@ -107,7 +111,8 @@ _intersectionHandlesThisCase (QuantVar {}) = ()
 -- they're just an equality check, which is handled at the very
 -- beginning.
 
-unionStack :: (FromTypeError e, MonadError e m, MonadWriter AssumptionsAll m) =>
+unionStack :: (FromTypeError e, MonadError e m,
+               MonadWriter AssumptionsAll m, MonadReader ReadOnlyState m) =>
               StackDesc -> StackDesc -> m StackDesc
 unionStack x y | x == y = pure x
 unionStack (StackDesc (Stack []) (RestGround x)) (StackDesc (Stack []) (RestGround y))
@@ -125,7 +130,8 @@ unionStack (StackDesc (Stack (a:as)) x) (StackDesc (Stack (b:bs)) y) = do
   StackDesc (Stack abs_) xy <- StackDesc (Stack as) x `unionStack` StackDesc (Stack bs) y
   return $ StackDesc (Stack (ab:abs_)) xy
 
-union :: (FromTypeError e, MonadError e m, MonadWriter AssumptionsAll m) =>
+union :: (FromTypeError e, MonadError e m,
+          MonadWriter AssumptionsAll m, MonadReader ReadOnlyState m) =>
          Type -> Type -> m Type
 union a b | a == b = pure a
 union TNothing (QuantVar b) = TNothing <$ assume b TNothing
@@ -140,7 +146,8 @@ union (FunType (FunctionType args1 rets1)) (FunType (FunctionType args2 rets2)) 
     liftA2 (fmap FunType . FunctionType) (intersectionStack args1 args2) (unionStack rets1 rets2)
 union _ _ = pure TAny
 
-intersectionStack :: (FromTypeError e, MonadError e m, MonadWriter AssumptionsAll m) =>
+intersectionStack :: (FromTypeError e, MonadError e m,
+                      MonadWriter AssumptionsAll m, MonadReader ReadOnlyState m) =>
                      StackDesc -> StackDesc -> m StackDesc
 intersectionStack x y | x == y = pure x
 intersectionStack (StackDesc (Stack []) (RestGround x)) (StackDesc (Stack []) (RestGround y))
@@ -158,7 +165,8 @@ intersectionStack (StackDesc (Stack (a:as)) x) (StackDesc (Stack (b:bs)) y) = do
   StackDesc (Stack abs_) xy <- StackDesc (Stack as) x `intersectionStack` StackDesc (Stack bs) y
   return $ StackDesc (Stack (ab:abs_)) xy
 
-intersection :: (FromTypeError e, MonadError e m, MonadWriter AssumptionsAll m) =>
+intersection :: (FromTypeError e, MonadError e m,
+                 MonadWriter AssumptionsAll m, MonadReader ReadOnlyState m) =>
                 Type -> Type -> m Type
 intersection a b | a == b = pure a
 intersection TAny (QuantVar b) = TAny <$ assume b TAny
@@ -173,11 +181,13 @@ intersection (FunType (FunctionType args1 rets1)) (FunType (FunctionType args2 r
     liftA2 (fmap FunType . FunctionType) (unionStack args1 args2) (intersectionStack rets1 rets2)
 intersection _ _ = pure TNothing
 
-isFnSubtypeOf :: (FromTypeError e, MonadError e m, MonadWriter AssumptionsAll m) =>
+isFnSubtypeOf :: (FromTypeError e, MonadError e m,
+                  MonadWriter AssumptionsAll m, MonadReader ReadOnlyState m) =>
                  FunctionType -> FunctionType -> m ()
 isFnSubtypeOf = isSubtypeOf `on` FunType
 
-isSubtypeOf :: (FromTypeError e, MonadError e m, MonadWriter AssumptionsAll m) =>
+isSubtypeOf :: (FromTypeError e, MonadError e m,
+                MonadWriter AssumptionsAll m, MonadReader ReadOnlyState m) =>
                Type -> Type -> m ()
 isSubtypeOf s t = do
   let noUnify = throwError (fromTypeError $ CouldNotUnify s t)
@@ -220,7 +230,8 @@ isSubtypeOf s t = do
 --           -- They're already the correct dimensions, so pass through
 --           (PolyFunctionType x (FunctionType a b), PolyFunctionType y (FunctionType b' c))
 
-requireSubtypeRest :: (FromTypeError e, MonadError e m, MonadWriter AssumptionsAll m) =>
+requireSubtypeRest :: (FromTypeError e, MonadError e m,
+                       MonadWriter AssumptionsAll m, MonadReader ReadOnlyState m) =>
                       RestVar -> RestVar -> m ()
 requireSubtypeRest a b | a == b = pure ()
 requireSubtypeRest (RestQuant a) (RestQuant b) =
@@ -233,7 +244,8 @@ requireSubtypeRest (RestGround a) (RestGround b)
                               CouldNotUnifyStack (StackDesc mempty $ RestGround a)
                                                  (StackDesc mempty $ RestGround b))
 
-requireSubtypeStack :: (FromTypeError e, MonadError e m, MonadWriter AssumptionsAll m) =>
+requireSubtypeStack :: (FromTypeError e, MonadError e m,
+                        MonadWriter AssumptionsAll m, MonadReader ReadOnlyState m) =>
                        StackDesc -> StackDesc -> m ()
 requireSubtypeStack (StackDesc xs x) (StackDesc ys y) = do
   let minlen = min (Stack.length xs) (Stack.length ys)
@@ -257,12 +269,14 @@ requireSubtypeStack (StackDesc xs x) (StackDesc ys y) = do
         error "Assertion violated in requireSubtypeStack"
 
 -- Left-to-right composition, so first function happens first.
-composeFunctions :: (FromTypeError e, MonadError e m, MonadWriter AssumptionsAll m) =>
+composeFunctions :: (FromTypeError e, MonadError e m,
+                     MonadWriter AssumptionsAll m, MonadReader ReadOnlyState m) =>
                     FunctionType -> FunctionType -> m FunctionType
 composeFunctions (FunctionType a b) (FunctionType b' c) =
     requireSubtypeStack b b' >> pure (FunctionType a c)
 
-composePFunctions :: (FromTypeError e, MonadError e m, MonadWriter AssumptionsAll m) =>
+composePFunctions :: (FromTypeError e, MonadError e m,
+                      MonadWriter AssumptionsAll m, MonadReader ReadOnlyState m) =>
                      PolyFunctionType -> PolyFunctionType -> m PolyFunctionType
 composePFunctions (PolyFunctionType i f) (PolyFunctionType j g) =
       go f (renameToAvoidConflicts' (`elem` i) g)

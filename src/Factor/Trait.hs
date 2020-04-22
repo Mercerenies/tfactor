@@ -23,16 +23,17 @@ import Factor.Names
 import Data.Monoid
 import Control.Monad.Reader hiding (reader)
 import Control.Monad.Except
-import Control.Monad.Writer
+import Control.Monad.RWS hiding (reader)
 import Control.Monad.State
 import Control.Lens
 import Data.Map(Map)
 import qualified Data.Map as Map
 import Data.Maybe
 
-requireSubtype :: (FromUnsatisfiedTrait e, MonadError e m) => QId -> TraitInfo -> Type -> Type -> m ()
-requireSubtype q t a b =
-    case runWriterT (a `isSubtypeOf` b) of
+requireSubtype :: (FromUnsatisfiedTrait e, MonadError e m) =>
+                  ReadOnlyState -> QId -> TraitInfo -> Type -> Type -> m ()
+requireSubtype reader q t a b =
+    case evalRWST (a `isSubtypeOf` b) reader () of
       Left (_ :: TypeError) -> throwError (fromUnsatisfiedTrait $ IncompatibleWithTrait q t)
       Right ((), _) -> pure ()
 
@@ -99,16 +100,16 @@ moduleSatisfies reader (Trait reqs0) m0 = mapM_ (go (QId []) m0) reqs0
                              value' <- requireExists qid' info value
                              case value' of
                                UDFunction (PolyFunctionType _ decltype) _ ->
-                                   requireSubtype qid' info (FunType decltype) (toGround r $ FunType reqtype)
+                                   requireSubtype reader qid' info (FunType decltype) (toGround r $ FunType reqtype)
                                BIFunction (PolyFunctionType _ decltype) _ ->
-                                   requireSubtype qid' info (FunType decltype) (toGround r $ FunType reqtype)
+                                   requireSubtype reader qid' info (FunType decltype) (toGround r $ FunType reqtype)
                                _ -> throwError (TraitError $ MissingFromTrait qid' info)
                    TraitMacro (PolyFunctionType r reqtype) -> do
                              value' <- requireExists qid' info value
                              case value' of
                                UDMacro (PolyFunctionType _ decltype) _ -> -- TODO Support BIMacro here,
                                                                           -- once we write that
-                                   requireSubtype qid' info (FunType decltype) (toGround r $ FunType reqtype)
+                                   requireSubtype reader qid' info (FunType decltype) (toGround r $ FunType reqtype)
                                _ -> throwError (TraitError $ MissingFromTrait qid' info)
                    TraitModule reqs -> do
                              value' <- requireExists qid' info value
