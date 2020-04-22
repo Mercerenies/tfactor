@@ -1,4 +1,9 @@
 
+# This one doesn't work yet. We need to think VERY HARD about how we
+# want these things to behave, because it's fixing to get complicated.
+
+# /////
+
 record Trivial { A : Type }
   constructor make
   field x A

@@ -2,7 +2,8 @@
 
 module Factor.Trait(Trait(..), ParameterizedTrait(..), TraitInfo(..), UnsatisfiedTrait(..),
                     FromUnsatisfiedTrait(..),
-                    traitDemandsType, mergeTraits, nestedTrait, nestedTraitDeep,
+                    traitDemandsType, functorDemandsType,
+                    mergeTraits, nestedTrait, nestedTraitDeep, nestedTraitDeepFunctor,
                     moduleSatisfies, moduleSatisfies',
                     bindTrait, bindTraitUnchecked,
                     makeMinimalModule, bindModule, makeFreshModuleName) where
@@ -57,6 +58,17 @@ traitDemandsType r (Trait xs) = getAny <$> foldMapM go xs
                 TraitDemandType -> pure $ Any True
                 TraitFunctor {} -> pure $ Any False
 
+functorDemandsType :: MonadError FactorError m => ReadOnlyState -> Map Id FunctorInfo -> m Bool
+functorDemandsType _r m = getAny <$> foldMapM go (Map.toList m)
+    where go (_, info) =
+              case info of
+                FunctorUDFunction {} -> pure $ Any False
+                FunctorUDMacro {} -> pure $ Any False
+                FunctorModule {} -> pure $ Any False
+                FunctorFunctor {} -> pure $ Any False
+                FunctorTrait _ -> pure $ Any False
+                FunctorDemandType -> pure $ Any True
+
 mergeTraits :: Trait -> Trait -> Trait
 mergeTraits (Trait xs) (Trait ys) = Trait $ xs ++ ys
 
@@ -86,6 +98,32 @@ nestedTrait r (Trait xs) y = foldMapM check xs >>= \case
 
 nestedTraitDeep :: MonadError FactorError m => ReadOnlyState -> Trait -> QId -> m Trait
 nestedTraitDeep r t (QId xs) = foldM (nestedTrait r) t xs
+
+nestedTraitDeepFunctor :: MonadError FactorError m =>
+                          ReadOnlyState -> Trait -> QId -> m ([ModuleArg], [(Id, TraitInfo)])
+nestedTraitDeepFunctor _ _ (QId []) = throwError (NoSuchTrait (QId []))
+nestedTraitDeepFunctor r (Trait ys) (QId xs) = do
+  Trait ys' <- nestedTraitDeep r (Trait ys) (QId $ init xs)
+  foldMapM check ys' >>= \case
+           [] -> throwError (NoSuchTrait (QId xs))
+           (y:_) -> pure y -- TODO We just take the first match right
+                           -- now, since there's no good way to merge
+                           -- functors at the moment.
+ where check (v, info) =
+           case info of
+                TraitFunction {} -> pure []
+                TraitMacro {} -> pure []
+                TraitModule _ -> pure []
+                TraitInclude (TraitRef q args) ->
+                    lookupFn q r >>= \case
+                             TraitValue pt -> do
+                               Trait info' <- runReaderT (bindTrait q pt args) r
+                               foldMapM check info'
+                             _ -> throwError (NoSuchTrait q)
+                TraitDemandType -> pure []
+                TraitFunctor ty zs
+                    | v == last xs -> pure [(ty, zs)]
+                    | otherwise -> throwError (NoSuchTrait (QId xs))
 
 -- TODO We want to verify properties like "does this included trait
 -- exist" or "did we pass the right number of arguments to the
