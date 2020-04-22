@@ -10,4 +10,6 @@ end
 #  [ keep ] dip2 [ keep ] dip call
 #end
 
-fun main ( -- ) end
+fun test ( -- Bool )
+  true
+end

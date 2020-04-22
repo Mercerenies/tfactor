@@ -12,9 +12,17 @@ import Test.HUnit
 -- failure. An error in the VM of any kind constitutes an error
 -- according to HUnit.
 
+-- TODO There are a few places (typechecker_1.txt, etc.) where we have
+-- commented out code that "should fail". We need to turn these into
+-- proper test cases in which failure is expected behavior.
+-- (Basically, just go through all of the test txt files; a lot of
+-- them have stuff like that)
+
 tests :: SharedPrelude -> Test
 tests p = TestLabel "Factor.Test.Files" $ TestList [
-           testFile p "std/test/recursion_1.txt"
+           testFile p "std/test/recursion_1.txt",
+           testFile p "std/test/typechecker_1.txt",
+           testFile p "std/test/usertypes_1.txt"
           ]
 
 testFile :: SharedPrelude -> FilePath -> Test
