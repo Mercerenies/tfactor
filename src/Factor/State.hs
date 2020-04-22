@@ -1,9 +1,10 @@
 {-# LANGUAGE FlexibleContexts, ViewPatterns, KindSignatures, RankNTypes, TypeFamilies, ScopedTypeVariables #-}
 
 module Factor.State(ReadOnlyState(ReadOnlyState), ReaderValue(..),
-                    Module(Module), ModuleDecl(..),
+                    Module(Module), TypeProperties(..), ModuleDecl(..),
                     readerModule, readerNames, readerResources,
-                    moduleNames, moduleDecls, moduleIsType,
+                    moduleNames, moduleDecls, moduleType,
+                    typeParent,
                     newReader, emptyModule, mapToModule,
                     declsToReadOnly) where
 
@@ -55,7 +56,7 @@ declsToReadOnly qid ds r = foldM go r ds
                  | otherwise -> do
                           let qid' = qid <> QId [v]
                           inner <- expandRecordDecl qid' def emptyModule
-                          let inner' = set moduleIsType True inner
+                          let inner' = set moduleType (Just (TypeProperties TAny)) inner
                           traverseOf moduleNames (defineModule qid' v inner') reader
                 TraitDecl v def
                  | Map.member v (reader^.moduleNames) -> throwError (DuplicateDecl v)

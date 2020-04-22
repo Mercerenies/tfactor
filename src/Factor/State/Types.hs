@@ -2,11 +2,12 @@
     GeneralizedNewtypeDeriving, TypeFamilies, DeriveTraversable #-}
 
 module Factor.State.Types(EvalState(..), ReadOnlyState(ReadOnlyState), ReaderValue(..), RId,
-                          Module(Module), ModuleDecl(..),
+                          Module(Module), TypeProperties(..), ModuleDecl(..),
                           BuiltIn(..), BuiltInConstraints,
                           ResourceTable(..),
                           readerModule, readerNames, readerResources,
-                          moduleNames, moduleDecls, moduleIsType,
+                          moduleNames, moduleDecls, moduleType,
+                          typeParent,
                           newState, newReader, emptyModule, mapToModule, newResourceTable) where
 
 import Factor.Error
@@ -45,7 +46,11 @@ data ReaderValue = UDFunction PolyFunctionType Function -- User-defined function
 data Module = Module {
       _moduleNames :: Map Id RId,
       _moduleDecls :: [ModuleDecl],
-      _moduleIsType :: Bool
+      _moduleType :: Maybe TypeProperties
+    } deriving (Show)
+
+data TypeProperties = TypeProperties {
+      _typeParent :: Type
     } deriving (Show)
 
 data ModuleDecl = Alias Id QId
@@ -80,6 +85,7 @@ type RId = Int
 
 makeLenses ''ReadOnlyState
 makeLenses ''Module
+makeLenses ''TypeProperties
 
 readerNames :: Lens' ReadOnlyState (Map Id RId)
 readerNames = readerModule . moduleNames
@@ -94,7 +100,7 @@ emptyModule :: Module
 emptyModule = mapToModule Map.empty
 
 mapToModule :: Map Id RId -> Module
-mapToModule m = Module m [] False
+mapToModule m = Module m [] Nothing
 
 newResourceTable :: ResourceTable a
 newResourceTable = ResourceTable Seq.Empty

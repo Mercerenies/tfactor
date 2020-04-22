@@ -137,7 +137,7 @@ checkIsWellDefined (FunType (FunctionType (StackDesc args _) (StackDesc rets _))
     mapM_ checkIsWellDefined (Stack.FromTop rets)
 checkIsWellDefined (ModuleType t) =
     ask >>= lookupFn t >>= \case
-        ModuleValue m | m^.moduleIsType -> pure ()
+        ModuleValue m | has (moduleType._Just) m -> pure ()
         _ -> throwError (NoSuchType t)
 
 {-

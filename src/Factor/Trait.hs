@@ -122,7 +122,7 @@ moduleSatisfies reader (Trait reqs0) m0 = mapM_ (go (QId []) m0) reqs0
                                   t <- runReaderT (bindTrait q pt args) reader
                                   moduleSatisfies reader t m
                                 _ -> throwError (NoSuchTrait q)
-                   TraitDemandType -> if m0^.moduleIsType then
+                   TraitDemandType -> if has (moduleType._Just) m0 then
                                           pure ()
                                       else
                                           throwError (TraitError $ MissingFromTrait qid info)
@@ -224,7 +224,7 @@ makeMinimalModuleFor qid (Trait info) = do
                                  _ -> throwError (NoSuchTrait innername)
                    let Trait innerinfo = innername'
                    foldM go modl innerinfo
-               TraitDemandType -> return $ set moduleIsType True modl
+               TraitDemandType -> return $ set moduleType (Just $ TypeProperties TAny) modl -- TODO The correct type ////
                TraitFunctor args info' -> do
                    inner <- makeMinimalInFunctor qid' (Trait info')
                    rid <- appendResourceRO' qid' (FunctorValue (ParameterizedModule args inner))
@@ -309,7 +309,7 @@ bindFunctorInfo subfn qid name info m =
           --res' <- normalizeTypesRes' res
           rid <- appendResourceRO' qid res
           return $ set (moduleNames.at name) (Just rid) m
-      FunctorDemandType -> return $ set moduleIsType True m
+      FunctorDemandType -> return $ set moduleType (Just $ TypeProperties TAny) m -- TODO The correct type ////
       FunctorFunctor args impl -> do
           -- TODO Substitute in args (as above)
           let -- We don't want to substitute any names bound by the

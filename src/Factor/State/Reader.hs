@@ -1,9 +1,10 @@
 {-# LANGUAGE ScopedTypeVariables, FlexibleContexts, RankNTypes #-}
 
 module Factor.State.Reader(ReadOnlyState(ReadOnlyState), ReaderValue(..),
-                           Module(Module), ModuleDecl(..),
+                           Module(Module), TypeProperties(..), ModuleDecl(..),
                            readerModule, readerNames, readerResources,
-                           moduleNames, moduleDecls, moduleIsType,
+                           moduleNames, moduleDecls, moduleType,
+                           typeParent,
                            newReader, emptyModule, mapToModule,
                            atQIdResource, atQId, lookupFn, lookupFnName,
                            allNamesInModule, allNames, allChildrenOf,
@@ -136,9 +137,13 @@ readerMacroType (ModuleValue _) = Nothing
 readerMacroType (TraitValue _) = Nothing
 readerMacroType (FunctorValue _) = Nothing
 
+-- TODO "t `mplus` t'" to get the first non-Nothing. Is this the
+-- behavior we want? What does it even mean if the top-level is a
+-- type, other than that something has gone horribly wrong or the user
+-- is a troll?
 merge :: MonadError FactorError m => ReadOnlyState -> ReadOnlyState -> m ReadOnlyState
 merge (ReadOnlyState (Module m a t) r) (ReadOnlyState (Module m' a' t') r') =
-    ReadOnlyState <$> (Module <$> merged <*> pure (a ++ a') <*> pure (t || t')) <*> pure rtable
+    ReadOnlyState <$> (Module <$> merged <*> pure (a ++ a') <*> pure (t `mplus` t')) <*> pure rtable
         where failure = Merge.zipWithAMatched $ \k _ _ -> throwError (DuplicateDecl k)
               renamedm = fmap (+ resourceCount r) m'
               renamedr = modifyRIds (+ resourceCount r) r'

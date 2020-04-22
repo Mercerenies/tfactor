@@ -176,7 +176,7 @@ polyFn args arg rets ret =
     in BIFunction (PolyFunctionType (allQuantVars $ FunType fn) fn)
 
 emptyTypeModule :: Module
-emptyTypeModule = set moduleIsType True emptyModule
+emptyTypeModule = set moduleType (Just $ TypeProperties TAny) emptyModule
 
 builtins :: Map Id ReaderValue
 builtins = Map.fromList [
