@@ -9,7 +9,6 @@ import Factor.Stack(Stack(..))
 import qualified Factor.Stack as Stack
 import Factor.State
 import Factor.State.Reader
-import Factor.State.Alias
 import Factor.State.Stack
 import Factor.State.Types(BuiltIn(..))
 import Factor.State.Resource
@@ -19,18 +18,15 @@ import Factor.Error
 import Factor.Code
 import Factor.Code.Decl
 import Factor.Eval
-import Factor.Loader
-import Factor.Loader.Module
-import Factor.Loader.Type
 import Factor.Parser.Token
 import Factor.Parser
 import Factor.Names
 import Factor.Trait
+import Factor.Manager
 
 import Control.Monad
 import Control.Monad.Except
 import Control.Monad.State
-import Control.Monad.Reader hiding (reader)
 import Control.Lens
 import Data.Map(Map)
 import qualified Data.Map as Map
@@ -240,16 +236,7 @@ loadPreludeImpl = do
     definednames <- declsToReadOnly (QId []) [ModuleDecl preludeModuleName decls] emptyModule
     resourcetable <- get
     return $ ReadOnlyState definednames resourcetable
-  fullbindings <- bindPrimitives newbindings
-  newbindings' <-
-      runReaderT (forOf (readerResources . traverseWithQId) newbindings $ \(q, v) -> resolveAliasesResource' Map.empty q v)
-      fullbindings
-  reader <- bindPrimitives newbindings'
-  reader' <- loadModules (allNames newbindings') reader
-  reader'' <- runReaderT (forOf (readerResources.traverseWithQId) reader' $ \(q, v) -> resolveAliasesResource' Map.empty q v) reader'
-  let updatednames = concatMap (allChildrenOf reader'') $ allNames newbindings'
-  reader''' <- normalizeAllTypes updatednames reader''
-  loadEntities updatednames reader'''
+  fullyLoadBindings bindPrimitives newbindings
 
 loadPrelude :: (MonadError FactorError m, MonadIO m) => m Prelude
 loadPrelude = fmap Prelude loadPreludeImpl `catchError` (\e -> throwError (InternalError $ show e))
