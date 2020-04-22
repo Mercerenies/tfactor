@@ -2,63 +2,11 @@
 module Factor.Test.StdLib where
 
 import Factor.Test.TestUtil
-import Factor.StdLib
-import Factor.Parser
-import Factor.Parser.Token
-import Factor.State
 import Factor.State.Stack
-import Factor.State.Alias
-import Factor.State.Macro
-import Factor.Eval
-import Factor.Error(liftParseError)
 import Factor.Stack(Stack(..))
 import Factor.Code
-import Factor.Type.Checker
 
 import Test.HUnit
-import Control.Monad.Except
-import Control.Monad.Reader
-import Control.Monad.RWS
-import qualified Data.Map as Map
-
-eitherToFail :: (MonadFail m, Show e) => Either e a -> m a
-eitherToFail (Left e) = fail (show e)
-eitherToFail (Right x) = pure x
-
-parseAndRun :: SharedPrelude -> String -> IO EvalState
-parseAndRun shared s = runExceptT go >>= eitherToFail
-    where go = do
-            prelude <- liftIO $ getSharedPrelude shared
-            tokens <- liftParseError $ parseManyTokens "(test case)" s
-            seq_ <- liftParseError $ parseSeq "(test case)" tokens
-            fullbindings <- bindStdlibModule prelude newReader
-            aliases <- bindDefaultAliases fullbindings Map.empty
-            seq_' <- resolveAliasesSeq aliases seq_
-
-            -- The typechecks are pretty weak here, since we don't
-            -- have any declared type to compare them to, but we can
-            -- at least check that there *is* a well-defined type for
-            -- them.
-            seq_'' <- flip runReaderT fullbindings $ do
-                        _ <- checkHasDefinedType MacroPass seq_'
-                        seq_'' <- augmentSeqWithMacros seq_'
-                        _ <- checkHasDefinedType FunctionPass seq_''
-                        return seq_''
-
-            ((), st, ()) <- runRWST (evalSeq seq_'') fullbindings newState
-            return st
-
-runAndExpect :: SharedPrelude -> String -> EvalState -> IO ()
-runAndExpect shared s expected = do
-  actual <- parseAndRun shared s
-  assertEqual ("Running sequence " ++ show s) expected actual
-
-runAndMatch :: SharedPrelude -> String -> String -> IO ()
-runAndMatch shared s1 s2 = do
-  a1 <- parseAndRun shared s1
-  a2 <- parseAndRun shared s2
-  assertBool ("Running " ++ show s1 ++ " (got " ++ show a1 ++ ") and " ++
-              show s2 ++ " (got " ++ show a2 ++ ")") $ a1 == a2
 
 tests :: SharedPrelude -> Test
 tests p =
