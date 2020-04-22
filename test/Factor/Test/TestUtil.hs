@@ -1,5 +1,5 @@
 
-module Factor.Test.Semaphore where
+module Factor.Test.TestUtil where
 
 import Factor.StdLib
 

@@ -1,7 +1,7 @@
 
 module Factor.Test.StdLib where
 
-import Factor.Test.Semaphore
+import Factor.Test.TestUtil
 import Factor.StdLib
 import Factor.Parser
 import Factor.Parser.Token

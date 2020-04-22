@@ -5,7 +5,7 @@ import qualified Factor.Test.Id
 import qualified Factor.Test.Stack
 import qualified Factor.Test.Util
 import qualified Factor.Test.StdLib
-import Factor.Test.Semaphore
+import Factor.Test.TestUtil
 
 import Test.HUnit
 
