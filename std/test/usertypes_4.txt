@@ -22,4 +22,6 @@ fun convert3 ( M.Bar -- Module1.Foo ) end
 
 # fun failedconvert ( Bar -- DistinctType ) end
 
-fun main ( -- ) end
+fun test ( -- Bool )
+  true
+end

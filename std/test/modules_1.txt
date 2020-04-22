@@ -2,8 +2,8 @@
 mod A
 
   mod B
-    fun bar ( -- String )
-      "Hi"
+    fun bar ( -- Int )
+      9
     end
   end
 
@@ -20,6 +20,6 @@ mod C
   end
 end
 
-fun main ( -- Int String Int )
-  C.foo C.B.bar C.baz
+fun test ( -- Bool )
+  C.foo 30 = C.B.bar 9 = C.baz 101 = and and
 end

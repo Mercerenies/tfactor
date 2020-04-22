@@ -69,24 +69,25 @@ end
 
 # Here's a comment before main.
 
-fun main ( -- Int Int Int Int Int String Int Symbol Symbol Symbol Symbol Symbol Symbol Int Int Int Int Int Int Int Int Int Int Int Int Int Int )
-  500 3 nip
-  500 500 2 nip2
-  500 500 500 1 nip3
+fun test ( -- Bool )
+  true
+  500 3 nip 3 = and
+  500 500 2 nip2 2 = and
+  500 500 500 1 nip3 1 = and
   id id id id id # Because why not?
   doesn't-actually-do-anything
-  true [ my-swap ] [ ] if
-  [ 3 4 5 + do-it-twice ] call
-  [ 3 4 + ] Prelude.call
-  string-output # Here's a comment at the end of a line.
-  100 200 300 400 500 MyModule.drop2 MyModule.MyNestedModule.drop2-again
+  8 9 true [ my-swap ] [ ] if drop 9 = and
+  [ 3 4 5 + do-it-twice ] call 12 = and
+  [ 3 4 + ] Prelude.call 7 = and
+  string-output drop # Here's a comment at the end of a line.
+  100 200 300 400 500 MyModule.drop2 MyModule.MyNestedModule.drop2-again 100 = and
   999999 999999 Joe.drop2
   999999 999999 charlie
   999999 foobar
   999999 999999 __root.MyModule.drop2
-  :abc :def :ghi :jkl drop do-it-twice
-  :first :second dup2
-  600 700 800 dup3
-  1000 2000 over
-  1000 2000 3000 over2
+  :abc :def :ghi :jkl drop do-it-twice drop2
+  :first :second dup2 drop2 drop2
+  600 700 800 dup3 drop3 drop2 600 = and
+  1000 2000 over drop3
+  1000 2000 3000 over2 drop3 drop2
 end

@@ -17,7 +17,10 @@ mod A
 
 end
 
-mod B = A end
+# (Issue #8)
+mod M
+  mod B = A end
+end
 
 alias Con = Container
 
@@ -39,28 +42,6 @@ mod KindaKnowsTheAnswer
 
 end
 
-trait HasInnerModule
-
-  mod Inner
-    val foo ( 'a -- 'a )
-  end
-
-end
-
-trait HasInnerModule1
-  include HasInnerModule
-end
-
-mod OuterModule
-  require HasInnerModule
-  require HasInnerModule1
-
-  mod Inner
-    fun foo ( 'a -- 'a ) id end
-  end
-
-end
-
 trait OuterTrait
   mod Inner
     include KnowsTheAnswer
@@ -76,6 +57,8 @@ mod OuterModule1
   end
 end
 
-fun main ( -- Int )
-  Con.Foo.the-answer
+fun test ( -- Bool )
+  Con.Foo.the-answer 42 =
+  OuterModule1.Inner.the-answer 42 =
+  and
 end

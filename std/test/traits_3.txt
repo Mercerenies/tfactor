@@ -1,0 +1,26 @@
+
+trait HasInnerModule
+
+  mod Inner
+    val foo ( 'a -- 'a )
+  end
+
+end
+
+trait HasInnerModule1
+  include HasInnerModule
+end
+
+mod OuterModule
+  require HasInnerModule
+  require HasInnerModule1
+
+  mod Inner
+    fun foo ( 'a -- 'a ) id end
+  end
+
+end
+
+fun test ( -- Bool )
+  true
+end

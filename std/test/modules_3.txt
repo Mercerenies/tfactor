@@ -1,4 +1,6 @@
 
+# Stress-test module load order a bit.
+
 mod A
   mod B
     mod C
@@ -15,6 +17,6 @@ mod F
   mod G = D.E.C end
 end
 
-fun main ( -- Int )
-  F.G.foo
+fun test ( -- Bool )
+  F.G.foo 10 =
 end
