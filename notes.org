@@ -86,6 +86,22 @@ end
    complicates things. For one, it's never actually module loaded,
    which means module synonyms and functor instantiations at the top
    level just... fail silently. How do we deal with this?
+* WHEN ARE TYPES COMPATIBLE?
+  This may be a bit complicated, so I'm writing it down here. When you
+  have a functor which constitutes a type (usually, a parameterized
+  record), that functor also constitutes a (parameterized) type. When
+  you instantiate the functor and get a module, that module /also/
+  constitutes a type, which is a subtype of the functor with the
+  appropriate parameters. Note that two identical instantiations of a
+  functor with the same arguments produce two distinct subtypes of the
+  functor type which are identical in representation but incompatible.
+
+  + Note that, right now, this does not apply to /nested/ types inside
+    a functor. Two instantiations of a functor which contains nested
+    types will produce two distinct, unrelated nested types. This
+    behavior is likely to stay, as it's quite useful to be able to
+    "generate" distinct types with the same representation at
+    compile-time.
 * TRAITS AND MODULE PARAMETERS PLAN
  1. [X] ~ResourceTable~ transition
  2. [X] Module synonyms that are exported
