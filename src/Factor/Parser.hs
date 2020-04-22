@@ -135,15 +135,32 @@ functorInfo :: Parser (Id, FunctorInfo)
 functorInfo = (\(t, s) -> (fromJust $ functionName s, FunctorUDFunction t s)) <$> functionDecl <|>
               (\(t, s) -> (macroName s, FunctorUDMacro t s)) <$> macroDecl <|>
               (\(i, m) -> (i, FunctorModule m)) <$> modWithinFunctor <|>
-              (\(i, t) -> (i, FunctorTrait t)) <$> trait
+              (\(i, t) -> (i, FunctorTrait t)) <$> trait <|>
+              (\(i, a, t) -> (i, FunctorFunctor a t)) <$> functorWithinFunctor
 
 modWithinFunctor :: Parser (Id, Map Id FunctorInfo)
 modWithinFunctor = do
-  _ <- symbol "mod"
-  name <- unqualifiedId
+  name <- try (symbol "mod" *> unqualifiedId <* notFollowedBy (symbol "{"))
   decls <- many functorInfo
   _ <- symbol "end"
   return (name, Map.fromList decls)
+
+functorWithinFunctor :: Parser (Id, [ModuleArg], Map Id FunctorInfo)
+functorWithinFunctor = do
+  name <- try (symbol "mod" *> unqualifiedId <* lookAhead (symbol "{"))
+  params <- option [] $ do
+              _ <- symbol "{"
+              let singleparam = do
+                          argname <- unqualifiedId
+                          _ <- symbol ":"
+                          argtype <- traitRef
+                          return $ ModuleArg argname argtype
+              params <- sepBy singleparam (symbol ",")
+              _ <- symbol "}"
+              return params
+  info <- Map.fromList <$> many functorInfo
+  _ <- symbol "end"
+  return (name, params, info)
 
 functorDecl :: Parser (Id, ParameterizedModule)
 functorDecl = do

@@ -3,7 +3,7 @@
 module Factor.Trait.Argument(ModuleArg(..), TraitRef(..),
                              moduleArgName, moduleArgTraitName, traitRefName, traitRefArgs,
                              subArg, subArgInType, subArgInFnType, subArgInPolyFnType,
-                             subArgInStmt, subArgInSeq,
+                             subArgInStmt, subArgInSeq, subArgInFunctorInfo,
                              substituteTrait) where
 
 import Factor.Trait.Types
@@ -49,6 +49,23 @@ subArgInStmt f (Literal lit) = Literal (subArgInData f lit)
 
 subArgInSeq :: (Id -> QId) -> Sequence -> Sequence
 subArgInSeq f (Sequence xs) = Sequence $ fmap (subArgInStmt f) xs
+
+subArgInFunctorInfo :: (Id -> QId) -> FunctorInfo -> FunctorInfo
+subArgInFunctorInfo f (FunctorUDFunction p (Function t ss)) =
+    FunctorUDFunction (subArgInPolyFnType f p) (Function t (subArgInSeq f ss))
+subArgInFunctorInfo f (FunctorUDMacro p (Macro t ss)) =
+    FunctorUDMacro (subArgInPolyFnType f p) (Macro t (subArgInSeq f ss))
+subArgInFunctorInfo f (FunctorModule m) =
+    FunctorModule $ fmap (subArgInFunctorInfo f) m
+subArgInFunctorInfo f (FunctorTrait (ParameterizedTrait args t)) =
+    let f' v = if any (\(ModuleArg v' _) -> v == v') args then QId [v] else f v
+    in -- TODO Substitute in args
+       FunctorTrait (ParameterizedTrait args (substituteTrait f' t))
+subArgInFunctorInfo f (FunctorFunctor args t) =
+    let f' v = if any (\(ModuleArg v' _) -> v == v') args then QId [v] else f v
+    in -- TODO Substitute in args
+       FunctorFunctor args (fmap (subArgInFunctorInfo f') t)
+subArgInFunctorInfo _ FunctorDemandType = FunctorDemandType
 
 substituteTrait :: (Id -> QId) -> Trait -> Trait
 substituteTrait f (Trait ts) = Trait $ fmap (_2 %~ go) ts

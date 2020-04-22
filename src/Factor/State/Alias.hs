@@ -152,6 +152,14 @@ resolveAliasesFunctorInfo m (FunctorTrait (ParameterizedTrait params (Trait xs))
                return (ModuleArg i (TraitRef name' args'))
   return (FunctorTrait (ParameterizedTrait params' (Trait xs')))
 resolveAliasesFunctorInfo _ FunctorDemandType = pure FunctorDemandType
+resolveAliasesFunctorInfo m (FunctorFunctor args xs) = do
+  args' <- forM args $ \(ModuleArg name (TraitRef tname innerargs)) -> do
+                           tname' <- resolveAlias m tname
+                           innerargs' <- mapM (resolveAlias m) innerargs
+                           return $ ModuleArg name (TraitRef tname' innerargs')
+  -- TODO Again, do we care about shadowing here? (See comments below in this file)
+  xs' <- mapM (resolveAliasesFunctorInfo m) xs
+  return (FunctorFunctor args' xs')
 
 resolveAliasesResource :: MonadError FactorError m =>
                           Map Id Alias -> ReaderValue -> m ReaderValue

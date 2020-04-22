@@ -1,0 +1,25 @@
+
+mod Foo { A : Type }
+  mod Bar { B : Type }
+    fun my-swap ( A B -- B A )
+      Prelude.swap
+    end
+  end
+end
+
+# Issue #8
+mod M
+  mod MyFoo = Foo { Int } end
+end
+
+mod N
+  mod MyBar = M.MyFoo.Bar { Int } end
+end
+
+# TODO Definitely some awkwardness if we make M and N one module.
+# Alias resolution still doesn't understand the modules that haven't
+# been loaded yet.
+
+fun test ( -- Bool )
+  100 200 N.MyBar.my-swap 100 = swap 200 = and
+end

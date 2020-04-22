@@ -36,6 +36,7 @@ data TraitInfo = TraitFunction PolyFunctionType
 data FunctorInfo = FunctorUDFunction PolyFunctionType Function
                  | FunctorUDMacro PolyFunctionType Macro
                  | FunctorModule (Map Id FunctorInfo)
+                 | FunctorFunctor [ModuleArg] (Map Id FunctorInfo)
                  | FunctorTrait ParameterizedTrait
                  | FunctorDemandType -- This won't be allowed in the parser either.
                    deriving (Eq)
@@ -68,3 +69,4 @@ instance Show FunctorInfo where
     showsPrec _ (FunctorModule m) = ("<FunctorModule " ++) . shows m . (">" ++)
     showsPrec _ (FunctorTrait t) = ("<FunctorTrait " ++) . shows t . (">" ++)
     showsPrec _ FunctorDemandType = ("<FunctorDemandType>" ++)
+    showsPrec _ (FunctorFunctor _ _) = ("<FunctorFunctor>" ++) -- TODO Print this better?

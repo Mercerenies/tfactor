@@ -84,6 +84,14 @@ normalizeTypesFunctorInfo names (FunctorTrait (ParameterizedTrait args t)) = do
   t' <- normalizeTypesTrait names'' t
   return (FunctorTrait (ParameterizedTrait args t'))
 normalizeTypesFunctorInfo _ FunctorDemandType = pure $ FunctorDemandType
+normalizeTypesFunctorInfo names (FunctorFunctor args info) = do
+  reader <- ask
+  names' <- forM args $ \(ModuleArg i (TraitRef q innerargs)) -> lookupFn q reader >>= \case
+            TraitValue pt -> fmap ((,) i) $ bindTraitAndNormalize q pt innerargs
+            _ -> throwError (NoSuchTrait q)
+  let names'' = Map.fromList names' <> names
+  info' <- mapM (normalizeTypesFunctorInfo names'') info
+  return (FunctorFunctor args info')
 
 normalizeTypesFunctor :: (MonadReader ReadOnlyState m, MonadError FactorError m) =>
                          Map Id Trait -> Map Id FunctorInfo -> m (Map Id FunctorInfo)
@@ -137,4 +145,7 @@ functorToTrait qid0 (ParameterizedModule params info0) =
                       go _ (FunctorTrait {}) = [] -- TODO These can't appear in traits right
                                                   -- now. Will this be supported later?
                       go _ FunctorDemandType = [TraitDemandType]
+                      go i (FunctorFunctor args m) =
+                          let Trait m' = toTrait (qid <> QId [i]) m
+                          in [TraitFunctor args m']
                   in Trait $ concatMap (\(i, v) -> map ((,) i) $ go i v) (Map.toList info)

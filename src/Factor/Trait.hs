@@ -236,7 +236,7 @@ makeMinimalInFunctor :: (MonadState ReadOnlyState m, MonadError FactorError m) =
                         QId -> Trait -> m (Map Id FunctorInfo)
 makeMinimalInFunctor qid (Trait info) = do
   let go modl (i, v) =
-          let _qid' = qid <> QId [i] -- Not currently used
+          let qid' = qid <> QId [i]
           in case v of
                TraitFunction p ->
                    pure (Map.insert i (FunctorUDFunction p (Function (Just i) unsafeImpl)) modl)
@@ -252,7 +252,9 @@ makeMinimalInFunctor qid (Trait info) = do
                    let Trait innerinfo = innername'
                    foldM go modl innerinfo
                TraitDemandType -> return $ Map.insert (Id "") FunctorDemandType modl
-               TraitFunctor _ _ -> error "NOT YET IMPLEMENTED" -- ////
+               TraitFunctor args info' -> do
+                   info'' <- makeMinimalInFunctor qid' (Trait info')
+                   return $ Map.insert i (FunctorFunctor args info'') modl
   foldM go Map.empty info
 
 unsafeImpl :: Sequence
@@ -307,6 +309,15 @@ bindFunctorInfo subfn qid name info m =
           rid <- appendResourceRO' qid res
           return $ set (moduleNames.at name) (Just rid) m
       FunctorDemandType -> return $ set moduleIsType True m
+      FunctorFunctor args impl -> do
+          -- TODO Substitute in args (as above)
+          let -- We don't want to substitute any names bound by the
+              -- inner functor itself.
+              subfn' k = if any (\(ModuleArg k' _) -> k == k') args then QId [k] else subfn k
+              impl' = fmap (subArgInFunctorInfo subfn') impl
+              res = FunctorValue (ParameterizedModule args impl')
+          rid <- appendResourceRO' qid res
+          return $ set (moduleNames.at name) (Just rid) m
 
 appendResourceRO' :: MonadState ReadOnlyState m => QId -> ReaderValue -> m RId
 appendResourceRO' qid value = state (appendResourceRO qid value)

@@ -1,0 +1,32 @@
+
+trait A
+  mod B { T1 : Type }
+    mod C { T2 : Type }
+      val do-swap ( T1 T2 -- T2 T1 )
+    end
+  end
+end
+
+mod AA
+  require A
+  mod B { S1 : Type }
+    mod C { T1 : Type }
+      fun do-swap ( S1 T1 -- T1 S1 )
+        Prelude.swap
+      end
+    end
+  end
+end
+
+# Issue #8
+mod M
+  mod MB = AA.B { Int } end
+end
+
+mod N
+  mod NC = M.MB.C { Int } end
+end
+
+fun test ( -- Bool )
+  100 200 N.NC.do-swap 100 = swap 200 = and
+end

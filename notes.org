@@ -112,7 +112,7 @@ end
     + [X] Parameterization
     + [X] Actualizing functors into modules
     + [X] Type checking inside of a functor
-    + [ ] Ability to have nested functors
+    + [X] Ability to have nested functors
     + [ ] Normalize the type names to behave more intuitively
     + [ ] A functor should depend on anything its inner declarations
       depend on (for module loading)
