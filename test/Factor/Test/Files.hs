@@ -22,8 +22,13 @@ tests :: SharedPrelude -> Test
 tests p = TestLabel "Factor.Test.Files" $ TestList [
            testFile p "std/test/recursion_1.txt",
            testFile p "std/test/typechecker_1.txt",
-           testFile p "std/test/usertypes_1.txt"
+           testFile p "std/test/usertypes_1.txt",
+           testFile p "std/test/usertypes_2.txt",
+           testFile p "std/test/usertypes_3.txt",
+           testFile p "std/test/traits_1.txt"
           ]
 
 testFile :: SharedPrelude -> FilePath -> Test
 testFile p f = TestLabel f . TestCase $ expectTrueFromFile p f
+
+-- /////

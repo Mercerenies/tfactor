@@ -31,6 +31,6 @@ mod N
   mod MyTuple2 = M.Tuple2 { Int , String } end
 end
 
-fun main ( -- N.MyTuple2 )
-  10 "A" N.MyTuple2.make
+fun test ( -- Bool )
+  10 "A" N.MyTuple2.make N.MyTuple2.proj1 10 =
 end

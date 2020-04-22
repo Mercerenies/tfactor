@@ -2,16 +2,12 @@
 trait Silly end
 
 trait Eq { X : Type }
-
   val == ( X X -- Bool )
-
 end
 
 trait Ord { X : Type }
   include Eq { X }
-
   val lt ( X X -- Bool )
-
 end
 
 mod IntIsOrd
@@ -33,21 +29,19 @@ record Tuple2
   field proj2 Int
 end
 
-fun && ( Bool Bool -- Bool )
-  [ ] [ drop false ] if
-end
-
 mod Tuple2IsEq
   require Eq { Tuple2 }
 
   fun == ( Tuple2 Tuple2 -- Bool )
     [ [ Tuple2.proj1 ] [ Tuple2.proj1 ] bi* IntIsOrd.== ]
     [ [ Tuple2.proj2 ] [ Tuple2.proj2 ] bi* IntIsOrd.== ]
-    bi2 &&
+    bi2 and
   end
 
 end
 
-fun main ( -- Bool )
-  10 20 Tuple2.make 20 10 Tuple2.make Tuple2IsEq.==
+fun test ( -- Bool )
+  10 20 Tuple2.make 10 20 Tuple2.make Tuple2IsEq.==
+  10 20 Tuple2.make 20 10 Tuple2.make Tuple2IsEq.== not
+  and
 end
