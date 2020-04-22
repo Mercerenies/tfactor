@@ -4,7 +4,7 @@ module Factor.Trait(Trait(..), ParameterizedTrait(..), TraitInfo(..), Unsatisfie
                     FromUnsatisfiedTrait(..),
                     traitDemandsType, mergeTraits, nestedTrait, nestedTraitDeep,
                     moduleSatisfies, moduleSatisfies',
-                    bindTrait) where
+                    bindTrait, bindTraitUnchecked) where
 
 import Factor.Trait.Types
 import Factor.Trait.Argument
@@ -117,12 +117,13 @@ moduleSatisfies' :: (MonadReader ReadOnlyState m, MonadError FactorError m) =>
                     Trait -> Module -> m ()
 moduleSatisfies' t m = ask >>= \r -> moduleSatisfies r t m
 
+-- TODO Should we auto-substitute Self here like we do in bindModule?
 bindTrait :: (MonadReader ReadOnlyState m, MonadError FactorError m) =>
              QId -> ParameterizedTrait -> [QId] -> m Trait
 bindTrait qid (ParameterizedTrait params trait) args
     | length params /= length args = throwError $ TraitArgError qid (length params) (length args)
     | otherwise = do
-        zipped <- forM (zip params args) $ \(ModuleArg param (TraitRef req innerargs), arg) -> do
+        _zipped <- forM (zip params args) $ \(ModuleArg param (TraitRef req innerargs), arg) -> do
                     modl <- ask >>= lookupFn arg >>= \case
                             ModuleValue m -> pure m
                             _ -> throwError (NoSuchModule arg)
@@ -134,7 +135,10 @@ bindTrait qid (ParameterizedTrait params trait) args
                             _ -> throwError (NoSuchTrait req)
                     moduleSatisfies' req' modl
                     return (param, arg)
-        let submap = Map.fromList zipped
-            subfn k = maybe (QId [k]) id (Map.lookup k submap)
-            trait' = substituteTrait subfn trait
-        return trait'
+        return $ bindTraitUnchecked qid (ParameterizedTrait params trait) args
+
+bindTraitUnchecked :: QId -> ParameterizedTrait -> [QId] -> Trait
+bindTraitUnchecked _qid (ParameterizedTrait params trait) args =
+    let submap = Map.fromList (zip (fmap (\(ModuleArg param _) -> param) params) args)
+        subfn k = maybe (QId [k]) id (Map.lookup k submap)
+    in substituteTrait subfn trait

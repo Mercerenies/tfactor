@@ -75,6 +75,7 @@ decl = (\(t, s) -> FunctionDecl t s) <$> functionDecl <|>
        (\(i, t) -> TraitDecl i t) <$> trait <|>
        (\(i, d) -> RecordDecl i d) <$> recordDecl <|>
        (\(i, f) -> FunctorDecl i f) <$> functorDecl <|>
+       (\(i, a, d) -> RecordFunctorDecl i a d) <$> recordFunctorDecl <|>
        (\(i, j) -> AliasDecl i j) <$> aliasDecl <|>
        (\i -> OpenDecl i) <$> openDecl <|>
        (\i -> RequireDecl i) <$> requireDecl <|>
@@ -119,8 +120,7 @@ moduleSyn = do
 
 recordDecl :: Parser (Id, [RecordInfo])
 recordDecl = do
-  _ <- symbol "record"
-  name <- unqualifiedId
+  name <- try (symbol "record" *> unqualifiedId <* notFollowedBy (symbol "{"))
   decls <- many recordInfo
   _ <- symbol "end"
   return (name, decls)
@@ -161,6 +161,29 @@ functorDecl = do
   info <- Map.fromList <$> many functorInfo
   _ <- symbol "end"
   return (name, ParameterizedModule params info)
+
+recordFunctorDecl :: Parser (Id, [ModuleArg], [RecordFunInfo])
+recordFunctorDecl = do
+  name <- try (symbol "record" *> unqualifiedId <* lookAhead (symbol "{"))
+  params <- option [] $ do
+              _ <- symbol "{"
+              let singleparam = do
+                          argname <- unqualifiedId
+                          _ <- symbol ":"
+                          argtype <- traitRef
+                          return $ ModuleArg argname argtype
+              params <- sepBy singleparam (symbol ",")
+              _ <- symbol "}"
+              return params
+  info <- many recordFunInfo
+  _ <- symbol "end"
+  return (name, params, info)
+
+recordFunInfo :: Parser RecordFunInfo
+recordFunInfo =
+    RecordFunConstructor <$> (symbol "constructor" *> unqualifiedId) <|>
+    RecordFunField <$> (symbol "field" *> unqualifiedId) <*> type_ <|>
+    (\(i, f) -> RecordFunOrdinaryDecl i f) <$> functorInfo
 
 aliasDecl :: Parser (Id, QId)
 aliasDecl = do

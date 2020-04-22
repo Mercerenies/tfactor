@@ -119,4 +119,9 @@ end
     + [ ] Need to pay special attention to aliases inside a functor to
       other names defined inside that functor, because they have to
       expand to names that don't yet exist
+    + [X] Parameterized records
+    + [ ] Module args can depend on earlier module args, so we can do
+      typeclass-ish stuff
+    + [ ] Module load order is awkward now, because a functor can't be
+      instantiated in the same module is was declared
  7. [ ] Functions can take module arguments

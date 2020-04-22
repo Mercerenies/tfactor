@@ -40,6 +40,8 @@ import qualified Data.Map as Map
 -- TODO Some form of "quoted" functions that are always treated as
 -- data and don't contribute to recursion checks.
 
+-- TODO WTF is all of this reader'''''''''''''''''''' stuff?
+
 run :: FilePath -> ExceptT FactorError IO ()
 run filename = do
   prelude <- loadPrelude
@@ -57,8 +59,9 @@ run filename = do
   reader'' <- bindStdlibModule prelude newbindings'
   reader''' <- loadModules (allNames newbindings') reader''
   reader'''' <- runReaderT (forOf (readerResources.traverseWithQId) reader''' $ \(q, v) -> resolveAliasesResource' aliases q v) reader'''
-  reader''''' <- normalizeAllTypes (allNames newbindings') reader''''
-  reader'''''' <- loadEntities (allNames newbindings') reader'''''
+  let updatednames = concatMap (allChildrenOf reader'''') $ allNames newbindings'
+  reader''''' <- normalizeAllTypes updatednames reader''''
+  reader'''''' <- loadEntities updatednames reader'''''
   (_, state) <- liftEither $ runEval (callFunction (QId [Id "main"])) reader'''''' newState
   liftIO $ print state
 

@@ -1,6 +1,6 @@
 {-# LANGUAGE FlexibleContexts, LambdaCase #-}
 
-module Factor.Trait.Functor(functorToTrait, makeMinimalModule, bindModule, makeFreshModuleName) where
+module Factor.Trait.Functor(makeMinimalModule, bindModule, makeFreshModuleName) where
 
 import Factor.Trait
 import Factor.Trait.Types
@@ -20,21 +20,6 @@ import Control.Monad.Reader hiding (reader)
 import Control.Lens
 import qualified Data.Map as Map
 import Data.Maybe
-
-functorToTrait :: QId -> ParameterizedModule -> ParameterizedTrait
-functorToTrait qid0 (ParameterizedModule params info0) =
-    ParameterizedTrait params (toTrait qid0 info0)
-        where toTrait qid info =
-                  let go _ (FunctorUDFunction p _) = [TraitFunction p]
-                      go _ (FunctorUDMacro p _) = [TraitMacro p]
-                      go i (FunctorModule info') =
-                          let qid' = qid <> QId [i]
-                              Trait inner = toTrait qid' info'
-                          in [TraitModule inner]
-                      go _ (FunctorTrait {}) = [] -- TODO These can't appear in traits right
-                                                  -- now. Will this be supported later?
-                      go _ FunctorDemandType = [TraitDemandType]
-                  in Trait $ concatMap (\(i, v) -> map ((,) i) $ go i v) (Map.toList info)
 
 -- Makes a minimal module for a functor, used for type-checking.
 makeMinimalModule :: (MonadState ReadOnlyState m, MonadError FactorError m) =>
@@ -103,7 +88,8 @@ bindModule mqid fnqid (ParameterizedModule params info) args
                             _ -> throwError (NoSuchTrait req)
                     get >>= runReaderT (moduleSatisfies' req' modl)
                     return (param, arg)
-        let submap = Map.fromList zipped
+        -- TODO Self to Factor.Names
+        let submap = Map.fromList (zipped ++ [(Id "Self", mqid)])
             subfn k = maybe (QId [k]) id (Map.lookup k submap)
         modl <- foldM (\m (k, v) -> bindFunctorInfo subfn (mqid <> QId [k]) k v m) emptyModule $ Map.toList info
         appendResourceRO' mqid (ModuleValue modl)
@@ -114,18 +100,18 @@ bindFunctorInfo subfn qid name info m =
     case info of
       FunctorUDFunction ptype (Function v ss) -> do
           let res = UDFunction (subArgInPolyFnType subfn ptype) (Function v $ subArgInSeq subfn ss)
-          res' <- normalizeTypesRes' res
-          rid <- appendResourceRO' qid res'
+          --res' <- normalizeTypesRes' res
+          rid <- appendResourceRO' qid res
           return $ set (moduleNames.at name) (Just rid) m
       FunctorUDMacro ptype (Macro v ss) -> do
           let res = UDMacro (subArgInPolyFnType subfn ptype) (Macro v $ subArgInSeq subfn ss)
-          res' <- normalizeTypesRes' res
-          rid <- appendResourceRO' qid res'
+          --res' <- normalizeTypesRes' res
+          rid <- appendResourceRO' qid res
           return $ set (moduleNames.at name) (Just rid) m
       FunctorModule m1 -> do
                 modl <- foldM (\m' (k, v) -> bindFunctorInfo subfn (qid <> QId [k]) k v m') emptyModule $ Map.toList m1
-                modl' <- normalizeTypesRes' (ModuleValue modl)
-                rid <- appendResourceRO' qid modl'
+                --modl' <- normalizeTypesRes' (ModuleValue modl)
+                rid <- appendResourceRO' qid (ModuleValue modl)
                 return $ set (moduleNames.at name) (Just rid) m
       FunctorTrait (ParameterizedTrait args t) -> do
           let -- We don't want to substitute any names bound by the
@@ -133,16 +119,16 @@ bindFunctorInfo subfn qid name info m =
               subfn' k = if any (\(ModuleArg k' _) -> k == k') args then QId [k] else subfn k
               res = TraitValue (ParameterizedTrait args (substituteTrait subfn' t))
           -- TODO Substitute in args
-          res' <- normalizeTypesRes' res
-          rid <- appendResourceRO' qid res'
+          --res' <- normalizeTypesRes' res
+          rid <- appendResourceRO' qid res
           return $ set (moduleNames.at name) (Just rid) m
       FunctorDemandType -> return $ set moduleIsType True m
 
 appendResourceRO' :: MonadState ReadOnlyState m => QId -> ReaderValue -> m RId
 appendResourceRO' qid value = state (appendResourceRO qid value)
 
-normalizeTypesRes' :: (MonadState ReadOnlyState m, MonadError FactorError m) => ReaderValue -> m ReaderValue
-normalizeTypesRes' rv = get >>= runReaderT (normalizeTypesRes rv)
+_normalizeTypesRes' :: (MonadState ReadOnlyState m, MonadError FactorError m) => ReaderValue -> m ReaderValue
+_normalizeTypesRes' rv = get >>= runReaderT (normalizeTypesRes rv)
 
 makeFreshModuleName :: String -> ReadOnlyState -> Id
 makeFreshModuleName prefix reader = head [name | v <- [0 :: Int ..]

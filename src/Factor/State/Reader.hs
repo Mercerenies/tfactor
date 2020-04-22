@@ -6,7 +6,7 @@ module Factor.State.Reader(ReadOnlyState(ReadOnlyState), ReaderValue(..),
                            moduleNames, moduleDecls, moduleIsType,
                            newReader, emptyModule, mapToModule,
                            atQIdResource, atQId, lookupFn, lookupFnName,
-                           allNamesInModule, allNames,
+                           allNamesInModule, allNames, allChildrenOf,
                            readerFunctionType, readerMacroType,
                            merge, mapToReader) where
 
@@ -107,6 +107,14 @@ allNamesInModule resources k0 = fold . Map.mapWithKey go' . view moduleNames
 
 allNames :: ReadOnlyState -> [QId]
 allNames reader = allNamesInModule (reader^.readerResources) (QId []) (reader^.readerModule)
+
+allChildrenOf :: ReadOnlyState -> QId -> [QId]
+allChildrenOf reader qid =
+    case lookupFn qid reader of
+      Left _ -> [qid]
+      Right (ModuleValue m) -> qid : concatMap go (Map.toList $ m^.moduleNames)
+      Right _ -> [qid]
+    where go (k, _) = allChildrenOf reader (qid <> QId [k])
 
 -- TODO Internally combine these into one function, since they're
 -- mutually exclusive, then provide the same public API in a more

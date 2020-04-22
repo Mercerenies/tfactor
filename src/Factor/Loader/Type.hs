@@ -97,7 +97,10 @@ normalizeTypesRes (FunctorValue (ParameterizedModule args t)) = do
   names <- forM args $ \(ModuleArg i (TraitRef q innerargs)) -> lookupFn q reader >>= \case
            TraitValue pt -> fmap ((,) i) $ bindTraitAndNormalize q pt innerargs
            _ -> throwError (NoSuchTrait q)
-  let names' = Map.fromList names
+  -- TODO QId [].... yeah
+  let selfptrait = functorToTrait (QId []) (ParameterizedModule args t)
+      selftrait = bindTraitUnchecked (QId []) selfptrait (fmap (\(ModuleArg i _) -> QId [i]) args)
+      names' = Map.singleton (Id "Self") selftrait <> Map.fromList names
   t' <- normalizeTypesFunctor names' t
   return $ FunctorValue (ParameterizedModule args t')
 
@@ -110,3 +113,18 @@ normalizeAllTypes qids r = foldM (flip normalizeTypesAt) r qids
 bindTraitAndNormalize :: (MonadReader ReadOnlyState m, MonadError FactorError m) =>
                          QId -> ParameterizedTrait -> [QId] -> m Trait
 bindTraitAndNormalize qid pt args = bindTrait qid pt args >>= normalizeTypesTrait Map.empty
+
+functorToTrait :: QId -> ParameterizedModule -> ParameterizedTrait
+functorToTrait qid0 (ParameterizedModule params info0) =
+    ParameterizedTrait params (toTrait qid0 info0)
+        where toTrait qid info =
+                  let go _ (FunctorUDFunction p _) = [TraitFunction p]
+                      go _ (FunctorUDMacro p _) = [TraitMacro p]
+                      go i (FunctorModule info') =
+                          let qid' = qid <> QId [i]
+                              Trait inner = toTrait qid' info'
+                          in [TraitModule inner]
+                      go _ (FunctorTrait {}) = [] -- TODO These can't appear in traits right
+                                                  -- now. Will this be supported later?
+                      go _ FunctorDemandType = [TraitDemandType]
+                  in Trait $ concatMap (\(i, v) -> map ((,) i) $ go i v) (Map.toList info)
