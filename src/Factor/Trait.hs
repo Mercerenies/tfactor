@@ -2,7 +2,6 @@
 
 module Factor.Trait(Trait(..), ParameterizedTrait(..), TraitInfo(..), UnsatisfiedTrait(..),
                     FromUnsatisfiedTrait(..),
-                    traitDemandsType, functorDemandsType,
                     mergeTraits, nestedTrait, nestedTraitDeep, nestedTraitDeepFunctor,
                     moduleSatisfies, moduleSatisfies',
                     bindTrait, bindTraitUnchecked,
@@ -21,7 +20,6 @@ import Factor.State.Resource
 import Factor.Code
 import Factor.Names
 
-import Data.Monoid
 import Control.Monad.Reader hiding (reader)
 import Control.Monad.Except
 import Control.Monad.RWS hiding (reader)
@@ -42,32 +40,32 @@ requireExists :: (FromUnsatisfiedTrait e, MonadError e m) => QId -> TraitInfo ->
 requireExists q t Nothing = throwError (fromUnsatisfiedTrait $ MissingFromTrait q t)
 requireExists _ _ (Just x) = pure x
 
-traitDemandsType :: MonadError FactorError m => ReadOnlyState -> Trait -> m Bool
-traitDemandsType r (Trait xs) = getAny <$> foldMapM go xs
-    where go (_, info) =
-              case info of
-                TraitFunction {} -> pure $ Any False
-                TraitMacro {} -> pure $ Any False
-                TraitModule {} -> pure $ Any False
-                TraitInclude (TraitRef q args) ->
-                    lookupFn q r >>= \case
-                             TraitValue pt -> do
-                               t <- runReaderT (bindTrait q pt args) r
-                               Any <$> traitDemandsType r t
-                             _ -> throwError (NoSuchTrait q)
-                TraitDemandType -> pure $ Any True
-                TraitFunctor {} -> pure $ Any False
+-- traitDemandsType :: MonadError FactorError m => ReadOnlyState -> Trait -> m Bool
+-- traitDemandsType r (Trait xs) = getAny <$> foldMapM go xs
+--     where go (_, info) =
+--               case info of
+--                 TraitFunction {} -> pure $ Any False
+--                 TraitMacro {} -> pure $ Any False
+--                 TraitModule {} -> pure $ Any False
+--                 TraitInclude (TraitRef q args) ->
+--                     lookupFn q r >>= \case
+--                              TraitValue pt -> do
+--                                t <- runReaderT (bindTrait q pt args) r
+--                                Any <$> traitDemandsType r t
+--                              _ -> throwError (NoSuchTrait q)
+--                 TraitDemandType -> pure $ Any True
+--                 TraitFunctor {} -> pure $ Any False
 
-functorDemandsType :: MonadError FactorError m => ReadOnlyState -> Map Id FunctorInfo -> m Bool
-functorDemandsType _r m = getAny <$> foldMapM go (Map.toList m)
-    where go (_, info) =
-              case info of
-                FunctorUDFunction {} -> pure $ Any False
-                FunctorUDMacro {} -> pure $ Any False
-                FunctorModule {} -> pure $ Any False
-                FunctorFunctor {} -> pure $ Any False
-                FunctorTrait _ -> pure $ Any False
-                FunctorDemandType -> pure $ Any True
+-- functorDemandsType :: MonadError FactorError m => ReadOnlyState -> Map Id FunctorInfo -> m Bool
+-- functorDemandsType _r m = getAny <$> foldMapM go (Map.toList m)
+--     where go (_, info) =
+--               case info of
+--                 FunctorUDFunction {} -> pure $ Any False
+--                 FunctorUDMacro {} -> pure $ Any False
+--                 FunctorModule {} -> pure $ Any False
+--                 FunctorFunctor {} -> pure $ Any False
+--                 FunctorTrait _ -> pure $ Any False
+--                 FunctorDemandType -> pure $ Any True
 
 mergeTraits :: Trait -> Trait -> Trait
 mergeTraits (Trait xs) (Trait ys) = Trait $ xs ++ ys
@@ -89,7 +87,6 @@ nestedTrait r (Trait xs) y = foldMapM check xs >>= \case
                                result <- nestedTrait r t y
                                return [result]
                              _ -> throwError (NoSuchTrait q)
-                TraitDemandType -> pure []
                 -- TODO I guess this one could technically be
                 -- meaningful in some cases, if we parameterize
                 -- correctly. That would be a big project to make it
@@ -120,7 +117,6 @@ nestedTraitDeepFunctor r (Trait ys) (QId xs) = do
                                Trait info' <- runReaderT (bindTrait q pt args) r
                                foldMapM check info'
                              _ -> throwError (NoSuchTrait q)
-                TraitDemandType -> pure []
                 TraitFunctor ty zs
                     | v == last xs -> pure [(ty, zs)]
                     | otherwise -> throwError (NoSuchTrait (QId xs))
@@ -160,10 +156,10 @@ moduleSatisfies reader (Trait reqs0) m0 = mapM_ (go (QId []) m0) reqs0
                                   t <- runReaderT (bindTrait q pt args) reader
                                   moduleSatisfies reader t m
                                 _ -> throwError (NoSuchTrait q)
-                   TraitDemandType -> if has (moduleType._Just) m0 then
-                                          pure ()
-                                      else
-                                          throwError (TraitError $ MissingFromTrait qid info)
+                   -- TraitDemandType -> if has (moduleType._Just) m0 then
+                   --                        pure ()
+                   --                    else
+                   --                        throwError (TraitError $ MissingFromTrait qid info)
                    TraitFunctor params info' -> do
                              value' <- requireExists qid' info value
                              ParameterizedModule args modl <-
@@ -262,7 +258,6 @@ makeMinimalModuleFor qid (Trait info) = do
                                  _ -> throwError (NoSuchTrait innername)
                    let Trait innerinfo = innername'
                    foldM go modl innerinfo
-               TraitDemandType -> return $ set moduleType (Just $ TypeProperties TAny) modl -- TODO The correct type ////
                TraitFunctor args info' -> do
                    inner <- makeMinimalInFunctor qid' (Trait info')
                    rid <- appendResourceRO' qid' (FunctorValue (ParameterizedModule args inner))
@@ -290,7 +285,6 @@ makeMinimalInFunctor qid (Trait info) = do
                                  _ -> throwError (NoSuchTrait innername)
                    let Trait innerinfo = innername'
                    foldM go modl innerinfo
-               TraitDemandType -> return $ Map.insert (Id "") FunctorDemandType modl
                TraitFunctor args info' -> do
                    info'' <- makeMinimalInFunctor qid' (Trait info')
                    return $ Map.insert i (FunctorFunctor args info'') modl
@@ -347,7 +341,6 @@ bindFunctorInfo subfn qid name info m =
           --res' <- normalizeTypesRes' res
           rid <- appendResourceRO' qid res
           return $ set (moduleNames.at name) (Just rid) m
-      FunctorDemandType -> return $ set moduleType (Just $ TypeProperties TAny) m -- TODO The correct type ////
       FunctorFunctor args impl -> do
           -- TODO Substitute in args (as above)
           let -- We don't want to substitute any names bound by the

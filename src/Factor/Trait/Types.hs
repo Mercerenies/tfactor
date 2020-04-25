@@ -30,7 +30,6 @@ data TraitInfo = TraitFunction PolyFunctionType
                | TraitModule [(Id, TraitInfo)]
                | TraitFunctor [ModuleArg] [(Id, TraitInfo)]
                | TraitInclude TraitRef
-               | TraitDemandType -- This won't be allowed in the parser but is used in Primitives.
                  deriving (Show, Eq)
 
 data FunctorInfo = FunctorUDFunction PolyFunctionType Function
@@ -38,7 +37,6 @@ data FunctorInfo = FunctorUDFunction PolyFunctionType Function
                  | FunctorModule (Map Id FunctorInfo)
                  | FunctorFunctor [ModuleArg] (Map Id FunctorInfo)
                  | FunctorTrait ParameterizedTrait
-                 | FunctorDemandType -- This won't be allowed in the parser either.
                    deriving (Eq)
 
 data UnsatisfiedTrait = MissingFromTrait QId TraitInfo
@@ -68,5 +66,5 @@ instance Show FunctorInfo where
     showsPrec _ (FunctorUDMacro p _) = ("<FunctorUDMacro " ++) . shows p . (">" ++)
     showsPrec _ (FunctorModule m) = ("<FunctorModule " ++) . shows m . (">" ++)
     showsPrec _ (FunctorTrait t) = ("<FunctorTrait " ++) . shows t . (">" ++)
-    showsPrec _ FunctorDemandType = ("<FunctorDemandType>" ++)
+--    showsPrec _ FunctorDemandType = ("<FunctorDemandType>" ++)
     showsPrec _ (FunctorFunctor _ _) = ("<FunctorFunctor>" ++) -- TODO Print this better?

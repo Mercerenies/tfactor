@@ -24,11 +24,10 @@ normalizeType names (FunType (FunctionType (StackDesc args a) (StackDesc rets r)
   Stack.FromTop rets' <- traverse (normalizeType names) (Stack.FromTop rets)
   return $ FunType (FunctionType (StackDesc args' a) (StackDesc rets' r))
 normalizeType names (ModuleType qid)
-    | QId (first:rest) <- qid
-    , Just t <- Map.lookup first names = ask >>=
-                                         \r -> nestedTraitDeep r t (QId rest) >>=
-                                         \t' -> traitDemandsType r t' >>=
-                                         \b -> if b then pure (ModuleType qid) else throwError (TraitError $ MissingFromTrait qid TraitDemandType)
+    | QId (first:_rest) <- qid
+    , Just _t <- Map.lookup first names = pure (ModuleType qid) -- TODO This is not correct right now,
+                                                                -- but we don't yet have the datatypes
+                                                                -- to make it so.
     | otherwise = ask >>= \r -> ModuleType <$> lookupFnName qid r
 normalizeType _ (GroundVar v) = pure $ GroundVar v
 normalizeType _ (QuantVar v) = pure $ QuantVar v
@@ -51,7 +50,6 @@ normalizeTypesTraitInfo names (TraitInclude (TraitRef q args)) = do
               ModuleType t' -> pure t'
               _ -> error "Internal error (shape changed) in normalizeTypesTraitInfo"
   return $ TraitInclude (TraitRef q args')
-normalizeTypesTraitInfo _ TraitDemandType = pure $ TraitDemandType
 normalizeTypesTraitInfo names (TraitFunctor args xs) = do
   reader <- ask
   names' <- forM args $ \(ModuleArg i (TraitRef q innerargs)) -> lookupFn q reader >>= \case
@@ -83,7 +81,6 @@ normalizeTypesFunctorInfo names (FunctorTrait (ParameterizedTrait args t)) = do
   let names'' = Map.fromList names' <> names
   t' <- normalizeTypesTrait names'' t
   return (FunctorTrait (ParameterizedTrait args t'))
-normalizeTypesFunctorInfo _ FunctorDemandType = pure $ FunctorDemandType
 normalizeTypesFunctorInfo names (FunctorFunctor args info) = do
   reader <- ask
   names' <- forM args $ \(ModuleArg i (TraitRef q innerargs)) -> lookupFn q reader >>= \case
@@ -145,7 +142,6 @@ functorToTrait qid0 (ParameterizedModule params info0) =
                           in [TraitModule inner]
                       go _ (FunctorTrait {}) = [] -- TODO These can't appear in traits right
                                                   -- now. Will this be supported later?
-                      go _ FunctorDemandType = [TraitDemandType]
                       go i (FunctorFunctor args m) =
                           let Trait m' = toTrait (qid <> QId [i]) m
                           in [TraitFunctor args m']

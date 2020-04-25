@@ -1,5 +1,5 @@
 
-module Factor.Code.Decl(Declaration(..), RecordInfo(..), RecordFunInfo(..)) where
+module Factor.Code.Decl(Declaration(..)) where
 
 import Factor.Id
 import Factor.Type
@@ -10,22 +10,22 @@ data Declaration = FunctionDecl PolyFunctionType Function
                  | MacroDecl PolyFunctionType Macro
                  | ModuleDecl Id [Declaration]
                  | ModuleSyn Id (Either QId TraitRef)
-                 | RecordDecl Id [RecordInfo]
+--                 | RecordDecl Id [RecordInfo]
                  | TraitDecl Id ParameterizedTrait
                  | FunctorDecl Id ParameterizedModule
-                 | RecordFunctorDecl Id [ModuleArg] [RecordFunInfo]
+--                 | RecordFunctorDecl Id [ModuleArg] [RecordFunInfo]
                  | AliasDecl Id QId
                  | OpenDecl QId
                  | RequireDecl TraitRef
                  | IncludeDecl QId
                    deriving (Show, Eq)
 
-data RecordInfo = RecordConstructor Id
-                | RecordField Id Type
-                | RecordOrdinaryDecl Declaration
-                  deriving (Show, Eq)
+-- data RecordInfo = RecordConstructor Id
+--                 | RecordField Id Type
+--                 | RecordOrdinaryDecl Declaration
+--                   deriving (Show, Eq)
 
-data RecordFunInfo = RecordFunConstructor Id
-                   | RecordFunField Id Type
-                   | RecordFunOrdinaryDecl Id FunctorInfo
-                     deriving (Show, Eq)
+-- data RecordFunInfo = RecordFunConstructor Id
+--                    | RecordFunField Id Type
+--                    | RecordFunOrdinaryDecl Id FunctorInfo
+--                      deriving (Show, Eq)

@@ -104,7 +104,7 @@ resolveAliasesTrait m (TraitInclude (TraitRef qid args)) = do
   qid' <- resolveAlias m qid
   args' <- mapM (resolveAlias m) args
   return (TraitInclude (TraitRef qid' args'))
-resolveAliasesTrait _ TraitDemandType = pure TraitDemandType
+--resolveAliasesTrait _ TraitDemandType = pure TraitDemandType
 resolveAliasesTrait m (TraitFunctor args xs) = do
   args' <- forM args $ \(ModuleArg name (TraitRef tname innerargs)) -> do
                            tname' <- resolveAlias m tname
@@ -151,7 +151,7 @@ resolveAliasesFunctorInfo m (FunctorTrait (ParameterizedTrait params (Trait xs))
                args' <- mapM (resolveAlias m) args
                return (ModuleArg i (TraitRef name' args'))
   return (FunctorTrait (ParameterizedTrait params' (Trait xs')))
-resolveAliasesFunctorInfo _ FunctorDemandType = pure FunctorDemandType
+--resolveAliasesFunctorInfo _ FunctorDemandType = pure FunctorDemandType
 resolveAliasesFunctorInfo m (FunctorFunctor args xs) = do
   args' <- forM args $ \(ModuleArg name (TraitRef tname innerargs)) -> do
                            tname' <- resolveAlias m tname
