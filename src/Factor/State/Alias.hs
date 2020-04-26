@@ -190,6 +190,7 @@ resolveAliasesResource m (FunctorValue (ParameterizedModule params info)) = do
                args' <- mapM (resolveAlias m) args
                return (ModuleArg i (TraitRef name' args'))
   return (FunctorValue (ParameterizedModule params' info'))
+resolveAliasesResource _ TypeValue = pure TypeValue
 
 resolveAliasesResource' :: (MonadError FactorError m, MonadReader ReadOnlyState m) =>
                            Map Id Alias -> QId -> ReaderValue -> m ReaderValue

@@ -48,6 +48,7 @@ evalMacrosStmt (Call v) = do
     Just (ModuleValue {}) -> defaultBehavior
     Just (TraitValue {}) -> defaultBehavior
     Just (FunctorValue {}) -> defaultBehavior
+    Just TypeValue -> defaultBehavior
    where defaultBehavior = pushStack (Stack.singleton $ Symbol $ qidName v)
 
 evalMacrosSeq :: (MonadReader ReadOnlyState m, MonadState EvalState m, MonadError FactorError m) =>
@@ -89,3 +90,4 @@ augmentWithMacros rv =
       ModuleValue {} -> pure rv
       TraitValue {} -> pure rv
       FunctorValue {} -> pure rv
+      TypeValue -> pure rv

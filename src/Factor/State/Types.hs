@@ -42,6 +42,7 @@ data ReaderValue = UDFunction PolyFunctionType Function -- User-defined function
                  | ModuleValue Module
                  | TraitValue ParameterizedTrait
                  | FunctorValue ParameterizedModule
+                 | TypeValue
 
 data Module = Module {
       _moduleNames :: Map Id RId,
@@ -80,6 +81,7 @@ instance Show ReaderValue where
     showsPrec _ (ModuleValue m) = ("<ModuleValue " ++) . shows m . (">" ++)
     showsPrec _ (TraitValue t) = ("<TraitValue " ++) . shows t . (">" ++)
     showsPrec _ (FunctorValue m) = ("<FunctorValue " ++) . shows m . (">" ++)
+    showsPrec _ TypeValue = ("<TypeValue>" ++)
 
 type RId = Int
 

@@ -43,6 +43,7 @@ filterAndClassify qids r = setFilterMap go
                      Right (ModuleValue {}) -> Just $ GraphEdge qid WeakDependency -- TODO Not sure about this one?
                      Right (TraitValue {}) -> Nothing -- TODO Not sure about this one either?
                      Right (FunctorValue {}) -> Just $ GraphEdge qid WeakDependency -- TODO ???
+                     Right TypeValue -> Nothing
 
 produceDependencyGraph :: [QId] -> ReadOnlyState -> Graph QId GraphEdge
 produceDependencyGraph qids reader =
@@ -57,6 +58,7 @@ produceDependencyGraph qids reader =
                                      ModuleValue {} -> []
                                      TraitValue {} -> []
                                      FunctorValue {} -> []
+                                     TypeValue -> []
                            inner = case v of
                                      ModuleValue m -> fold (Map.mapWithKey (go' k) (m^.moduleNames))
                                      _ -> []

@@ -100,6 +100,7 @@ allNamesInModule resources k0 = fold . Map.mapWithKey go' . view moduleNames
                                  ModuleValue m' -> allNamesInModule resources k m'
                                  TraitValue {} -> []
                                  FunctorValue {} -> [] -- Nothing allocated yet.
+                                 TypeValue {} -> []
               in k : innernames
           go' :: Id -> RId -> [QId]
           go' k v = case getResource v resources of
@@ -128,6 +129,7 @@ readerFunctionType (UDMacro _ _) = Nothing
 readerFunctionType (ModuleValue _) = Nothing
 readerFunctionType (TraitValue _) = Nothing
 readerFunctionType (FunctorValue _) = Nothing
+readerFunctionType TypeValue = Nothing
 
 readerMacroType :: ReaderValue -> Maybe PolyFunctionType
 readerMacroType (UDFunction _ _) = Nothing
@@ -136,6 +138,7 @@ readerMacroType (UDMacro t _) = Just t
 readerMacroType (ModuleValue _) = Nothing
 readerMacroType (TraitValue _) = Nothing
 readerMacroType (FunctorValue _) = Nothing
+readerMacroType TypeValue = Nothing
 
 -- TODO "t `mplus` t'" to get the first non-Nothing. Is this the
 -- behavior we want? What does it even mean if the top-level is a

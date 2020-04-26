@@ -190,6 +190,7 @@ checkTypeOf tpass (FunctorValue pm) = do
   let names = allNamesInModule (reader''^.readerResources) (QId [newname]) modl
   local (const reader'') $ do
     forM_ names $ \q -> ask >>= lookupFn q >>= checkTypeOf tpass
+checkTypeOf _ TypeValue = pure ()
 
 checkTypes :: (MonadError FactorError m, MonadReader ReadOnlyState m) =>
               TypeCheckerPass -> Map Id ReaderValue -> m ()

@@ -119,6 +119,7 @@ normalizeTypesRes (FunctorValue (ParameterizedModule args t)) = do
       names' = Map.singleton (Id "Self") selftrait <> Map.fromList names
   t' <- normalizeTypesFunctor names' t
   return $ FunctorValue (ParameterizedModule args t')
+normalizeTypesRes TypeValue = pure TypeValue
 
 normalizeTypesAt :: MonadError FactorError m => QId -> ReadOnlyState -> m ReadOnlyState
 normalizeTypesAt qid r = traverseOf (atQId qid) (\v -> runReaderT (normalizeTypesRes v) r) r
