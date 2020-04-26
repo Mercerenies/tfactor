@@ -1,10 +1,9 @@
 {-# LANGUAGE FlexibleContexts, ViewPatterns, KindSignatures, RankNTypes, TypeFamilies, ScopedTypeVariables #-}
 
 module Factor.State(ReadOnlyState(ReadOnlyState), ReaderValue(..),
-                    Module(Module), TypeProperties(..), ModuleDecl(..),
+                    Module(Module), ModuleDecl(..),
                     readerModule, readerNames, readerResources,
-                    moduleNames, moduleDecls, moduleType,
-                    typeParent,
+                    moduleNames, moduleDecls,
                     newReader, emptyModule, mapToModule,
                     declsToReadOnly) where
 
