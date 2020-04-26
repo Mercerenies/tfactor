@@ -28,24 +28,21 @@ declsToReadOnly :: (MonadState (ResourceTable ReaderValue) m, MonadError FactorE
 declsToReadOnly qid ds r = foldM go r ds
     where go reader decl =
               case decl of
+                _
+                 | Just v <- newDeclName decl
+                 , Map.member v (reader^.moduleNames) -> throwError (DuplicateDecl v)
                 FunctionDecl _ (Function Nothing _) ->
                     throwError (InternalError "Unnamed top-level function")
-                FunctionDecl t (Function (Just v) def)
-                 | Map.member v (reader^.moduleNames) -> throwError (DuplicateDecl v)
-                 | otherwise ->
+                FunctionDecl t (Function (Just v) def) ->
                      let qid' = qid <> QId [v]
                      in traverseOf moduleNames (defineFunction qid' v t def) reader
-                MacroDecl t (Macro v def)
-                 | Map.member v (reader^.moduleNames) -> throwError (DuplicateDecl v)
-                 | otherwise ->
+                MacroDecl t (Macro v def) ->
                      let qid' = qid <> QId [v]
                      in traverseOf moduleNames (defineMacro qid' v t def) reader
-                ModuleDecl v def
-                 | Map.member v (reader^.moduleNames) -> throwError (DuplicateDecl v)
-                 | otherwise -> do
-                          let qid' = qid <> QId [v]
-                          inner <- declsToReadOnly qid' def emptyModule
-                          traverseOf moduleNames (defineModule qid' v inner) reader
+                ModuleDecl v def -> do
+                     let qid' = qid <> QId [v]
+                     inner <- declsToReadOnly qid' def emptyModule
+                     traverseOf moduleNames (defineModule qid' v inner) reader
                 ModuleSyn v dest -> pure $ over moduleDecls (++ [ModuleSynonym v dest]) reader
                 -- RecordDecl v def
                 --  | Map.member v (reader^.moduleNames) -> throwError (DuplicateDecl v)
@@ -54,14 +51,10 @@ declsToReadOnly qid ds r = foldM go r ds
                 --           inner <- expandRecordDecl qid' def emptyModule
                 --           let inner' = set moduleType (Just (TypeProperties TAny)) inner
                 --           traverseOf moduleNames (defineModule qid' v inner') reader
-                TraitDecl v def
-                 | Map.member v (reader^.moduleNames) -> throwError (DuplicateDecl v)
-                 | otherwise ->
+                TraitDecl v def ->
                      let qid' = qid <> QId [v]
                      in traverseOf moduleNames (defineResource qid' v (TraitValue def)) reader
-                FunctorDecl v def
-                 | Map.member v (reader^.moduleNames) -> throwError (DuplicateDecl v)
-                 | otherwise ->
+                FunctorDecl v def ->
                      let qid' = qid <> QId [v]
                      in traverseOf moduleNames (defineResource qid' v (FunctorValue def)) reader
                 -- RecordFunctorDecl v args def
@@ -75,6 +68,19 @@ declsToReadOnly qid ds r = foldM go r ds
                 OpenDecl j -> pure $ over moduleDecls (++ [Open j]) reader
                 RequireDecl j -> pure $ over moduleDecls (++ [AssertTrait j]) reader
                 IncludeDecl q -> pure $ over moduleDecls (++ [IncludeModule q]) reader
+
+newDeclName :: Declaration -> Maybe Id
+newDeclName (FunctionDecl _ (Function Nothing _)) = Nothing
+newDeclName (FunctionDecl _ (Function (Just v) _)) = Just v
+newDeclName (MacroDecl _ (Macro v _)) = Just v
+newDeclName (ModuleDecl v _) = Just v
+newDeclName (ModuleSyn {}) = Nothing -- Doesn't define a resource yet; it'll get expanded later.
+newDeclName (TraitDecl v _) = Just v
+newDeclName (FunctorDecl v _) = Just v
+newDeclName (AliasDecl {}) = Nothing
+newDeclName (OpenDecl {}) = Nothing
+newDeclName (RequireDecl {}) = Nothing
+newDeclName (IncludeDecl {}) = Nothing
 
 defineFunction :: MonadState (ResourceTable ReaderValue) m =>
                   QId -> Id -> PolyFunctionType -> Sequence -> Map Id RId -> m (Map Id RId)
