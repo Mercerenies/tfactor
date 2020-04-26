@@ -129,16 +129,17 @@ unsafe1 = BuiltIn $ pure ()
 -- additional arguments as the integer tells it to. There's no way to
 -- express this in the type system, so here we are.
 
--- ( 'S Int String -- 'T Any )
+-- ( 'S Int Int String -- 'T Any )
 unsafeRecordConstruct :: BuiltIn ()
 unsafeRecordConstruct = BuiltIn $ do
-                          (s, n) <- popStack2
+                          (s, m, n) <- popStack3
                           s' <- assertString s
+                          m' <- fmap fromInteger $ assertInt m
                           n' <- fmap fromInteger $ assertInt n
                           args <- popStack n'
                           let args' = toList $ Stack.FromBottom args
                               qid = splitQualified (Id s')
-                          pushStack (Stack.singleton $ makeRecord qid args')
+                          pushStack (Stack.singleton $ makeRecord qid m' args')
 
 -- This one has a correct type signature at least, but it's still
 -- unsafe in that it produces a runtime error if the index is out of
@@ -150,10 +151,17 @@ unsafeRecordGet :: BuiltIn ()
 unsafeRecordGet = BuiltIn $ do
                     (n, obj) <- popStack2
                     n' <- fmap fromInteger $ assertInt n
-                    (_, obj') <- assertRecord obj
+                    (_, _, obj') <- assertRecord obj
                     case recordGetField n' obj' of
                       Nothing -> throwError (RuntimeError "record slot index out of bounds")
                       Just x -> pushStack (Stack.singleton x)
+
+-- ( 'S Any -- 'S Int )
+unsafeRecordVariety :: BuiltIn ()
+unsafeRecordVariety = BuiltIn $ do
+                        obj <- popStack1
+                        (_, n, _) <- assertRecord obj
+                        pushStack (Stack.singleton (Int $ fromIntegral n))
 
 -- ( 'R Int Int -- 'R Int )
 binmathop :: (Integer -> Integer -> Integer) -> BuiltIn ()
@@ -203,6 +211,7 @@ builtins = Map.fromList [
             ("unsafe1", polyFn [QuantVar "a"] "S" [QuantVar "b"] "S" unsafe1),
             ("unsafe-record-construct", polyFn [TString, TInt] "S" [TAny] "T" unsafeRecordConstruct),
             ("unsafe-record-get", polyFn [TInt, TAny] "S" [TAny] "S" unsafeRecordGet),
+            ("unsafe-record-variety", polyFn [TAny] "S" [TInt] "S" unsafeRecordVariety),
             ("+", polyFn [TInt, TInt] "R" [TInt] "R" $ binmathop (+)),
             ("-", polyFn [TInt, TInt] "R" [TInt] "R" $ binmathop (-)),
             ("*", polyFn [TInt, TInt] "R" [TInt] "R" $ binmathop (*)),

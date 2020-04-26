@@ -104,6 +104,6 @@ assertString :: MonadError FactorError m => Data -> m String
 assertString (String x) = pure x
 assertString v = throwError (RuntimeTypeError v TString)
 
-assertRecord :: MonadError FactorError m => Data -> m (QId, Array Int Data)
-assertRecord (RecordInstance qid arr) = pure (qid, arr)
+assertRecord :: MonadError FactorError m => Data -> m (QId, Int, Array Int Data)
+assertRecord (RecordInstance qid n arr) = pure (qid, n, arr)
 assertRecord v = throwError (RuntimeError $ "expecting record, got " ++ show v)

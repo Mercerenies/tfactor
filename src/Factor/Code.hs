@@ -22,7 +22,7 @@ data Data = Int Integer
           | Bool Bool
           | String String
           | Symbol String -- TODO Actually implement these things in some kind of efficient way
-          | RecordInstance QId (Array Int Data)
+          | RecordInstance QId Int (Array Int Data)
             deriving (Show, Eq)
 
 data Statement = Call QId
@@ -44,8 +44,8 @@ macroName (Macro i _) = i
 macroSeq :: Macro -> Sequence
 macroSeq (Macro _ s) = s
 
-makeRecord :: QId -> [Data] -> Data
-makeRecord qid xs = RecordInstance qid $ listArray (0, length xs - 1) xs
+makeRecord :: QId -> Int -> [Data] -> Data
+makeRecord qid n xs = RecordInstance qid n $ listArray (0, length xs - 1) xs
 
 recordGetField :: Int -> Array Int Data -> Maybe Data
 recordGetField n arr

@@ -41,7 +41,7 @@ subArgInData f lit = case lit of
                        Bool {} -> lit
                        String {} -> lit
                        Symbol {} -> lit
-                       RecordInstance qid arr -> RecordInstance (subArg f qid) (fmap (subArgInData f) arr)
+                       RecordInstance qid n arr -> RecordInstance (subArg f qid) n (fmap (subArgInData f) arr)
 
 subArgInStmt :: (Id -> QId) -> Statement -> Statement
 subArgInStmt f (Call qid) = Call (subArg f qid)

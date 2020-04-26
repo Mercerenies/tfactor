@@ -48,7 +48,7 @@ typeOfValue tpass value = case value of
                              Bool _ -> return TBool
                              String _ -> return TString
                              Symbol _ -> return TSymbol
-                             RecordInstance v _ -> return (ModuleType v)
+                             RecordInstance v _ _ -> return (ModuleType v)
                              FunctionValue (Function _ ss) -> do
                                 (PolyFunctionType ids ss', AssumptionsAll w w') <-
                                    capture (typeOfSeq tpass ss)
