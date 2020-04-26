@@ -1,0 +1,27 @@
+
+trait ActsOnInt
+  val perform ( Int -- Int )
+end
+
+mod AddOne
+  require ActsOnInt
+  fun perform ( Int -- Int )
+    1 +
+  end
+end
+
+mod DoTwice { F : ActsOnInt }
+  # require ActsOnInt # TODO Can't express this right now since it's inside a functor.
+  fun perform ( Int -- Int )
+    F.perform F.perform
+  end
+end
+
+# Issue #8
+mod M
+  mod AddTwo = DoTwice { AddOne } end
+end
+
+fun test ( -- Bool )
+  10 M.AddTwo.perform 12 =
+end

@@ -1,24 +1,28 @@
 
+trait Vacuous end
+
 trait HasFunctor
-  mod Inner { A : Type }
-    val foo ( A -- A )
+  mod Inner { A : Vacuous } # TODO Actually use the trait in this test case here.
+    val foo ( Int -- Int )
   end
 end
 
 mod IsHasFunctor
   require HasFunctor
 
-  mod Inner { B : Type }
-    fun foo ( B -- B )
+  mod Inner { B : Vacuous }
+    fun foo ( Int -- Int )
       id
     end
   end
 
 end
 
+mod SimpleModule end
+
 # Issue #8
 mod M
-  mod Instance = IsHasFunctor.Inner { Int } end
+  mod Instance = IsHasFunctor.Inner { SimpleModule } end
 end
 
 fun test ( -- Bool )

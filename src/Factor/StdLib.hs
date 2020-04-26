@@ -27,7 +27,6 @@ import Factor.Manager
 import Control.Monad
 import Control.Monad.Except
 import Control.Monad.State
-import Control.Lens
 import Data.Map(Map)
 import qualified Data.Map as Map
 import Data.Foldable
@@ -175,19 +174,22 @@ polyFn args arg rets ret =
     let fn = functionType args (RestQuant arg) rets (RestQuant ret)
     in BIFunction (PolyFunctionType (allQuantVars $ FunType fn) fn)
 
-emptyTypeModule :: Module
-emptyTypeModule = set moduleType (Just $ TypeProperties TAny) emptyModule
+--emptyTypeModule :: Module
+--emptyTypeModule = set moduleType (Just $ TypeProperties TAny) emptyModule
+
+primitiveType :: ReaderValue
+primitiveType = TypeValue
 
 builtins :: Map Id ReaderValue
 builtins = Map.fromList [
             ("Type", TraitValue (ParameterizedTrait [] $ Trait [])), -- TODO A vacuous trait for now,
                                                                      -- for temporary backward compatibility.
-            ("Int", ModuleValue emptyTypeModule),
-            ("Any", ModuleValue emptyTypeModule),
-            ("Nothing", ModuleValue emptyTypeModule),
-            ("Bool", ModuleValue emptyTypeModule),
-            ("String", ModuleValue emptyTypeModule),
-            ("Symbol", ModuleValue emptyTypeModule),
+            ("Int", primitiveType),
+            ("Any", primitiveType),
+            ("Nothing", primitiveType),
+            ("Bool", primitiveType),
+            ("String", primitiveType),
+            ("Symbol", primitiveType),
             ("drop", polyFn [TAny] "R" [] "R" drop_),
             ("dup", polyFn [QuantVar "a"] "R" [QuantVar "a", QuantVar "a"] "R" dup),
             ("over", polyFn [QuantVar "b", QuantVar "a"] "R" [QuantVar "a", QuantVar "b", QuantVar "a"] "R" over_),
