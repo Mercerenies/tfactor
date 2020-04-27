@@ -2,9 +2,8 @@
 # More hypothetical syntax.
 
 type List { 'a }
-  val Nil ( -- List { 'a } )
-  val Cons ( List { 'a } 'a -- List { 'a } )
-end
+  | Nil ( -- List { 'a } )
+  | Cons ( List { 'a } 'a -- List { 'a } )
 
 # The above would also implicitly generate...
 

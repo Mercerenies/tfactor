@@ -124,12 +124,11 @@ typeDecl = do
   _ <- symbol "type"
   name <- unqualifiedId
   body <- many (typeInfo name)
-  _ <- symbol "end"
   return (name, body)
 
 typeInfo :: Id -> Parser TypeInfo
 typeInfo tname = do
-  _ <- symbol "val"
+  _ <- symbol "|"
   name <- unqualifiedId
   let failure = fail ("Invalid stack effect on val " ++ show name)
   -- We parse a function type then severely restrict it.

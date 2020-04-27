@@ -1,8 +1,7 @@
 
 type OneOrTwo
-  val Just1 ( Int -- OneOrTwo )
-  val Actually2 ( Int Int -- OneOrTwo )
-end
+  | Just1 ( Int -- OneOrTwo )
+  | Actually2 ( Int Int -- OneOrTwo )
 
 fun my-dispatch ( OneOrTwo -- Int )
   [ ] [ drop ] *OneOrTwo
