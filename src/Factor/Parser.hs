@@ -142,7 +142,7 @@ typeInfoGADT tname name = do
   unless (a == r) failure
   case a of { RestQuant _ -> pure () ; _ -> failure } -- If it's a ground term, then wtf?
   -- The result shall consist of exactly one argument: the type name itself
-  case rets of { Stack [ModuleType r'] | QId [tname] == r' -> pure () ; _ -> failure }
+  case rets of { Stack [NamedType r'] | QId [tname] == r' -> pure () ; _ -> failure }
   -- The arguments can have no variables
   case concatMap allGroundVars (Stack.toList args) ++ concatMap allQuantVars (Stack.toList args) of
     [] -> pure ()
@@ -352,7 +352,7 @@ restQuantType = satisfy go
           go _ = Nothing
 
 type_ :: Parser Type
-type_ = (ModuleType <$> moduleType <?> "named type") <|>
+type_ = (NamedType <$> moduleType <?> "named type") <|>
         (QuantVar <$> quantType <?> "type variable") <|>
         (FunType <$> functionType <?> "function type")
 

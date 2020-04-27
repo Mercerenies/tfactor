@@ -48,7 +48,7 @@ typeOfValue tpass value = case value of
                              Bool _ -> return TBool
                              String _ -> return TString
                              Symbol _ -> return TSymbol
-                             RecordInstance v _ _ -> return (ModuleType v)
+                             RecordInstance v _ _ -> return (NamedType v)
                              FunctionValue (Function _ ss) -> do
                                 (PolyFunctionType ids ss', AssumptionsAll w w') <-
                                    capture (typeOfSeq tpass ss)
@@ -135,7 +135,7 @@ checkIsWellDefined (QuantVar {}) = pure ()
 checkIsWellDefined (FunType (FunctionType (StackDesc args _) (StackDesc rets _))) =
     mapM_ checkIsWellDefined (Stack.FromTop args) >>
     mapM_ checkIsWellDefined (Stack.FromTop rets)
-checkIsWellDefined (ModuleType t) =
+checkIsWellDefined (NamedType t) =
     ask >>= lookupFn t >>= \case
         TypeValue -> pure ()
         _ -> throwError (NoSuchType t)

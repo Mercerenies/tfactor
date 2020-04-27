@@ -23,12 +23,12 @@ normalizeType names (FunType (FunctionType (StackDesc args a) (StackDesc rets r)
   Stack.FromTop args' <- traverse (normalizeType names) (Stack.FromTop args)
   Stack.FromTop rets' <- traverse (normalizeType names) (Stack.FromTop rets)
   return $ FunType (FunctionType (StackDesc args' a) (StackDesc rets' r))
-normalizeType names (ModuleType qid)
+normalizeType names (NamedType qid)
     | QId (first:_rest) <- qid
-    , Just _t <- Map.lookup first names = pure (ModuleType qid) -- TODO This is not correct right now,
+    , Just _t <- Map.lookup first names = pure (NamedType qid) -- TODO This is not correct right now,
                                                                 -- but we don't yet have the datatypes
                                                                 -- to make it so.
-    | otherwise = ask >>= \r -> ModuleType <$> lookupFnName qid r
+    | otherwise = ask >>= \r -> NamedType <$> lookupFnName qid r
 normalizeType _ (GroundVar v) = pure $ GroundVar v
 normalizeType _ (QuantVar v) = pure $ QuantVar v
 
@@ -46,8 +46,8 @@ normalizeTypesTraitInfo names (TraitMacro p) = TraitMacro <$> normalizePolyFnTyp
 normalizeTypesTraitInfo names (TraitModule xs) =
     TraitModule <$> mapM (\(i, t) -> ((,) i) <$> normalizeTypesTraitInfo names t) xs
 normalizeTypesTraitInfo names (TraitInclude (TraitRef q args)) = do
-  args' <- forM args $ \t -> normalizeType names (ModuleType t) >>= \case
-              ModuleType t' -> pure t'
+  args' <- forM args $ \t -> normalizeType names (NamedType t) >>= \case
+              NamedType t' -> pure t'
               _ -> error "Internal error (shape changed) in normalizeTypesTraitInfo"
   return $ TraitInclude (TraitRef q args')
 normalizeTypesTraitInfo names (TraitFunctor args xs) = do

@@ -85,7 +85,7 @@ declsToReadOnly qid ds r = foldM go r ds
 bindConstructors :: (MonadState (ResourceTable ReaderValue) m, MonadError FactorError m) =>
                     QId -> Id -> [TypeInfo] -> Module -> m Module
 bindConstructors qid v ts reader0 = foldM go reader0 (zip [0 :: Int ..] ts)
-    where desttype = ModuleType $ qid <> QId [v]
+    where desttype = NamedType $ qid <> QId [v]
           go reader (idx, TypeVal n ss) =
               let usedvars = concatMap allQuantVars $ Stack.toList ss -- TODO Plus any polymorphic vars
                   restvar = freshVar "R" usedvars
@@ -106,7 +106,7 @@ bindPattern :: (MonadState (ResourceTable ReaderValue) m, MonadError FactorError
                QId -> Id -> Id -> [TypeInfo] -> Module -> m Module
 bindPattern qid tname pname ts reader =
       traverseOf moduleNames (defineResource qidn pname (UDFunction pfntype $ Function (Just pname) impl)) reader
-    where typename = ModuleType (qid <> QId [tname])
+    where typename = NamedType (qid <> QId [tname])
           qidn = qid <> QId [pname]
           usedvars = [] -- TODO This will be used once we allow polymorphic types
           restvar1 = freshVar "S" usedvars
@@ -172,7 +172,7 @@ defineModule q v def = defineResource q v (ModuleValue def)
 --                     let var = unusedTypeVar
 --                         args = reverse $ fmap (\(_, t) -> t) collectedFields
 --                         fntype = polyFunctionType [var] args (RestQuant var)
---                                                         [ModuleType qid] (RestQuant var)
+--                                                         [NamedType qid] (RestQuant var)
 --                         impl = Sequence [
 --                                 Literal (Int . toInteger $ length collectedFields),
 --                                 Literal (String $ qidName qid),
@@ -183,7 +183,7 @@ defineModule q v def = defineResource q v (ModuleValue def)
 --                     in declsToReadOnly qid [d] reader
 --                 RecordField i t ->
 --                     let var = unusedTypeVar
---                         fntype = polyFunctionType [var] [ModuleType qid] (RestQuant var)
+--                         fntype = polyFunctionType [var] [NamedType qid] (RestQuant var)
 --                                                         [t] (RestQuant var)
 --                         -- We're iterating over the exact same data
 --                         -- used to construct collectedFields, so the
@@ -213,7 +213,7 @@ defineModule q v def = defineResource q v (ModuleValue def)
 --                         args = reverse $ fmap (\(_, t) -> t) collectedFields
 --                         fntype = polyFunctionType [var] args (RestQuant var)
 --                                                         -- TODO Put Self in Factor.Names
---                                                         [ModuleType (QId [Id "Self"])] (RestQuant var)
+--                                                         [NamedType (QId [Id "Self"])] (RestQuant var)
 --                         impl = Sequence [
 --                                 Literal (Int . toInteger $ length collectedFields),
 --                                 Literal (String $ qidName qid), -- TODO This is the wrong name!
@@ -224,7 +224,7 @@ defineModule q v def = defineResource q v (ModuleValue def)
 --                     in Map.insert v d reader
 --                 RecordFunField i t ->
 --                     let var = unusedTypeVar
---                         fntype = polyFunctionType [var] [ModuleType (QId [Id "Self"])] (RestQuant var)
+--                         fntype = polyFunctionType [var] [NamedType (QId [Id "Self"])] (RestQuant var)
 --                                                         [t] (RestQuant var)
 --                         -- We're iterating over the exact same data
 --                         -- used to construct collectedFields, so the

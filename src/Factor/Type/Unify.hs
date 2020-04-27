@@ -103,11 +103,11 @@ assume' v s = tell (AssumptionsAll mempty (Map.singleton v [s]))
 
 _intersectionHandlesThisCase :: Type -> ()
 _intersectionHandlesThisCase (FunType {}) = ()
-_intersectionHandlesThisCase (ModuleType _) = ()
+_intersectionHandlesThisCase (NamedType _) = ()
 _intersectionHandlesThisCase (GroundVar {}) = ()
 _intersectionHandlesThisCase (QuantVar {}) = ()
 
--- GroundVar and (other than TAny, TNothing) ModuleType are trivial as
+-- GroundVar and (other than TAny, TNothing) NamedType are trivial as
 -- they're just an equality check, which is handled at the very
 -- beginning.
 

@@ -24,7 +24,7 @@ import Control.Monad
 -- Note: Quantified variables can be specialized. Ground variables are
 -- ground and only unify with identical variables.
 data Type = FunType FunctionType
-          | ModuleType QId
+          | NamedType QId
           | GroundVar Id
           | QuantVar Id
             deriving (Eq, Ord)
@@ -43,28 +43,28 @@ data RestVar = RestGround Id
                deriving (Eq, Ord)
 
 pattern TInt :: Type
-pattern TInt <- ModuleType ((\t -> guard (t == intType)) -> Just ())
-    where TInt = ModuleType intType
+pattern TInt <- NamedType ((\t -> guard (t == intType)) -> Just ())
+    where TInt = NamedType intType
 
 pattern TAny :: Type
-pattern TAny <- ModuleType ((\t -> guard (t == anyType)) -> Just ())
-    where TAny = ModuleType anyType
+pattern TAny <- NamedType ((\t -> guard (t == anyType)) -> Just ())
+    where TAny = NamedType anyType
 
 pattern TNothing :: Type
-pattern TNothing <- ModuleType ((\t -> guard (t == nothingType)) -> Just ())
-    where TNothing = ModuleType nothingType
+pattern TNothing <- NamedType ((\t -> guard (t == nothingType)) -> Just ())
+    where TNothing = NamedType nothingType
 
 pattern TBool :: Type
-pattern TBool <- ModuleType ((\t -> guard (t == boolType)) -> Just ())
-    where TBool = ModuleType boolType
+pattern TBool <- NamedType ((\t -> guard (t == boolType)) -> Just ())
+    where TBool = NamedType boolType
 
 pattern TString :: Type
-pattern TString <- ModuleType ((\t -> guard (t == stringType)) -> Just ())
-    where TString = ModuleType stringType
+pattern TString <- NamedType ((\t -> guard (t == stringType)) -> Just ())
+    where TString = NamedType stringType
 
 pattern TSymbol :: Type
-pattern TSymbol <- ModuleType ((\t -> guard (t == symbolType)) -> Just ())
-    where TSymbol = ModuleType symbolType
+pattern TSymbol <- NamedType ((\t -> guard (t == symbolType)) -> Just ())
+    where TSymbol = NamedType symbolType
 
 instance Show RestVar where
     showsPrec n (RestGround t) = ("'" ++) . showsPrec n t
@@ -76,7 +76,7 @@ instance Show StackDesc where
 
 instance Show Type where
     showsPrec n (FunType t) = showsPrec n t
-    showsPrec n (ModuleType t) = showsPrec n t
+    showsPrec n (NamedType t) = showsPrec n t
     showsPrec n (GroundVar t) = ("'" ++) . showsPrec n t
     showsPrec n (QuantVar t) = ("''" ++) . showsPrec n t
 
@@ -118,7 +118,7 @@ gensub :: (Id -> Type) -> (Id -> Type) -> Type -> Type
 gensub a b = go
     where go (FunType (FunctionType (StackDesc xs x) (StackDesc ys y))) =
               FunType (FunctionType (StackDesc (fmap go xs) x) (StackDesc (fmap go ys) y))
-          go (ModuleType t) = ModuleType t
+          go (NamedType t) = NamedType t
           go (GroundVar v) = a v
           go (QuantVar v) = b v
 
@@ -135,7 +135,7 @@ substituteUntilDone m x = let x' = substitute m x in if x == x' then x else subs
 gensubstack :: (Id -> StackDesc) -> (Id -> StackDesc) -> (Type -> Type, StackDesc -> StackDesc)
 gensubstack a b = (go, go')
     where go (FunType (FunctionType arg ret)) = FunType (FunctionType (go' arg) (go' ret))
-          go (ModuleType t) = ModuleType t
+          go (NamedType t) = NamedType t
           go (GroundVar v) = GroundVar v
           go (QuantVar v) = QuantVar v
           go' (StackDesc xs x) =
@@ -183,7 +183,7 @@ allGroundVars :: Type -> [Id]
 allGroundVars = Set.toList . go
     where go (FunType (FunctionType (StackDesc xs x) (StackDesc ys y))) =
               foldMap go (FromTop xs) <> include x <> foldMap go (FromTop ys) <> include y
-          go (ModuleType _) = Set.empty
+          go (NamedType _) = Set.empty
           go (GroundVar v) = Set.singleton v
           go (QuantVar {}) = Set.empty
           include (RestGround x) = Set.singleton x
@@ -193,7 +193,7 @@ allQuantVars :: Type -> [Id]
 allQuantVars = Set.toList . go
     where go (FunType (FunctionType (StackDesc xs x) (StackDesc ys y))) =
               foldMap go (FromTop xs) <> include x <> foldMap go (FromTop ys) <> include y
-          go (ModuleType _) = Set.empty
+          go (NamedType _) = Set.empty
           go (GroundVar {}) = Set.empty
           go (QuantVar v) = Set.singleton v
           include (RestQuant x) = Set.singleton x
