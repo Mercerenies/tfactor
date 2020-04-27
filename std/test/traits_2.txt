@@ -32,16 +32,6 @@ alias Con = Container
 # mod E require KnowsTheAnswer end
 # mod F require KnowsTheAnswer fun the-answer ( -- String ) "A" end end
 
-mod KindaKnowsTheAnswer
-  require KnowsTheAnswer
-
-  # This is still technically fine, though silly
-  fun the-answer ( -- Nothing )
-    42 Primitives.unsafe1
-  end
-
-end
-
 trait OuterTrait
   mod Inner
     include KnowsTheAnswer

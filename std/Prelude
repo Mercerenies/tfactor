@@ -9,33 +9,32 @@ trait Type
 end
 
 mod Int = P.Int end
-mod Any = P.Any end
 mod Nothing = P.Nothing end
 mod Bool = P.Bool end
 mod String = P.String end
 mod Symbol = P.Symbol end
 
-fun drop ( Any -- )
+fun drop ( 'a -- )
   P.drop
 end
 
-fun drop2 ( Any Any -- )
+fun drop2 ( 'a 'b -- )
   drop drop
 end
 
-fun drop3 ( Any Any Any -- )
+fun drop3 ( 'a 'b 'c -- )
   drop2 drop
 end
 
-fun nip ( Any 'a -- 'a )
+fun nip ( 'a 'b -- 'b )
   swap drop
 end
 
-fun nip2 ( Any Any 'a -- 'a )
+fun nip2 ( 'a 'b 'c -- 'c )
   nip nip
 end
 
-fun nip3 ( Any Any Any 'a -- 'a )
+fun nip3 ( 'a 'b 'c 'd -- 'd )
   nip2 nip
 end
 

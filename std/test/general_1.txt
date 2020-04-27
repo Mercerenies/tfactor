@@ -4,13 +4,13 @@
 
 mod MyModule
 
-  fun drop2 ( Any Any -- )
+  fun drop2 ( 'a 'b -- )
     drop drop
   end
 
   mod MyNestedModule
 
-    fun drop2-again ( Any Any -- )
+    fun drop2-again ( 'a 'b -- )
       MyModule.drop2
     end
 
@@ -20,7 +20,7 @@ end
 
 mod MyTestModule1
 
-  fun foobar ( Any -- )
+  fun foobar ( 'a -- )
     drop
   end
 

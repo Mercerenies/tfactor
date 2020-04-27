@@ -1,6 +1,6 @@
 {-# LANGUAGE PatternSynonyms, ViewPatterns #-}
 
-module Factor.Type(Type(.., TInt, TAny, TNothing, TBool, TString, TSymbol),
+module Factor.Type(Type(.., TInt, TBool, TString, TSymbol),
                    PolyFunctionType(..), FunctionType(..),
                    StackDesc(..), RestVar(..),
                    emptyFnType, emptyPolyFnType, functionType, polyFunctionType,
@@ -46,14 +46,6 @@ data RestVar = RestGround Id
 pattern TInt :: Type
 pattern TInt <- NamedType ((\t -> guard (t == intType)) -> Just ())
     where TInt = NamedType intType
-
-pattern TAny :: Type
-pattern TAny <- NamedType ((\t -> guard (t == anyType)) -> Just ())
-    where TAny = NamedType anyType
-
-pattern TNothing :: Type
-pattern TNothing <- NamedType ((\t -> guard (t == nothingType)) -> Just ())
-    where TNothing = NamedType nothingType
 
 pattern TBool :: Type
 pattern TBool <- NamedType ((\t -> guard (t == boolType)) -> Just ())

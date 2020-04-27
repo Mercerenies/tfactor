@@ -145,7 +145,7 @@ _intersectionHandlesThisCase (NamedType _) = ()
 _intersectionHandlesThisCase (GroundVar {}) = ()
 _intersectionHandlesThisCase (QuantVar {}) = ()
 
--- GroundVar and (other than TAny, TNothing) NamedType are trivial as
+-- GroundVar and NamedType are trivial as
 -- they're just an equality check, which is handled at the very
 -- beginning.
 
@@ -172,17 +172,13 @@ union :: (FromTypeError e, MonadError e m,
           MonadWriter AssumptionsAll m, MonadReader ReadOnlyState m) =>
          Type -> Type -> m Type
 union a b | a == b = pure a
-union TNothing (QuantVar b) = TNothing <$ assume b TNothing
-union (QuantVar a) TNothing = TNothing <$ assume a TNothing
-union TNothing t = pure t
-union t TNothing = pure t
 union (QuantVar a) (QuantVar b) =
     QuantVar a <$ (assume a (QuantVar b) >> assume b (QuantVar a))
 union (QuantVar a) b = b <$ assume a b
 union a (QuantVar b) = a <$ assume b a
 union (FunType (FunctionType args1 rets1)) (FunType (FunctionType args2 rets2)) =
     liftA2 (fmap FunType . FunctionType) (intersectionStack args1 args2) (unionStack rets1 rets2)
-union _ _ = pure TAny
+union a b = throwError (fromTypeError $ CouldNotUnify a b)
 
 intersectionStack :: (FromTypeError e, MonadError e m,
                       MonadWriter AssumptionsAll m, MonadReader ReadOnlyState m) =>
@@ -207,17 +203,13 @@ intersection :: (FromTypeError e, MonadError e m,
                  MonadWriter AssumptionsAll m, MonadReader ReadOnlyState m) =>
                 Type -> Type -> m Type
 intersection a b | a == b = pure a
-intersection TAny (QuantVar b) = TAny <$ assume b TAny
-intersection (QuantVar a) TAny = TAny <$ assume a TAny
-intersection TAny t = pure t
-intersection t TAny = pure t
 intersection (QuantVar a) (QuantVar b) =
     QuantVar a <$ (assume a (QuantVar b) >> assume b (QuantVar a))
 intersection (QuantVar a) b = b <$ assume a b
 intersection a (QuantVar b) = a <$ assume b a
 intersection (FunType (FunctionType args1 rets1)) (FunType (FunctionType args2 rets2)) =
     liftA2 (fmap FunType . FunctionType) (unionStack args1 args2) (intersectionStack rets1 rets2)
-intersection _ _ = pure TNothing
+intersection a b = throwError (fromTypeError $ CouldNotUnify a b)
 
 isFnSubtypeOf :: (FromTypeError e, MonadError e m,
                   MonadWriter AssumptionsAll m, MonadReader ReadOnlyState m) =>

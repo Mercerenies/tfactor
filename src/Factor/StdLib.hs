@@ -65,7 +65,7 @@ _popStack5 = popStack 5 >>= \case
             Stack [x, y, z, t, u] -> pure (x, y, z, t, u)
             _ -> error "Internal error in popStack5"
 
--- ( 'R Any -- 'R )
+-- ( 'R 'a -- 'R )
 drop_ :: BuiltIn ()
 drop_ = BuiltIn $ void (popStack 1)
 
@@ -129,7 +129,7 @@ unsafe1 = BuiltIn $ pure ()
 -- additional arguments as the leftmost integer argument tells it to.
 -- There's no way to express this in the type system, so here we are.
 
--- ( 'S Int Int String -- 'T Any )
+-- ( 'S Int Int String -- 'T 'a )
 unsafeRecordConstruct :: BuiltIn ()
 unsafeRecordConstruct = BuiltIn $ do
                           (s, m, n) <- popStack3
@@ -146,7 +146,7 @@ unsafeRecordConstruct = BuiltIn $ do
 -- bounds. Also, you know, accessing record fields by numerical index
 -- is generally a bad idea anyway.
 
--- ( 'S Any Int -- 'S Any )
+-- ( 'S 'a Int -- 'S 'b )
 unsafeRecordGet :: BuiltIn ()
 unsafeRecordGet = BuiltIn $ do
                     (n, obj) <- popStack2
@@ -156,7 +156,7 @@ unsafeRecordGet = BuiltIn $ do
                       Nothing -> throwError (RuntimeError "record slot index out of bounds")
                       Just x -> pushStack (Stack.singleton x)
 
--- ( 'S Any -- 'S Int )
+-- ( 'S 'a -- 'S Int )
 unsafeRecordVariety :: BuiltIn ()
 unsafeRecordVariety = BuiltIn $ do
                         obj <- popStack1
@@ -219,7 +219,7 @@ builtins = Map.fromList [
             ("Bool", primitiveType),
             ("String", primitiveType),
             ("Symbol", primitiveType),
-            ("drop", polyFn [TAny] "R" [] "R" drop_),
+            ("drop", polyFn [QuantVar "a"] "R" [] "R" drop_),
             ("dup", polyFn [QuantVar "a"] "R" [QuantVar "a", QuantVar "a"] "R" dup),
             ("over", polyFn [QuantVar "b", QuantVar "a"] "R" [QuantVar "a", QuantVar "b", QuantVar "a"] "R" over_),
             ("pick", polyFn [QuantVar "c", QuantVar "b", QuantVar "a"] "R" [QuantVar "a", QuantVar "c", QuantVar "b", QuantVar "a"] "R" pick),
@@ -230,10 +230,10 @@ builtins = Map.fromList [
             ("if", polyFn [FunType (functionType [] (RestQuant "S") [] (RestQuant "T")), FunType (functionType [] (RestQuant "S") [] (RestQuant "T")), TBool] "S" [] "T" if_),
             ("unsafe", polyFn [] "S" [] "T" unsafe),
             ("unsafe1", polyFn [QuantVar "a"] "S" [QuantVar "b"] "S" unsafe1),
-            ("unsafe-record-construct", polyFn [TString, TInt, TInt] "S" [TAny] "T" unsafeRecordConstruct),
-            ("unsafe-record-get", polyFn [TInt, TAny] "S" [TAny] "S" unsafeRecordGet),
-            ("unsafe-record-variety", polyFn [TAny] "S" [TInt] "S" unsafeRecordVariety),
-            ("unsafe-record-branch", polyFn [TAny] "S" [] "T" unsafeRecordBranch),
+            ("unsafe-record-construct", polyFn [TString, TInt, TInt] "S" [QuantVar "a"] "T" unsafeRecordConstruct),
+            ("unsafe-record-get", polyFn [TInt, QuantVar "a"] "S" [QuantVar "b"] "S" unsafeRecordGet),
+            ("unsafe-record-variety", polyFn [QuantVar "a"] "S" [TInt] "S" unsafeRecordVariety),
+            ("unsafe-record-branch", polyFn [QuantVar "a"] "S" [] "T" unsafeRecordBranch),
             ("+", polyFn [TInt, TInt] "R" [TInt] "R" $ binmathop (+)),
             ("-", polyFn [TInt, TInt] "R" [TInt] "R" $ binmathop (-)),
             ("*", polyFn [TInt, TInt] "R" [TInt] "R" $ binmathop (*)),

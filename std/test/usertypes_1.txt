@@ -4,11 +4,11 @@
 mod MyFunType
 end
 
-fun make-my-fun-type ( Int Int -- Any )
+fun make-my-fun-type ( Int Int -- 'a )
   2 0 "MyFunType" Primitives.unsafe-record-construct
 end
 
-fun get-first-slot ( Any -- Int )
+fun get-first-slot ( 'a -- Int )
   0 Primitives.unsafe-record-get Primitives.unsafe1
 end
 
