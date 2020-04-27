@@ -37,21 +37,46 @@ instance Monoid AssumptionsAll where
 liftAssumptions :: Assumptions -> AssumptionsAll
 liftAssumptions (Assumptions m m') = AssumptionsAll (fmap (\x -> [x]) m) (fmap (\x -> [x]) m')
 
+findFirstCycle :: Eq a => [a] -> Maybe [a]
+findFirstCycle = go []
+    where go _ [] = Nothing
+          go ys (x:xs)
+              | Just i <- x `List.elemIndex` ys = Just (take (i + 1) ys)
+              | otherwise = go (x:ys) xs
+
+leadsBackMin :: Map Id Type -> Id -> Bool
+leadsBackMin m i0 = case findFirstCycle $ iterate go (Just i0) of
+                   Just cycl | maximum cycl == Just i0 -> True
+                   _ -> False
+    where go Nothing = Nothing
+          go (Just i)
+             | Just (QuantVar i') <- Map.lookup i m = Just i'
+             | otherwise = Nothing
+
+leadsBackMin' :: Map Id StackDesc -> Id -> Bool
+leadsBackMin' m i0 = case findFirstCycle $ iterate go (Just i0) of
+                   Just cycl | maximum cycl == Just i0 -> True
+                   _ -> False
+    where go Nothing = Nothing
+          go (Just i)
+             | Just (StackDesc (Stack []) (RestQuant i')) <- Map.lookup i m = Just i'
+             | otherwise = Nothing
+
 -- This isn't a full cycle check. It deals with trivial solvable
 -- cases. We need to do a proper occurs check for the cycles that
 -- should err.
 removeSynonyms :: Assumptions -> Assumptions
 removeSynonyms (Assumptions m0 m1) = Assumptions (removeSynonyms0 m0) (removeSynonyms1 m1)
     where removeSynonyms0 m =
-              let classify k (QuantVar k') | k < k' && Map.lookup k' m == Just (QuantVar k) = True
+              let classify k (QuantVar _) | leadsBackMin m k = True
                   classify _ _ = False
                   (_removals, keeps) = Map.partitionWithKey classify m
 --                  keeps' = fmap (substituteUntilDone removals) keeps
               in keeps
           removeSynonyms1 :: Map Id StackDesc -> Map Id StackDesc
           removeSynonyms1 m =
-              let classify k (StackDesc (Stack []) (RestQuant k'))
-                      | k < k' && Map.lookup k' m == Just (StackDesc (Stack []) (RestQuant k)) = True
+              let classify k (StackDesc (Stack []) (RestQuant _))
+                      | leadsBackMin' m k = True
                   classify _ _ = False
                   (_removals, keeps) = Map.partitionWithKey classify m
 --                  keeps' = fmap (substituteStackUntilDone' removals) keeps
@@ -61,6 +86,13 @@ substituteFully :: Assumptions -> Type -> Type
 substituteFully asm t0 =
     let Assumptions m m' = removeSynonyms asm
         go t = let t' = substituteUntilDone m . substituteStackUntilDone m' $ t
+               in if t == t' then t else go t'
+    in go t0
+
+substituteFully' :: Assumptions -> StackDesc -> StackDesc
+substituteFully' asm t0 =
+    let Assumptions m m' = removeSynonyms asm
+        go t = let t' = substituteUntilDone' m . substituteStackUntilDone' m' $ t
                in if t == t' then t else go t'
     in go t0
 
@@ -93,7 +125,13 @@ consolidateUntilDone asm = fmap removeSynonyms (go asm) >>= \asm' -> occursCheck
     where go x = runWriterT (consolidate x) >>=
                  \case
                       (a, w) | w == mempty -> pure a
-                             | otherwise   -> go (liftAssumptions a <> w)
+                             | otherwise   ->
+                                 let a' = removeSynonyms a
+                                     AssumptionsAll w0 w1 = w
+                                     sub  = fmap (fmap (substituteFully  a'))
+                                     sub' = fmap (fmap (substituteFully' a'))
+                                     w' = AssumptionsAll (sub w0) (sub' w1)
+                                 in go (liftAssumptions a <> w')
 
 assume :: MonadWriter AssumptionsAll m => Id -> Type -> m ()
 assume v t = tell (AssumptionsAll (Map.singleton v [t]) mempty)

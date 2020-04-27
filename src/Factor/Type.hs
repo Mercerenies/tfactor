@@ -5,7 +5,8 @@ module Factor.Type(Type(.., TInt, TAny, TNothing, TBool, TString, TSymbol),
                    StackDesc(..), RestVar(..),
                    emptyFnType, emptyPolyFnType, functionType, polyFunctionType,
                    liftFnType, quantifiedVars, underlyingFnType,
-                   substitute, substituteUntilDone, substituteStack, substituteStackUntilDone,
+                   substitute, substituteUntilDone, substituteUntilDone',
+                   substituteStack, substituteStackUntilDone,
                    substituteStack', substituteStackUntilDone',
                    toGround, toQuant, allGroundVars, allQuantVars,
                    renameToAvoidConflicts, renameToAvoidConflicts', renameToAvoidConflicts'') where
@@ -128,8 +129,17 @@ substitute m = gensub GroundVar trysub
               | Just t <- Map.lookup v m = t
               | otherwise = QuantVar v
 
+substitute' :: Map Id Type -> StackDesc -> StackDesc
+substitute' m (StackDesc xs r) = StackDesc (fmap (gensub GroundVar trysub) xs) r
+    where trysub v
+              | Just t <- Map.lookup v m = t
+              | otherwise = QuantVar v
+
 substituteUntilDone :: Map Id Type -> Type -> Type
 substituteUntilDone m x = let x' = substitute m x in if x == x' then x else substituteUntilDone m x'
+
+substituteUntilDone' :: Map Id Type -> StackDesc -> StackDesc
+substituteUntilDone' m x = let x' = substitute' m x in if x == x' then x else substituteUntilDone' m x'
 
 -- Ground, then Quant
 gensubstack :: (Id -> StackDesc) -> (Id -> StackDesc) -> (Type -> Type, StackDesc -> StackDesc)
