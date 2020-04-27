@@ -1,0 +1,12 @@
+
+type MyList { 'a }
+  | MyNil of ( )
+  | MyCons of ( MyList { 'a } 'a )
+
+fun sum-list ( MyList { Int } -- Int )
+  [ 0 ] [ swap sum-list + ] *MyList
+end
+
+fun test ( -- Bool )
+  MyNil 4 MyCons 3 MyCons 2 MyCons 1 MyCons sum-list 10 = 
+end

@@ -85,7 +85,7 @@ declsToReadOnly qid ds r = foldM go r ds
 bindConstructors :: (MonadState (ResourceTable ReaderValue) m, MonadError FactorError m) =>
                     QId -> Id -> [Id] -> [TypeInfo] -> Module -> m Module
 bindConstructors qid v vs ts reader0 = foldM go reader0 (zip [0 :: Int ..] ts)
-    where desttype = NamedType (TypeId (qid <> QId [v]) [])
+    where desttype = NamedType (TypeId (qid <> QId [v]) (fmap QuantVar vs))
           go reader (idx, TypeVal n ss) =
               let usedvars = vs ++ (concatMap allQuantVars $ Stack.toList ss)
                   restvar = freshVar "R" usedvars
@@ -106,7 +106,7 @@ bindPattern :: (MonadState (ResourceTable ReaderValue) m, MonadError FactorError
                QId -> Id -> Id -> [Id] -> [TypeInfo] -> Module -> m Module
 bindPattern qid tname pname vs ts reader =
       traverseOf moduleNames (defineResource qidn pname (UDFunction pfntype $ Function (Just pname) impl)) reader
-    where typename = NamedType (TypeId (qid <> QId [tname]) [])
+    where typename = NamedType (TypeId (qid <> QId [tname]) (fmap QuantVar vs))
           qidn = qid <> QId [pname]
           usedvars = vs
           restvar1 = freshVar "S" usedvars

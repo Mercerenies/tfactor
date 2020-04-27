@@ -123,18 +123,23 @@ typeDecl :: Parser (Id, [Id], [TypeInfo])
 typeDecl = do
   _ <- symbol "type"
   name <- unqualifiedId
-  body <- many (typeInfo name)
-  return (name, [], body)
+  args <- option [] $ do
+             _ <- symbol "{"
+             args <- sepBy quantType (symbol ",")
+             _ <- symbol "}"
+             return args
+  body <- many (typeInfo name args)
+  return (name, args, body)
 
-typeInfo :: Id -> Parser TypeInfo
-typeInfo tname = do
+typeInfo :: Id -> [Id] -> Parser TypeInfo
+typeInfo tname targs = do
   _ <- symbol "|"
   name <- unqualifiedId
-  args <- typeInfoGADT tname name <|> typeInfoStd tname name
+  args <- typeInfoGADT tname name targs <|> typeInfoStd tname name targs
   return $ TypeVal name args
 
-typeInfoGADT :: Id -> Id -> Parser (Stack Type)
-typeInfoGADT tname name = do
+typeInfoGADT :: Id -> Id -> [Id] -> Parser (Stack Type)
+typeInfoGADT tname name targs = do
   let failure = fail ("Invalid stack effect on val " ++ show name)
   -- We parse a function type then severely restrict it.
   FunctionType (StackDesc args a) (StackDesc rets r) <- functionType
@@ -145,17 +150,17 @@ typeInfoGADT tname name = do
   case rets of { Stack [NamedType (TypeId r' [])] | QId [tname] == r' -> pure () ; _ -> failure }
   -- The arguments can have no variables
   case concatMap allGroundVars (Stack.toList args) ++ concatMap allQuantVars (Stack.toList args) of
-    [] -> pure ()
+    xs | all (`elem` targs) xs -> pure ()
     _ -> failure
   pure args
 
-typeInfoStd :: Id -> Id -> Parser (Stack Type)
-typeInfoStd _ name = do
+typeInfoStd :: Id -> Id -> [Id] -> Parser (Stack Type)
+typeInfoStd _ name targs = do
   let failure = fail ("Invalid stack effect on val " ++ show name)
   _ <- symbol "of"
   args <- try single <|> multiple
-  case concatMap allGroundVars (Stack.toList args) of
-    [] -> pure ()
+  case concatMap allGroundVars (Stack.toList args) ++ concatMap allQuantVars (Stack.toList args) of
+    xs | all (`elem` targs) xs -> pure ()
     _ -> failure
   pure args
       where single = Stack.singleton <$> type_
@@ -336,10 +341,17 @@ traitInfoInclude = do
   return (Id "", TraitInclude name) -- TODO Reorganize Trait so that the empty Id isn't necessary here.
 
 moduleType :: Parser TypeId
-moduleType = try $ do
-  qid <- qualifiedId
-  when (qid == QId [Id "--"]) $ unexpected "--"
-  return (TypeId qid [])
+moduleType = do
+  qid <- try $ do
+           qid <- qualifiedId
+           when (qid == QId [Id "--"]) $ unexpected "--"
+           return qid
+  args <- option [] $ do
+               _ <- symbol "{"
+               args <- sepBy type_ (symbol ",")
+               _ <- symbol "}"
+               return args
+  return (TypeId qid args)
 
 quantType :: Parser Id
 quantType = satisfy go

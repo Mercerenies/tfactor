@@ -1,0 +1,22 @@
+
+type MyEither { 'a , 'b }
+  | MyLeft of 'a
+  | MyRight of 'b
+
+# Making specialized versions of drop to make
+# sure the inferred type is correct.
+
+fun int-drop ( Int -- )
+  drop
+end
+
+fun string-drop ( String -- )
+  drop
+end
+
+fun test ( -- Bool )
+  100 MyLeft [ int-drop true ] [ string-drop false ] *MyEither
+  "A" MyRight [ int-drop false ] [ string-drop true ] *MyEither
+  500 MyRight [ int-drop false ] [ int-drop true ] *MyEither
+  and and
+end

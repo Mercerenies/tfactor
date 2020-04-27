@@ -119,7 +119,7 @@ gensub :: (Id -> Type) -> (Id -> Type) -> Type -> Type
 gensub a b = go
     where go (FunType (FunctionType (StackDesc xs x) (StackDesc ys y))) =
               FunType (FunctionType (StackDesc (fmap go xs) x) (StackDesc (fmap go ys) y))
-          go (NamedType t) = NamedType t
+          go (NamedType (TypeId t ts)) = NamedType (TypeId t (fmap go ts))
           go (GroundVar v) = a v
           go (QuantVar v) = b v
 
@@ -145,7 +145,7 @@ substituteUntilDone' m x = let x' = substitute' m x in if x == x' then x else su
 gensubstack :: (Id -> StackDesc) -> (Id -> StackDesc) -> (Type -> Type, StackDesc -> StackDesc)
 gensubstack a b = (go, go')
     where go (FunType (FunctionType arg ret)) = FunType (FunctionType (go' arg) (go' ret))
-          go (NamedType t) = NamedType t
+          go (NamedType (TypeId t ts)) = NamedType (TypeId t (fmap go ts))
           go (GroundVar v) = GroundVar v
           go (QuantVar v) = QuantVar v
           go' (StackDesc xs x) =
