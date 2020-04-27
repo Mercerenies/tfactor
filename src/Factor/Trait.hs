@@ -32,7 +32,7 @@ import Data.Maybe
 requireSubtype :: (FromUnsatisfiedTrait e, MonadError e m) =>
                   ReadOnlyState -> QId -> TraitInfo -> Type -> Type -> m ()
 requireSubtype reader q t a b =
-    case evalRWST (a `isSubtypeOf` b) reader () of
+    case evalRWST (a `canUnify` b) reader () of
       Left (_ :: TypeError) -> throwError (fromUnsatisfiedTrait $ IncompatibleWithTrait q t)
       Right ((), _) -> pure ()
 

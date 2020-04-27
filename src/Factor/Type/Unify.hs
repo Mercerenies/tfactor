@@ -116,8 +116,8 @@ consolidate :: (FromTypeError e, MonadError e m,
                AssumptionsAll -> m Assumptions
 consolidate (AssumptionsAll m0 m1) =
     Assumptions <$>
-        mapM (foldM1 intersection) m0 <*>
-        mapM (foldM1 intersectionStack) m1
+        mapM (foldM1 unify) m0 <*>
+        mapM (foldM1 unifyStack) m1
 
 consolidateUntilDone :: (FromTypeError e, MonadError e m, MonadReader ReadOnlyState m) =>
                         AssumptionsAll -> m Assumptions
@@ -139,94 +139,60 @@ assume v t = tell (AssumptionsAll (Map.singleton v [t]) mempty)
 assume' :: MonadWriter AssumptionsAll m => Id -> StackDesc -> m ()
 assume' v s = tell (AssumptionsAll mempty (Map.singleton v [s]))
 
-_intersectionHandlesThisCase :: Type -> ()
-_intersectionHandlesThisCase (FunType {}) = ()
-_intersectionHandlesThisCase (NamedType _) = ()
-_intersectionHandlesThisCase (GroundVar {}) = ()
-_intersectionHandlesThisCase (QuantVar {}) = ()
+_unifyHandlesThisCase :: Type -> ()
+_unifyHandlesThisCase (FunType {}) = ()
+_unifyHandlesThisCase (NamedType _) = ()
+_unifyHandlesThisCase (GroundVar {}) = ()
+_unifyHandlesThisCase (QuantVar {}) = ()
 
 -- GroundVar and NamedType are trivial as
 -- they're just an equality check, which is handled at the very
 -- beginning.
 
-unionStack :: (FromTypeError e, MonadError e m,
+unifyStack :: (FromTypeError e, MonadError e m,
                MonadWriter AssumptionsAll m, MonadReader ReadOnlyState m) =>
               StackDesc -> StackDesc -> m StackDesc
-unionStack x y | x == y = pure x
-unionStack (StackDesc (Stack []) (RestGround x)) (StackDesc (Stack []) (RestGround y))
+unifyStack x y | x == y = pure x
+unifyStack (StackDesc (Stack []) (RestGround x)) (StackDesc (Stack []) (RestGround y))
     | x == y = pure $ StackDesc (Stack []) (RestGround x)
     | otherwise = throwError (fromTypeError $ CouldNotUnifyStack (StackDesc mempty (RestGround x))
                                                                  (StackDesc mempty (RestGround y)))
-unionStack (StackDesc (Stack []) (RestQuant x)) y = assume' x y >> pure y
-unionStack x (StackDesc (Stack []) (RestQuant y)) = assume' y x >> pure x
-unionStack (StackDesc (Stack []) (RestGround x)) y =
+unifyStack (StackDesc (Stack []) (RestQuant x)) y = assume' x y >> pure y
+unifyStack x (StackDesc (Stack []) (RestQuant y)) = assume' y x >> pure x
+unifyStack (StackDesc (Stack []) (RestGround x)) y =
     throwError (fromTypeError $ CouldNotUnifyStack (StackDesc mempty (RestGround x)) y)
-unionStack x (StackDesc (Stack []) (RestGround y)) =
+unifyStack x (StackDesc (Stack []) (RestGround y)) =
     throwError (fromTypeError $ CouldNotUnifyStack x (StackDesc mempty (RestGround y)))
-unionStack (StackDesc (Stack (a:as)) x) (StackDesc (Stack (b:bs)) y) = do
-  ab <- a `union` b
-  StackDesc (Stack abs_) xy <- StackDesc (Stack as) x `unionStack` StackDesc (Stack bs) y
+unifyStack (StackDesc (Stack (a:as)) x) (StackDesc (Stack (b:bs)) y) = do
+  ab <- a `unify` b
+  StackDesc (Stack abs_) xy <- StackDesc (Stack as) x `unifyStack` StackDesc (Stack bs) y
   return $ StackDesc (Stack (ab:abs_)) xy
 
-union :: (FromTypeError e, MonadError e m,
+unify :: (FromTypeError e, MonadError e m,
           MonadWriter AssumptionsAll m, MonadReader ReadOnlyState m) =>
          Type -> Type -> m Type
-union a b | a == b = pure a
-union (QuantVar a) (QuantVar b) =
+unify a b | a == b = pure a
+unify (QuantVar a) (QuantVar b) =
     QuantVar a <$ (assume a (QuantVar b) >> assume b (QuantVar a))
-union (QuantVar a) b = b <$ assume a b
-union a (QuantVar b) = a <$ assume b a
-union (FunType (FunctionType args1 rets1)) (FunType (FunctionType args2 rets2)) =
-    liftA2 (fmap FunType . FunctionType) (intersectionStack args1 args2) (unionStack rets1 rets2)
-union a b = throwError (fromTypeError $ CouldNotUnify a b)
+unify (QuantVar a) b = b <$ assume a b
+unify a (QuantVar b) = a <$ assume b a
+unify (FunType (FunctionType args1 rets1)) (FunType (FunctionType args2 rets2)) =
+    liftA2 (fmap FunType . FunctionType) (unifyStack args1 args2) (unifyStack rets1 rets2)
+unify a b = throwError (fromTypeError $ CouldNotUnify a b)
 
-intersectionStack :: (FromTypeError e, MonadError e m,
-                      MonadWriter AssumptionsAll m, MonadReader ReadOnlyState m) =>
-                     StackDesc -> StackDesc -> m StackDesc
-intersectionStack x y | x == y = pure x
-intersectionStack (StackDesc (Stack []) (RestGround x)) (StackDesc (Stack []) (RestGround y))
-    | x == y = pure $ StackDesc (Stack []) (RestGround x)
-    | otherwise = throwError (fromTypeError $ CouldNotUnifyStack (StackDesc mempty (RestGround x))
-                                                                 (StackDesc mempty (RestGround y)))
-intersectionStack (StackDesc (Stack []) (RestQuant x)) y = assume' x y >> pure y
-intersectionStack x (StackDesc (Stack []) (RestQuant y)) = assume' y x >> pure x
-intersectionStack (StackDesc (Stack []) (RestGround x)) y =
-    throwError (fromTypeError $ CouldNotUnifyStack (StackDesc mempty (RestGround x)) y)
-intersectionStack x (StackDesc (Stack []) (RestGround y)) =
-    throwError (fromTypeError $ CouldNotUnifyStack x (StackDesc mempty (RestGround y)))
-intersectionStack (StackDesc (Stack (a:as)) x) (StackDesc (Stack (b:bs)) y) = do
-  ab <- a `intersection` b
-  StackDesc (Stack abs_) xy <- StackDesc (Stack as) x `intersectionStack` StackDesc (Stack bs) y
-  return $ StackDesc (Stack (ab:abs_)) xy
+canUnifyFn :: (FromTypeError e, MonadError e m,
+               MonadWriter AssumptionsAll m, MonadReader ReadOnlyState m) =>
+               FunctionType -> FunctionType -> m ()
+canUnifyFn = canUnify `on` FunType
 
-intersection :: (FromTypeError e, MonadError e m,
-                 MonadWriter AssumptionsAll m, MonadReader ReadOnlyState m) =>
-                Type -> Type -> m Type
-intersection a b | a == b = pure a
-intersection (QuantVar a) (QuantVar b) =
-    QuantVar a <$ (assume a (QuantVar b) >> assume b (QuantVar a))
-intersection (QuantVar a) b = b <$ assume a b
-intersection a (QuantVar b) = a <$ assume b a
-intersection (FunType (FunctionType args1 rets1)) (FunType (FunctionType args2 rets2)) =
-    liftA2 (fmap FunType . FunctionType) (unionStack args1 args2) (intersectionStack rets1 rets2)
-intersection a b = throwError (fromTypeError $ CouldNotUnify a b)
-
-isFnSubtypeOf :: (FromTypeError e, MonadError e m,
-                  MonadWriter AssumptionsAll m, MonadReader ReadOnlyState m) =>
-                 FunctionType -> FunctionType -> m ()
-isFnSubtypeOf = isSubtypeOf `on` FunType
-
-isSubtypeOf :: (FromTypeError e, MonadError e m,
-                MonadWriter AssumptionsAll m, MonadReader ReadOnlyState m) =>
-               Type -> Type -> m ()
-isSubtypeOf s t = do
-  let noUnify = throwError (fromTypeError $ CouldNotUnify s t)
-  (u, w) <- listen (s `intersection` t)
-  --tell w -- Don't need this; I misunderstood what `listen' does.
-  cw <- consolidateUntilDone w
-  let u' = substituteFully cw u
-      s' = substituteFully cw s
-  if u' == s' then pure () else noUnify
+canUnify :: (FromTypeError e, MonadError e m,
+             MonadWriter AssumptionsAll m, MonadReader ReadOnlyState m) =>
+             Type -> Type -> m ()
+canUnify s t = do
+  (_, w) <- listen (s `unify` t)
+  -- Consolidation also performs occurs check, which we still want to do.
+  Assumptions {} <- consolidateUntilDone w
+  pure ()
 
 -- pad :: FunctionType -> FunctionType -> (FunctionType, FunctionType)
 -- pad (FunctionType a b) (FunctionType b' c) =
@@ -249,12 +215,12 @@ isSubtypeOf s t = do
 --       GT ->
 --           let missing = Stack.length b - Stack.length b'
 --               extra = fromJust $ Stack.takeBottom missing b
---               y' = y `List.union` (x `List.intersect` (concatMap allQuantVars $ Stack.toList extra))
+--               y' = y `List.unify` (x `List.intersect` (concatMap allQuantVars $ Stack.toList extra))
 --           in (PolyFunctionType x (FunctionType a b), PolyFunctionType y' (FunctionType (b' <> extra) (c <> extra)))
 --       LT ->
 --           let missing = Stack.length b' - Stack.length b
 --               extra = fromJust $ Stack.takeBottom missing b'
---               x' = x `List.union` (y `List.intersect` (concatMap allQuantVars $ Stack.toList extra))
+--               x' = x `List.unify` (y `List.intersect` (concatMap allQuantVars $ Stack.toList extra))
 --           in (PolyFunctionType x' (FunctionType (a <> extra) (b <> extra)), PolyFunctionType y (FunctionType b' c))
 --       EQ ->
 --           -- They're already the correct dimensions, so pass through
@@ -281,7 +247,7 @@ requireSubtypeStack (StackDesc xs x) (StackDesc ys y) = do
   let minlen = min (Stack.length xs) (Stack.length ys)
       (xs', xs1) = fromJust $ Stack.splitStack minlen xs
       (ys', ys1) = fromJust $ Stack.splitStack minlen ys
-  zipWithM_ isSubtypeOf (Stack.toList xs') (Stack.toList ys')
+  zipWithM_ canUnify (Stack.toList xs') (Stack.toList ys')
   case (xs1, x, ys1, y) of
     (Stack [], x0, Stack [], y0) -> requireSubtypeRest x0 y0
     (xs1', RestGround x0, ys1', y0) ->

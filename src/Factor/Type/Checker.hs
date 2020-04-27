@@ -120,7 +120,7 @@ checkDeclaredType tpass (PolyFunctionType ids declared) ss =
     where go = do
             ss' <- evalStateT (typeOfSeq tpass ss) mempty
             let inferred = underlyingFnType ss'
-            inferred `isFnSubtypeOf` toGround' ids declared
+            inferred `canUnifyFn` toGround' ids declared
           toGround' i fn = case toGround i (FunType fn) of
                              FunType fn' -> fn'
                              _ -> error "toGround changed shape of type in checkDeclaredType"
