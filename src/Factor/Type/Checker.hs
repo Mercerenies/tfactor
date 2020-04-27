@@ -135,9 +135,11 @@ checkIsWellDefined (QuantVar {}) = pure ()
 checkIsWellDefined (FunType (FunctionType (StackDesc args _) (StackDesc rets _))) =
     mapM_ checkIsWellDefined (Stack.FromTop args) >>
     mapM_ checkIsWellDefined (Stack.FromTop rets)
-checkIsWellDefined (NamedType (TypeId t ts)) = -- TODO Make sure we have the right argument count
+checkIsWellDefined (NamedType (TypeId t ts)) =
     ask >>= lookupFn t >>= \case
-        TypeValue -> mapM_ checkIsWellDefined ts
+        TypeValue (TypeData n)
+            | length ts == n -> mapM_ checkIsWellDefined ts
+            | otherwise -> throwError (TypeArgError t n (length ts))
         _ -> throwError (NoSuchType t)
 
 {-
@@ -190,7 +192,7 @@ checkTypeOf tpass (FunctorValue pm) = do
   let names = allNamesInModule (reader''^.readerResources) (QId [newname]) modl
   local (const reader'') $ do
     forM_ names $ \q -> ask >>= lookupFn q >>= checkTypeOf tpass
-checkTypeOf _ TypeValue = pure ()
+checkTypeOf _ (TypeValue _) = pure ()
 
 checkTypes :: (MonadError FactorError m, MonadReader ReadOnlyState m) =>
               TypeCheckerPass -> Map Id ReaderValue -> m ()

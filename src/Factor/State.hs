@@ -53,7 +53,8 @@ declsToReadOnly qid ds r = foldM go r ds
                      case containsDuplicate names of
                        Just name -> throwError (DuplicateDecl name)
                        _ -> pure ()
-                     reader' <- traverseOf moduleNames (defineResource (qid <> QId [v]) v TypeValue) reader
+                     let res = TypeValue (TypeData $ length vs)
+                     reader' <- traverseOf moduleNames (defineResource (qid <> QId [v]) v res) reader
                      reader'' <- bindConstructors qid v vs info reader'
                      bindPattern qid v patternname vs info reader''
                 ModuleSyn v dest -> pure $ over moduleDecls (++ [ModuleSynonym v dest]) reader

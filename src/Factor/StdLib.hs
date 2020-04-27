@@ -206,7 +206,7 @@ polyFn args arg rets ret =
 --emptyTypeModule = set moduleType (Just $ TypeProperties TAny) emptyModule
 
 primitiveType :: ReaderValue
-primitiveType = TypeValue
+primitiveType = TypeValue (TypeData 0)
 
 builtins :: Map Id ReaderValue
 builtins = Map.fromList [

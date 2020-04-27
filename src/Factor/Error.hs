@@ -40,6 +40,7 @@ data FactorError = NoSuchFunction QId
                  | TraitError UnsatisfiedTrait
                  | TraitArgError QId Int Int
                  | FunctorArgError QId Int Int
+                 | TypeArgError QId Int Int
                    deriving (Eq)
 
 instance Show FactorError where
@@ -74,6 +75,9 @@ instance Show FactorError where
               (", got " ++) . shows actual
           FunctorArgError t expected actual ->
               ("Expected " ++) . shows expected . (" arguments to functor " ++) . shows t .
+              (", got " ++) . shows actual
+          TypeArgError t expected actual ->
+              ("Expected " ++) . shows expected . (" arguments to type " ++) . shows t .
               (", got " ++) . shows actual
 
 instance FromTypeError FactorError where

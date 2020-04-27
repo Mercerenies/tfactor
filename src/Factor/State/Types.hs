@@ -4,7 +4,7 @@
 module Factor.State.Types(EvalState(..), ReadOnlyState(ReadOnlyState), ReaderValue(..), RId,
                           Module(Module), ModuleDecl(..),
                           BuiltIn(..), BuiltInConstraints,
-                          ResourceTable(..),
+                          ResourceTable(..), TypeData(..),
                           readerModule, readerNames, readerResources,
                           moduleNames, moduleDecls,
                           newState, newReader, emptyModule, mapToModule, newResourceTable) where
@@ -41,7 +41,7 @@ data ReaderValue = UDFunction PolyFunctionType Function -- User-defined function
                  | ModuleValue Module
                  | TraitValue ParameterizedTrait
                  | FunctorValue ParameterizedModule
-                 | TypeValue
+                 | TypeValue TypeData
 
 data Module = Module {
       _moduleNames :: Map Id RId,
@@ -54,6 +54,9 @@ data ModuleDecl = Alias Id QId
                 | ModuleSynonym Id (Either QId TraitRef)
                 | IncludeModule QId
                   deriving (Show, Eq)
+
+data TypeData = TypeData Int
+                deriving (Show, Eq)
 
 type BuiltInConstraints m = (MonadReader ReadOnlyState m, MonadState EvalState m, MonadError FactorError m)
 
@@ -75,7 +78,7 @@ instance Show ReaderValue where
     showsPrec _ (ModuleValue m) = ("<ModuleValue " ++) . shows m . (">" ++)
     showsPrec _ (TraitValue t) = ("<TraitValue " ++) . shows t . (">" ++)
     showsPrec _ (FunctorValue m) = ("<FunctorValue " ++) . shows m . (">" ++)
-    showsPrec _ TypeValue = ("<TypeValue>" ++)
+    showsPrec _ (TypeValue (TypeData n)) = ("<TypeValue args=" ++) . shows n . (">" ++)
 
 type RId = Int
 

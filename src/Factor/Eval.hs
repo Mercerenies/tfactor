@@ -53,4 +53,4 @@ callFunction v = ask >>= lookupFn v >>= go
           go (ModuleValue _) = throwError NotAFunction
           go (TraitValue _) = throwError NotAFunction
           go (FunctorValue _) = throwError NotAFunction
-          go TypeValue = throwError NotAFunction
+          go (TypeValue _) = throwError NotAFunction

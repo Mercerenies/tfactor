@@ -58,7 +58,7 @@ loadModule mqid r =
       ModuleValue m -> ModuleValue <$> foldM (flip $ resolveModuleDecl mqid) m (m^.moduleDecls)
       TraitValue {} -> pure r
       FunctorValue {} -> pure r -- TODO Nothing to do here right now, but there will be stuff later.
-      TypeValue -> pure r
+      TypeValue {} -> pure r
 
 loadModuleAt :: MonadError FactorError m => QId -> ReadOnlyState -> m ReadOnlyState
 loadModuleAt qid r =
@@ -90,7 +90,7 @@ produceModuleDepGraph qids reader =
                                                         , e <- dependenciesFromModuleDecl decl]
                              TraitValue {} -> []
                              FunctorValue {} -> [] -- TODO This
-                             TypeValue -> []
+                             TypeValue {} -> []
               in parents ++ others
 
 -- As in Factor.Loader.Graph, we reverse the top sort order since we

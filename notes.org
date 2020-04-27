@@ -141,3 +141,9 @@ end
     + [ ] Module load order is awkward now, because a functor can't be
       instantiated in the same module is was declared
  7. [ ] Functions can take module arguments
+** SIDE PLAN
+ + [X] Remove trait ~Type~
+ + [X] Type resources store their argument count
+ + [ ] Traits can demand types that take a specific number of args
+ + [ ] Recover test cases, as much as possible
+ + [ ] Canonical list type? (or is this out of scope for ~new-user-defined-types~?)

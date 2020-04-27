@@ -1,7 +1,7 @@
 {-# LANGUAGE ScopedTypeVariables, FlexibleContexts, RankNTypes #-}
 
 module Factor.State.Reader(ReadOnlyState(ReadOnlyState), ReaderValue(..),
-                           Module(Module), ModuleDecl(..),
+                           Module(Module), ModuleDecl(..), TypeData(..),
                            readerModule, readerNames, readerResources,
                            moduleNames, moduleDecls,
                            newReader, emptyModule, mapToModule,
@@ -128,7 +128,7 @@ readerFunctionType (UDMacro _ _) = Nothing
 readerFunctionType (ModuleValue _) = Nothing
 readerFunctionType (TraitValue _) = Nothing
 readerFunctionType (FunctorValue _) = Nothing
-readerFunctionType TypeValue = Nothing
+readerFunctionType (TypeValue _) = Nothing
 
 readerMacroType :: ReaderValue -> Maybe PolyFunctionType
 readerMacroType (UDFunction _ _) = Nothing
@@ -137,7 +137,7 @@ readerMacroType (UDMacro t _) = Just t
 readerMacroType (ModuleValue _) = Nothing
 readerMacroType (TraitValue _) = Nothing
 readerMacroType (FunctorValue _) = Nothing
-readerMacroType TypeValue = Nothing
+readerMacroType (TypeValue _) = Nothing
 
 merge :: MonadError FactorError m => ReadOnlyState -> ReadOnlyState -> m ReadOnlyState
 merge (ReadOnlyState (Module m a) r) (ReadOnlyState (Module m' a') r') =
