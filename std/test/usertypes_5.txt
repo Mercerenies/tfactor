@@ -1,0 +1,21 @@
+
+type IntOrString
+  | IsInt of Int
+  | IsString of String
+
+# Making specialized versions of drop to make
+# sure the inferred type is correct.
+
+fun int-drop ( Int -- )
+  drop
+end
+
+fun string-drop ( String -- )
+  drop
+end
+
+fun test ( -- Bool )
+  100 IsInt [ int-drop true ] [ string-drop false ] *IntOrString
+  "ABC" IsString [ int-drop false ] [ string-drop true ] *IntOrString
+  and
+end

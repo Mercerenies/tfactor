@@ -1,0 +1,14 @@
+
+type OneOrTwo
+  | Just1 of Int
+  | Actually2 of ( Int Int )
+
+fun my-dispatch ( OneOrTwo -- Int )
+  [ ] [ drop ] *OneOrTwo
+end
+
+fun test ( -- Bool )
+  10 Just1 my-dispatch 10 =
+  10 20 Actually2 my-dispatch 10 =
+  and
+end

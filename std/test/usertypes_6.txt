@@ -1,0 +1,11 @@
+
+type UnitType
+  | Unit of ( )
+
+fun roundabout-call ( 'S ( 'S -- 'T ) -- 'T )
+  Unit swap *UnitType
+end
+
+fun test ( -- Bool )
+  [ 500 600 ] roundabout-call [ 500 = ] [ 600 = ] bi* and
+end

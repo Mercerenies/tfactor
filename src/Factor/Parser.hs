@@ -22,7 +22,7 @@ type Parser = Parsec [Token] ()
 
 keywords :: [String]
 keywords = ["true", "false", "fun", "mod", "end", "macro", "alias", "open",
-            "field", "constructor", "val", "require", "include", "type"]
+            "field", "constructor", "val", "require", "include", "type", "of"]
 
 -- (Unused right now)
 _id_ :: Parser Id
@@ -130,6 +130,11 @@ typeInfo :: Id -> Parser TypeInfo
 typeInfo tname = do
   _ <- symbol "|"
   name <- unqualifiedId
+  args <- typeInfoGADT tname name <|> typeInfoStd tname name
+  return $ TypeVal name args
+
+typeInfoGADT :: Id -> Id -> Parser (Stack Type)
+typeInfoGADT tname name = do
   let failure = fail ("Invalid stack effect on val " ++ show name)
   -- We parse a function type then severely restrict it.
   FunctionType (StackDesc args a) (StackDesc rets r) <- functionType
@@ -142,7 +147,23 @@ typeInfo tname = do
   case concatMap allGroundVars (Stack.toList args) ++ concatMap allQuantVars (Stack.toList args) of
     [] -> pure ()
     _ -> failure
-  return $ TypeVal name args
+  pure args
+
+typeInfoStd :: Id -> Id -> Parser (Stack Type)
+typeInfoStd _ name = do
+  let failure = fail ("Invalid stack effect on val " ++ show name)
+  _ <- symbol "of"
+  args <- try single <|> multiple
+  case concatMap allGroundVars (Stack.toList args) of
+    [] -> pure ()
+    _ -> failure
+  pure args
+      where single = Stack.singleton <$> type_
+            multiple = do
+              _ <- symbol "("
+              args <- many type_
+              _ <- symbol ")"
+              return (Stack.fromList $ reverse args)
 
 -- recordDecl :: Parser (Id, [RecordInfo])
 -- recordDecl = do
