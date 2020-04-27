@@ -21,7 +21,6 @@ import Factor.Eval
 import Factor.Parser.Token
 import Factor.Parser
 import Factor.Names
-import Factor.Trait
 import Factor.Manager
 
 import Control.Monad
@@ -211,8 +210,6 @@ primitiveType = TypeValue
 
 builtins :: Map Id ReaderValue
 builtins = Map.fromList [
-            ("Type", TraitValue (ParameterizedTrait [] $ Trait [])), -- TODO A vacuous trait for now,
-                                                                     -- for temporary backward compatibility.
             ("Int", primitiveType),
             ("Any", primitiveType),
             ("Nothing", primitiveType),
