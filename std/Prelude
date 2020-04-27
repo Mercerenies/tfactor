@@ -14,6 +14,14 @@ mod Bool = P.Bool end
 mod String = P.String end
 mod Symbol = P.Symbol end
 
+# TODO I may choose to hide *Void and *Unit later, as they're just
+# id and call, respectively. There's no facility to hide them right
+# now, but let's not get dependent on them.
+
+type Void
+
+type Unit | U of ( )
+
 fun drop ( 'a -- )
   P.drop
 end

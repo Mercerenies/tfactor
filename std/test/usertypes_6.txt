@@ -1,9 +1,9 @@
 
 type UnitType
-  | Unit of ( )
+  | Unit1 of ( )
 
 fun roundabout-call ( 'S ( 'S -- 'T ) -- 'T )
-  Unit swap *UnitType
+  Unit1 swap *UnitType
 end
 
 fun test ( -- Bool )
