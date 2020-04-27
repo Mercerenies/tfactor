@@ -15,7 +15,7 @@ data Declaration = FunctionDecl PolyFunctionType Function
                  | TraitDecl Id ParameterizedTrait
                  | FunctorDecl Id ParameterizedModule
 --                 | RecordFunctorDecl Id [ModuleArg] [RecordFunInfo]
-                 | TypeDecl Id [TypeInfo]
+                 | TypeDecl Id [Id] [TypeInfo]
                  | AliasDecl Id QId
                  | OpenDecl QId
                  | RequireDecl TraitRef

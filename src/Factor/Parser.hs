@@ -76,7 +76,7 @@ decl = (\(t, s) -> FunctionDecl t s) <$> functionDecl <|>
 --       (\(i, d) -> RecordDecl i d) <$> recordDecl <|>
        (\(i, f) -> FunctorDecl i f) <$> functorDecl <|>
 --       (\(i, a, d) -> RecordFunctorDecl i a d) <$> recordFunctorDecl <|>
-       (\(i, t) -> TypeDecl i t) <$> typeDecl <|>
+       (\(i, is, t) -> TypeDecl i is t) <$> typeDecl <|>
        (\(i, j) -> AliasDecl i j) <$> aliasDecl <|>
        (\i -> OpenDecl i) <$> openDecl <|>
        (\i -> RequireDecl i) <$> requireDecl <|>
@@ -119,12 +119,12 @@ moduleSyn = do
   _ <- symbol "end"
   return (name, args)
 
-typeDecl :: Parser (Id, [TypeInfo])
+typeDecl :: Parser (Id, [Id], [TypeInfo])
 typeDecl = do
   _ <- symbol "type"
   name <- unqualifiedId
   body <- many (typeInfo name)
-  return (name, body)
+  return (name, [], body)
 
 typeInfo :: Id -> Parser TypeInfo
 typeInfo tname = do

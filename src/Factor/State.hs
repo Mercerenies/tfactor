@@ -45,7 +45,7 @@ declsToReadOnly qid ds r = foldM go r ds
                      let qid' = qid <> QId [v]
                      inner <- declsToReadOnly qid' def emptyModule
                      traverseOf moduleNames (defineModule qid' v inner) reader
-                TypeDecl v info -> do
+                TypeDecl v vs info -> do
                      let names = [Id "*" <> v] ++ fmap (\(TypeVal name _) -> name) info
                          patternname = Id "*" <> v
                      forM_ names $ \name ->
@@ -54,8 +54,8 @@ declsToReadOnly qid ds r = foldM go r ds
                        Just name -> throwError (DuplicateDecl name)
                        _ -> pure ()
                      reader' <- traverseOf moduleNames (defineResource (qid <> QId [v]) v TypeValue) reader
-                     reader'' <- bindConstructors qid v info reader'
-                     bindPattern qid v patternname info reader''
+                     reader'' <- bindConstructors qid v vs info reader'
+                     bindPattern qid v patternname vs info reader''
                 ModuleSyn v dest -> pure $ over moduleDecls (++ [ModuleSynonym v dest]) reader
                 -- RecordDecl v def
                 --  | Map.member v (reader^.moduleNames) -> throwError (DuplicateDecl v)
@@ -83,11 +83,11 @@ declsToReadOnly qid ds r = foldM go r ds
                 IncludeDecl q -> pure $ over moduleDecls (++ [IncludeModule q]) reader
 
 bindConstructors :: (MonadState (ResourceTable ReaderValue) m, MonadError FactorError m) =>
-                    QId -> Id -> [TypeInfo] -> Module -> m Module
-bindConstructors qid v ts reader0 = foldM go reader0 (zip [0 :: Int ..] ts)
+                    QId -> Id -> [Id] -> [TypeInfo] -> Module -> m Module
+bindConstructors qid v vs ts reader0 = foldM go reader0 (zip [0 :: Int ..] ts)
     where desttype = NamedType (TypeId (qid <> QId [v]) [])
           go reader (idx, TypeVal n ss) =
-              let usedvars = concatMap allQuantVars $ Stack.toList ss -- TODO Plus any polymorphic vars
+              let usedvars = vs ++ (concatMap allQuantVars $ Stack.toList ss)
                   restvar = freshVar "R" usedvars
                   restvar' = RestQuant restvar
                   fntype = FunctionType (StackDesc ss restvar') (StackDesc (Stack.singleton desttype) restvar')
@@ -103,12 +103,12 @@ bindConstructors qid v ts reader0 = foldM go reader0 (zip [0 :: Int ..] ts)
               in traverseOf moduleNames (defineResource qidn n (UDFunction pfntype $ Function (Just n) impl)) reader
 
 bindPattern :: (MonadState (ResourceTable ReaderValue) m, MonadError FactorError m) =>
-               QId -> Id -> Id -> [TypeInfo] -> Module -> m Module
-bindPattern qid tname pname ts reader =
+               QId -> Id -> Id -> [Id] -> [TypeInfo] -> Module -> m Module
+bindPattern qid tname pname vs ts reader =
       traverseOf moduleNames (defineResource qidn pname (UDFunction pfntype $ Function (Just pname) impl)) reader
     where typename = NamedType (TypeId (qid <> QId [tname]) [])
           qidn = qid <> QId [pname]
-          usedvars = [] -- TODO This will be used once we allow polymorphic types
+          usedvars = vs
           restvar1 = freshVar "S" usedvars
           restvar2 = freshVar "T" usedvars
           destructorFor (TypeVal _ ss) = FunctionType (StackDesc ss (RestQuant restvar1))
@@ -131,7 +131,7 @@ newDeclName (ModuleDecl v _) = Just v
 newDeclName (ModuleSyn {}) = Nothing -- Doesn't define a resource yet; it'll get expanded later.
 newDeclName (TraitDecl v _) = Just v
 newDeclName (FunctorDecl v _) = Just v
-newDeclName (TypeDecl v _) = Just v
+newDeclName (TypeDecl v _ _) = Just v
 newDeclName (AliasDecl {}) = Nothing
 newDeclName (OpenDecl {}) = Nothing
 newDeclName (RequireDecl {}) = Nothing
