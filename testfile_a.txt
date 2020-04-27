@@ -1,0 +1,9 @@
+
+type EitherOfInt
+  val field1 ( Int -- EitherOfInt )
+  val field2 ( Int -- EitherOfInt )
+end
+
+fun main ( -- EitherOfInt EitherOfInt )
+  10 field1 20 field2
+end

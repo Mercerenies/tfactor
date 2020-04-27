@@ -1,7 +1,7 @@
 {-# LANGUAGE RankNTypes #-}
 
 module Factor.Util(sepBy, padLeft, foldM1, insertOrUpdate, errorToMaybe, setFilterMap,
-                   possibly, possibly', foldMapM) where
+                   possibly, possibly', foldMapM, containsDuplicate) where
 
 import Control.Monad
 import Control.Monad.Except
@@ -10,6 +10,7 @@ import Data.Map(Map)
 import qualified Data.Map as Map
 import Data.Set(Set)
 import qualified Data.Set as Set
+import qualified Data.List as List
 import Data.Maybe
 import Data.Monoid
 
@@ -45,3 +46,9 @@ possibly' f t = to $ getConst . t (Const . f)
 
 foldMapM :: (Foldable t, Monad m, Monoid b) => (a -> m b) -> t a -> m b
 foldMapM f = foldM (\acc val -> fmap (acc <>) $ f val) mempty
+
+containsDuplicate :: Ord a => [a] -> Maybe a
+containsDuplicate = go . List.sort
+    where go (x:y:_) | x == y = Just x
+          go (_:xs) = go xs
+          go [] = Nothing

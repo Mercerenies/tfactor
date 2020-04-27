@@ -209,7 +209,7 @@ builtins = Map.fromList [
             ("if", polyFn [FunType (functionType [] (RestQuant "S") [] (RestQuant "T")), FunType (functionType [] (RestQuant "S") [] (RestQuant "T")), TBool] "S" [] "T" if_),
             ("unsafe", polyFn [] "S" [] "T" unsafe),
             ("unsafe1", polyFn [QuantVar "a"] "S" [QuantVar "b"] "S" unsafe1),
-            ("unsafe-record-construct", polyFn [TString, TInt] "S" [TAny] "T" unsafeRecordConstruct),
+            ("unsafe-record-construct", polyFn [TString, TInt, TInt] "S" [TAny] "T" unsafeRecordConstruct),
             ("unsafe-record-get", polyFn [TInt, TAny] "S" [TAny] "S" unsafeRecordGet),
             ("unsafe-record-variety", polyFn [TAny] "S" [TInt] "S" unsafeRecordVariety),
             ("+", polyFn [TInt, TInt] "R" [TInt] "R" $ binmathop (+)),

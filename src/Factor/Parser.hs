@@ -5,7 +5,7 @@ import Factor.Id
 import Factor.Code
 import Factor.Code.Decl
 import Factor.Type hiding (functionType)
-import Factor.Stack(Stack)
+import Factor.Stack(Stack(Stack))
 import qualified Factor.Stack as Stack
 import Factor.Trait.Types
 import Factor.Parser.Token
@@ -22,7 +22,7 @@ type Parser = Parsec [Token] ()
 
 keywords :: [String]
 keywords = ["true", "false", "fun", "mod", "end", "macro", "alias", "open",
-            "field", "constructor", "val", "require", "include"]
+            "field", "constructor", "val", "require", "include", "type"]
 
 -- (Unused right now)
 _id_ :: Parser Id
@@ -76,6 +76,7 @@ decl = (\(t, s) -> FunctionDecl t s) <$> functionDecl <|>
 --       (\(i, d) -> RecordDecl i d) <$> recordDecl <|>
        (\(i, f) -> FunctorDecl i f) <$> functorDecl <|>
 --       (\(i, a, d) -> RecordFunctorDecl i a d) <$> recordFunctorDecl <|>
+       (\(i, t) -> TypeDecl i t) <$> typeDecl <|>
        (\(i, j) -> AliasDecl i j) <$> aliasDecl <|>
        (\i -> OpenDecl i) <$> openDecl <|>
        (\i -> RequireDecl i) <$> requireDecl <|>
@@ -117,6 +118,32 @@ moduleSyn = do
               return (Right $ TraitRef syn args)
   _ <- symbol "end"
   return (name, args)
+
+typeDecl :: Parser (Id, [TypeInfo])
+typeDecl = do
+  _ <- symbol "type"
+  name <- unqualifiedId
+  body <- many (typeInfo name)
+  _ <- symbol "end"
+  return (name, body)
+
+typeInfo :: Id -> Parser TypeInfo
+typeInfo tname = do
+  _ <- symbol "val"
+  name <- unqualifiedId
+  let failure = fail ("Invalid stack effect on val " ++ show name)
+  -- We parse a function type then severely restrict it.
+  FunctionType (StackDesc args a) (StackDesc rets r) <- functionType
+  -- The rest variables must be the same.
+  unless (a == r) failure
+  case a of { RestQuant _ -> pure () ; _ -> failure } -- If it's a ground term, then wtf?
+  -- The result shall consist of exactly one argument: the type name itself
+  case rets of { Stack [ModuleType r'] | QId [tname] == r' -> pure () ; _ -> failure }
+  -- The arguments can have no variables
+  case concatMap allGroundVars (Stack.toList args) ++ concatMap allQuantVars (Stack.toList args) of
+    [] -> pure ()
+    _ -> failure
+  return $ TypeVal name args
 
 -- recordDecl :: Parser (Id, [RecordInfo])
 -- recordDecl = do

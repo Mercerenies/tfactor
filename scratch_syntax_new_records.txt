@@ -1,0 +1,22 @@
+
+# More hypothetical syntax.
+
+type List { 'a }
+  val Nil ( -- List { 'a } )
+  val Cons ( List { 'a } 'a -- List { 'a } )
+end
+
+# The above would also implicitly generate...
+
+fun *List ( 'S ( 'S -- 'T ) ( 'S List { 'a } 'a -- 'T ) List { 'a } -- 'T )
+  # ...
+end
+
+# Where the first is the "Nil" case and the second is the "Cons" case.
+# Note in particular that we use GADT syntax here, but we don't
+# actually (yet) support GADTs, or existentials for that matter. The
+# algebraic data type defined must return, as its stack effect, one
+# (unparameterized) instance of the new type, and the left-hand side
+# can only use type variables bound by the type being defined. These
+# restrictions will be examined in-depth later and we'll explore
+# removing them, but for now we're keeping things conservative.

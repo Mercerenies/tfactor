@@ -1,10 +1,11 @@
 
-module Factor.Code.Decl(Declaration(..)) where
+module Factor.Code.Decl(Declaration(..), TypeInfo(..)) where
 
 import Factor.Id
 import Factor.Type
 import Factor.Trait.Types
 import Factor.Code
+import Factor.Stack(Stack)
 
 data Declaration = FunctionDecl PolyFunctionType Function
                  | MacroDecl PolyFunctionType Macro
@@ -14,11 +15,15 @@ data Declaration = FunctionDecl PolyFunctionType Function
                  | TraitDecl Id ParameterizedTrait
                  | FunctorDecl Id ParameterizedModule
 --                 | RecordFunctorDecl Id [ModuleArg] [RecordFunInfo]
+                 | TypeDecl Id [TypeInfo]
                  | AliasDecl Id QId
                  | OpenDecl QId
                  | RequireDecl TraitRef
                  | IncludeDecl QId
                    deriving (Show, Eq)
+
+data TypeInfo = TypeVal Id (Stack Type)
+                deriving (Show, Eq)
 
 -- data RecordInfo = RecordConstructor Id
 --                 | RecordField Id Type
