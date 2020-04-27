@@ -1,9 +1,18 @@
 
-type EitherOfInt
-  val field1 ( Int -- EitherOfInt )
-  val field2 ( Int -- EitherOfInt )
+type OneOrTwo
+  val Just1 ( Int -- OneOrTwo )
+  val Actually2 ( Int Int -- OneOrTwo )
 end
 
-fun main ( -- EitherOfInt EitherOfInt )
-  10 field1 20 field2
+fun my-dispatch ( OneOrTwo -- Int )
+  [ ] [ drop ] *OneOrTwo
 end
+
+fun main ( -- Int Int )
+#  10 Just1 [ drop "CORRECT" ] [ drop2 "INCORRECT" ] *OneOrTwo
+#  10 20 Actually2 [ drop "INCORRECT" ] [ drop2 "CORRECT" ] *OneOrTwo
+  10 Just1 my-dispatch
+  10 20 Actually2 my-dispatch
+end
+
+# ///// Formalize this file into some unit tests, then make parameterized types.

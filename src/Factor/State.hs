@@ -46,7 +46,8 @@ declsToReadOnly qid ds r = foldM go r ds
                      inner <- declsToReadOnly qid' def emptyModule
                      traverseOf moduleNames (defineModule qid' v inner) reader
                 TypeDecl v info -> do
-                     let names = fmap (\(TypeVal name _) -> name) info
+                     let names = [Id "*" <> v] ++ fmap (\(TypeVal name _) -> name) info
+                         patternname = Id "*" <> v
                      forM_ names $ \name ->
                          when (Map.member name (reader^.moduleNames)) $ throwError (DuplicateDecl name)
                      case containsDuplicate names of
@@ -54,7 +55,7 @@ declsToReadOnly qid ds r = foldM go r ds
                        _ -> pure ()
                      reader' <- traverseOf moduleNames (defineResource (qid <> QId [v]) v TypeValue) reader
                      reader'' <- bindConstructors qid v info reader'
-                     return reader''
+                     bindPattern qid v patternname info reader''
                 ModuleSyn v dest -> pure $ over moduleDecls (++ [ModuleSynonym v dest]) reader
                 -- RecordDecl v def
                 --  | Map.member v (reader^.moduleNames) -> throwError (DuplicateDecl v)
@@ -86,7 +87,7 @@ bindConstructors :: (MonadState (ResourceTable ReaderValue) m, MonadError Factor
 bindConstructors qid v ts reader0 = foldM go reader0 (zip [0 :: Int ..] ts)
     where desttype = ModuleType $ qid <> QId [v]
           go reader (idx, TypeVal n ss) =
-              let usedvars = concatMap allQuantVars $ Stack.toList ss
+              let usedvars = concatMap allQuantVars $ Stack.toList ss -- TODO Plus any polymorphic vars
                   restvar = freshVar "R" usedvars
                   restvar' = RestQuant restvar
                   fntype = FunctionType (StackDesc ss restvar') (StackDesc (Stack.singleton desttype) restvar')
@@ -100,6 +101,27 @@ bindConstructors qid v ts reader0 = foldM go reader0 (zip [0 :: Int ..] ts)
                          ]
                   qidn = qid <> QId [n]
               in traverseOf moduleNames (defineResource qidn n (UDFunction pfntype $ Function (Just n) impl)) reader
+
+bindPattern :: (MonadState (ResourceTable ReaderValue) m, MonadError FactorError m) =>
+               QId -> Id -> Id -> [TypeInfo] -> Module -> m Module
+bindPattern qid tname pname ts reader =
+      traverseOf moduleNames (defineResource qidn pname (UDFunction pfntype $ Function (Just pname) impl)) reader
+    where typename = ModuleType (qid <> QId [tname])
+          qidn = qid <> QId [pname]
+          usedvars = [] -- TODO This will be used once we allow polymorphic types
+          restvar1 = freshVar "S" usedvars
+          restvar2 = freshVar "T" usedvars
+          destructorFor (TypeVal _ ss) = FunctionType (StackDesc ss (RestQuant restvar1))
+                                                      (StackDesc Stack.empty (RestQuant restvar2))
+          allDestructors = fmap (FunType . destructorFor) ts
+          args = StackDesc (Stack.fromList (reverse allDestructors) <> Stack.singleton typename) (RestQuant restvar1)
+          rets = StackDesc Stack.empty (RestQuant restvar2)
+          fntype = FunctionType args rets
+          pfntype = PolyFunctionType ([restvar1, restvar2] ++ usedvars) fntype
+          impl = Sequence [
+                  Literal (Int . toInteger $ length ts),
+                  Call (QId [rootAliasName, primitivesModuleName, Id "unsafe-record-branch"]) -- TODO Factor.Names
+                 ]
 
 newDeclName :: Declaration -> Maybe Id
 newDeclName (FunctionDecl _ (Function Nothing _)) = Nothing

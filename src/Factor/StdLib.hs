@@ -126,8 +126,8 @@ unsafe1 = BuiltIn $ pure ()
 -- This function is also unsafe, in that its type signature is a lie.
 -- To use it safely, you MUST wrap it in a function which explicitly
 -- declares the CORRECT stack effect. It will actually pop as many
--- additional arguments as the integer tells it to. There's no way to
--- express this in the type system, so here we are.
+-- additional arguments as the leftmost integer argument tells it to.
+-- There's no way to express this in the type system, so here we are.
 
 -- ( 'S Int Int String -- 'T Any )
 unsafeRecordConstruct :: BuiltIn ()
@@ -162,6 +162,27 @@ unsafeRecordVariety = BuiltIn $ do
                         obj <- popStack1
                         (_, n, _) <- assertRecord obj
                         pushStack (Stack.singleton (Int $ fromIntegral n))
+
+-- This one is also horribly unsafe and lies about its type signature.
+-- Don't trust it. It declares one integer argument. It will end up
+-- popping (including that integer argument) N+2 arguments, where N is
+-- the declared argument. The next N below the declared argument are
+-- functions, and the one below that is the record object to dispatch on.
+
+-- ( 'S Int -- 'T )
+unsafeRecordBranch :: BuiltIn ()
+unsafeRecordBranch = BuiltIn $ do
+                       n <- popStack1
+                       n' <- fmap fromInteger $ assertInt n
+                       args <- popStack n'
+                       obj <- popStack1
+                       (_, idx, obj') <- assertRecord obj
+                       let fn = (toList $ Stack.FromBottom args) !! idx -- TODO Check bounds
+                       fn' <- case fn of
+                                FunctionValue (Function _ ss) -> pure ss
+                                _ -> throwError NotAFunction
+                       pushStack (Stack.fromList (reverse $ toList obj'))
+                       evalSeq fn'
 
 -- ( 'R Int Int -- 'R Int )
 binmathop :: (Integer -> Integer -> Integer) -> BuiltIn ()
@@ -212,6 +233,7 @@ builtins = Map.fromList [
             ("unsafe-record-construct", polyFn [TString, TInt, TInt] "S" [TAny] "T" unsafeRecordConstruct),
             ("unsafe-record-get", polyFn [TInt, TAny] "S" [TAny] "S" unsafeRecordGet),
             ("unsafe-record-variety", polyFn [TAny] "S" [TInt] "S" unsafeRecordVariety),
+            ("unsafe-record-branch", polyFn [TAny] "S" [] "T" unsafeRecordBranch),
             ("+", polyFn [TInt, TInt] "R" [TInt] "R" $ binmathop (+)),
             ("-", polyFn [TInt, TInt] "R" [TInt] "R" $ binmathop (-)),
             ("*", polyFn [TInt, TInt] "R" [TInt] "R" $ binmathop (*)),
