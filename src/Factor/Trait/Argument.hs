@@ -21,7 +21,7 @@ subArgInType :: (Id -> QId) -> Type -> Type
 subArgInType f t =
     case t of
       FunType fn -> FunType (subArgInFnType f fn)
-      NamedType q -> NamedType (subArg f q)
+      NamedType (TypeId q ts) -> NamedType (TypeId (subArg f q) (fmap (subArgInType f) ts))
       GroundVar i -> GroundVar i
       QuantVar i -> QuantVar i
 

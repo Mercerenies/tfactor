@@ -141,13 +141,12 @@ assume' v s = tell (AssumptionsAll mempty (Map.singleton v [s]))
 
 _unifyHandlesThisCase :: Type -> ()
 _unifyHandlesThisCase (FunType {}) = ()
-_unifyHandlesThisCase (NamedType _) = ()
+_unifyHandlesThisCase (NamedType {}) = ()
 _unifyHandlesThisCase (GroundVar {}) = ()
 _unifyHandlesThisCase (QuantVar {}) = ()
 
--- GroundVar and NamedType are trivial as
--- they're just an equality check, which is handled at the very
--- beginning.
+-- GroundVar is trivial as it's just an equality check, which is
+-- handled at the very beginning.
 
 unifyStack :: (FromTypeError e, MonadError e m,
                MonadWriter AssumptionsAll m, MonadReader ReadOnlyState m) =>
@@ -176,6 +175,8 @@ unify (QuantVar a) (QuantVar b) =
     QuantVar a <$ (assume a (QuantVar b) >> assume b (QuantVar a))
 unify (QuantVar a) b = b <$ assume a b
 unify a (QuantVar b) = a <$ assume b a
+unify (NamedType (TypeId a as)) (NamedType (TypeId b bs))
+    | a == b && length as == length bs = NamedType . TypeId a <$> zipWithM unify as bs
 unify (FunType (FunctionType args1 rets1)) (FunType (FunctionType args2 rets2)) =
     liftA2 (fmap FunType . FunctionType) (unifyStack args1 args2) (unifyStack rets1 rets2)
 unify a b = throwError (fromTypeError $ CouldNotUnify a b)

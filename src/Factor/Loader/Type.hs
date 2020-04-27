@@ -23,12 +23,10 @@ normalizeType names (FunType (FunctionType (StackDesc args a) (StackDesc rets r)
   Stack.FromTop args' <- traverse (normalizeType names) (Stack.FromTop args)
   Stack.FromTop rets' <- traverse (normalizeType names) (Stack.FromTop rets)
   return $ FunType (FunctionType (StackDesc args' a) (StackDesc rets' r))
-normalizeType names (NamedType qid)
-    | QId (first:_rest) <- qid
-    , Just _t <- Map.lookup first names = pure (NamedType qid) -- TODO This is not correct right now,
-                                                                -- but we don't yet have the datatypes
-                                                                -- to make it so.
-    | otherwise = ask >>= \r -> NamedType <$> lookupFnName qid r
+normalizeType names (NamedType (TypeId qid ts)) -- TODO Fill out the commented area below
+--    | QId (first:_rest) <- qid
+--    , Just TypeValue <- Map.lookup first names = NamedType . TypeId qid <$> mapM (normalizeType names) ts
+    | otherwise = ask >>= \r -> (\a b -> NamedType (TypeId a b)) <$> lookupFnName qid r <*> mapM (normalizeType names) ts
 normalizeType _ (GroundVar v) = pure $ GroundVar v
 normalizeType _ (QuantVar v) = pure $ QuantVar v
 
@@ -45,11 +43,8 @@ normalizeTypesTraitInfo names (TraitFunction p) = TraitFunction <$> normalizePol
 normalizeTypesTraitInfo names (TraitMacro p) = TraitMacro <$> normalizePolyFnType names p
 normalizeTypesTraitInfo names (TraitModule xs) =
     TraitModule <$> mapM (\(i, t) -> ((,) i) <$> normalizeTypesTraitInfo names t) xs
-normalizeTypesTraitInfo names (TraitInclude (TraitRef q args)) = do
-  args' <- forM args $ \t -> normalizeType names (NamedType t) >>= \case
-              NamedType t' -> pure t'
-              _ -> error "Internal error (shape changed) in normalizeTypesTraitInfo"
-  return $ TraitInclude (TraitRef q args')
+normalizeTypesTraitInfo _ (TraitInclude (TraitRef q args)) =
+    pure (TraitInclude (TraitRef q args))
 normalizeTypesTraitInfo names (TraitFunctor args xs) = do
   reader <- ask
   names' <- forM args $ \(ModuleArg i (TraitRef q innerargs)) -> lookupFn q reader >>= \case

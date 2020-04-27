@@ -79,7 +79,8 @@ resolveAliasesSeq m (Sequence xs) = Sequence <$> mapM (resolveAliasesStmt m) xs
 
 resolveAliasesType :: MonadError FactorError m => Map Id Alias -> Type -> m Type
 resolveAliasesType m (FunType fn) = FunType <$> resolveAliasesFnType m fn
-resolveAliasesType m (NamedType qid) = NamedType <$> resolveAlias m qid
+resolveAliasesType m (NamedType (TypeId qid ts)) =
+    (\a b -> NamedType (TypeId a b)) <$> resolveAlias m qid <*> mapM (resolveAliasesType m) ts
 resolveAliasesType _ (GroundVar i) = pure $ GroundVar i
 resolveAliasesType _ (QuantVar i) = pure $ QuantVar i
 

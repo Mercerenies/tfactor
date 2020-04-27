@@ -85,7 +85,7 @@ declsToReadOnly qid ds r = foldM go r ds
 bindConstructors :: (MonadState (ResourceTable ReaderValue) m, MonadError FactorError m) =>
                     QId -> Id -> [TypeInfo] -> Module -> m Module
 bindConstructors qid v ts reader0 = foldM go reader0 (zip [0 :: Int ..] ts)
-    where desttype = NamedType $ qid <> QId [v]
+    where desttype = NamedType (TypeId (qid <> QId [v]) [])
           go reader (idx, TypeVal n ss) =
               let usedvars = concatMap allQuantVars $ Stack.toList ss -- TODO Plus any polymorphic vars
                   restvar = freshVar "R" usedvars
@@ -106,7 +106,7 @@ bindPattern :: (MonadState (ResourceTable ReaderValue) m, MonadError FactorError
                QId -> Id -> Id -> [TypeInfo] -> Module -> m Module
 bindPattern qid tname pname ts reader =
       traverseOf moduleNames (defineResource qidn pname (UDFunction pfntype $ Function (Just pname) impl)) reader
-    where typename = NamedType (qid <> QId [tname])
+    where typename = NamedType (TypeId (qid <> QId [tname]) [])
           qidn = qid <> QId [pname]
           usedvars = [] -- TODO This will be used once we allow polymorphic types
           restvar1 = freshVar "S" usedvars

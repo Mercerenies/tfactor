@@ -1,6 +1,6 @@
 {-# LANGUAGE PatternSynonyms, ViewPatterns #-}
 
-module Factor.Type(Type(.., TInt, TBool, TString, TSymbol),
+module Factor.Type(Type(.., TInt, TBool, TString, TSymbol), TypeId(..),
                    PolyFunctionType(..), FunctionType(..),
                    StackDesc(..), RestVar(..),
                    emptyFnType, emptyPolyFnType, functionType, polyFunctionType,
@@ -15,6 +15,7 @@ import Factor.Id
 import Factor.Stack(Stack, FromTop(..))
 import qualified Factor.Stack as Stack
 import Factor.Names
+import Factor.Util
 
 import Data.Map(Map)
 import qualified Data.Map as Map
@@ -25,10 +26,13 @@ import Control.Monad
 -- Note: Quantified variables can be specialized. Ground variables are
 -- ground and only unify with identical variables.
 data Type = FunType FunctionType
-          | NamedType QId
+          | NamedType TypeId
           | GroundVar Id
           | QuantVar Id
             deriving (Eq, Ord)
+
+data TypeId = TypeId QId [Type]
+              deriving (Eq, Ord)
 
 data PolyFunctionType = PolyFunctionType [Id] FunctionType
                         deriving (Eq)
@@ -44,20 +48,20 @@ data RestVar = RestGround Id
                deriving (Eq, Ord)
 
 pattern TInt :: Type
-pattern TInt <- NamedType ((\t -> guard (t == intType)) -> Just ())
-    where TInt = NamedType intType
+pattern TInt <- NamedType (TypeId ((\t -> guard (t == intType)) -> Just ()) [])
+    where TInt = NamedType (TypeId intType [])
 
 pattern TBool :: Type
-pattern TBool <- NamedType ((\t -> guard (t == boolType)) -> Just ())
-    where TBool = NamedType boolType
+pattern TBool <- NamedType (TypeId ((\t -> guard (t == boolType)) -> Just ()) [])
+    where TBool = NamedType (TypeId boolType [])
 
 pattern TString :: Type
-pattern TString <- NamedType ((\t -> guard (t == stringType)) -> Just ())
-    where TString = NamedType stringType
+pattern TString <- NamedType (TypeId ((\t -> guard (t == stringType)) -> Just ()) [])
+    where TString = NamedType (TypeId stringType [])
 
 pattern TSymbol :: Type
-pattern TSymbol <- NamedType ((\t -> guard (t == symbolType)) -> Just ())
-    where TSymbol = NamedType symbolType
+pattern TSymbol <- NamedType (TypeId ((\t -> guard (t == symbolType)) -> Just ()) [])
+    where TSymbol = NamedType (TypeId symbolType [])
 
 instance Show RestVar where
     showsPrec n (RestGround t) = ("'" ++) . showsPrec n t
@@ -72,6 +76,10 @@ instance Show Type where
     showsPrec n (NamedType t) = showsPrec n t
     showsPrec n (GroundVar t) = ("'" ++) . showsPrec n t
     showsPrec n (QuantVar t) = ("''" ++) . showsPrec n t
+
+instance Show TypeId where
+    showsPrec _ (TypeId qid refs) = shows qid . (" { " ++) . refs' . (" }" ++)
+        where refs' = sepBy (" , " ++) $ fmap shows refs
 
 instance Show FunctionType where
     showsPrec _ (FunctionType args rets) =

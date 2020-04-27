@@ -142,7 +142,7 @@ typeInfoGADT tname name = do
   unless (a == r) failure
   case a of { RestQuant _ -> pure () ; _ -> failure } -- If it's a ground term, then wtf?
   -- The result shall consist of exactly one argument: the type name itself
-  case rets of { Stack [NamedType r'] | QId [tname] == r' -> pure () ; _ -> failure }
+  case rets of { Stack [NamedType (TypeId r' [])] | QId [tname] == r' -> pure () ; _ -> failure }
   -- The arguments can have no variables
   case concatMap allGroundVars (Stack.toList args) ++ concatMap allQuantVars (Stack.toList args) of
     [] -> pure ()
@@ -335,11 +335,11 @@ traitInfoInclude = do
   name <- traitRef
   return (Id "", TraitInclude name) -- TODO Reorganize Trait so that the empty Id isn't necessary here.
 
-moduleType :: Parser QId
+moduleType :: Parser TypeId
 moduleType = try $ do
   qid <- qualifiedId
   when (qid == QId [Id "--"]) $ unexpected "--"
-  return qid
+  return (TypeId qid [])
 
 quantType :: Parser Id
 quantType = satisfy go
