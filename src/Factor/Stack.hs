@@ -1,4 +1,5 @@
-{-# LANGUAGE GeneralizedNewtypeDeriving #-}
+{-# LANGUAGE GeneralizedNewtypeDeriving, TypeFamilies, DeriveGeneric,
+  FlexibleInstances, MultiParamTypeClasses #-}
 
 module Factor.Stack(Stack(..), FromTop(..), FromBottom(..),
                     empty, singleton,
@@ -13,6 +14,8 @@ import Prelude hiding (length, reverse)
 import qualified Prelude
 import Control.Applicative.Backwards
 import qualified Control.Monad(zipWithM)
+import Control.Lens
+import GHC.Generics
 
 -- I'm tired of forgetting which side of my "stack" is the top, so I'm
 -- making an ADT for it.
@@ -23,10 +26,15 @@ newtype Stack a = Stack { unStack :: [a] }
     deriving (Show, Read, Eq, Ord, Functor, Semigroup, Monoid)
 
 newtype FromTop a = FromTop (Stack a)
-    deriving (Show, Read, Eq, Functor)
+    deriving (Show, Read, Eq, Functor, Generic)
 
 newtype FromBottom a = FromBottom (Stack a)
-    deriving (Show, Read, Eq, Functor)
+    deriving (Show, Read, Eq, Functor, Generic)
+
+instance Wrapped (FromTop a) where
+    type Unwrapped (FromTop a) = Stack a
+
+instance (t ~ FromTop a) => Rewrapped (FromTop a) t
 
 instance Foldable FromTop where
     foldMap f (FromTop (Stack xs)) = foldMap f xs
