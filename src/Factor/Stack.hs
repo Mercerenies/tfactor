@@ -36,6 +36,11 @@ instance Wrapped (FromTop a) where
 
 instance (t ~ FromTop a) => Rewrapped (FromTop a) t
 
+instance Wrapped (FromBottom a) where
+    type Unwrapped (FromBottom a) = Stack a
+
+instance (t ~ FromTop a) => Rewrapped (FromBottom a) t
+
 instance Foldable FromTop where
     foldMap f (FromTop (Stack xs)) = foldMap f xs
     foldr f x (FromTop (Stack xs)) = foldr f x xs
