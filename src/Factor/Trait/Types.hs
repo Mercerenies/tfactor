@@ -30,6 +30,7 @@ data TraitInfo = TraitFunction PolyFunctionType
                | TraitModule [(Id, TraitInfo)]
                | TraitFunctor [ModuleArg] [(Id, TraitInfo)]
                | TraitInclude TraitRef
+               | TraitType Int
                  deriving (Show, Eq)
 
 data FunctorInfo = FunctorUDFunction PolyFunctionType Function
@@ -37,6 +38,7 @@ data FunctorInfo = FunctorUDFunction PolyFunctionType Function
                  | FunctorModule (Map Id FunctorInfo)
                  | FunctorFunctor [ModuleArg] (Map Id FunctorInfo)
                  | FunctorTrait ParameterizedTrait
+--                 | FunctorType Int
                    deriving (Eq)
 
 data UnsatisfiedTrait = MissingFromTrait QId TraitInfo
@@ -66,5 +68,5 @@ instance Show FunctorInfo where
     showsPrec _ (FunctorUDMacro p _) = ("<FunctorUDMacro " ++) . shows p . (">" ++)
     showsPrec _ (FunctorModule m) = ("<FunctorModule " ++) . shows m . (">" ++)
     showsPrec _ (FunctorTrait t) = ("<FunctorTrait " ++) . shows t . (">" ++)
---    showsPrec _ FunctorDemandType = ("<FunctorDemandType>" ++)
     showsPrec _ (FunctorFunctor _ _) = ("<FunctorFunctor>" ++) -- TODO Print this better?
+--    showsPrec _ (FunctorType n) = ("<FunctorType args=" ++) . shows n . (">" ++)

@@ -114,6 +114,7 @@ resolveAliasesTrait m (TraitFunctor args xs) = do
   -- TODO Again, do we care about shadowing here? (See comments below in this file)
   xs' <- forM xs $ \(i, t) -> (,) i <$> resolveAliasesTrait m t
   return (TraitFunctor args' xs')
+resolveAliasesTrait _ (TraitType n) = pure $ TraitType n
 
 resolveAliasesAssert :: MonadError FactorError m =>
                         Map Id Alias -> ModuleDecl -> m ModuleDecl

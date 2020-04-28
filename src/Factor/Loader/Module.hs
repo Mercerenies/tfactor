@@ -70,7 +70,9 @@ loadModuleAt qid r =
 
 dependenciesFromModuleDecl :: ModuleDecl -> [GraphEdge]
 dependenciesFromModuleDecl (ModuleSynonym _ (Left dest)) = [GraphEdge dest' | dest' <- allPrefixes dest]
-dependenciesFromModuleDecl (ModuleSynonym _ (Right (TraitRef dest _))) = [GraphEdge dest' | dest' <- allPrefixes dest]
+dependenciesFromModuleDecl (ModuleSynonym _ (Right (TraitRef dest args))) =
+    [GraphEdge dest' | dest' <- allPrefixes dest] ++
+    [GraphEdge a' | a <- args, a' <- allPrefixes a]
 dependenciesFromModuleDecl (IncludeModule dest) = [GraphEdge dest' | dest' <- allPrefixes dest]
 dependenciesFromModuleDecl (Alias _ _) = []
 dependenciesFromModuleDecl (Open _) = []

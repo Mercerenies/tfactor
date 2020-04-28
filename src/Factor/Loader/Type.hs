@@ -16,6 +16,7 @@ import Control.Monad.Except
 import Control.Lens
 import Data.Map(Map)
 import qualified Data.Map as Map
+import qualified Data.List as List
 
 normalizeType :: (MonadReader ReadOnlyState m, MonadError FactorError m) =>
                  Map Id Trait -> Type -> m Type
@@ -23,9 +24,16 @@ normalizeType names (FunType (FunctionType (StackDesc args a) (StackDesc rets r)
   Stack.FromTop args' <- traverse (normalizeType names) (Stack.FromTop args)
   Stack.FromTop rets' <- traverse (normalizeType names) (Stack.FromTop rets)
   return $ FunType (FunctionType (StackDesc args' a) (StackDesc rets' r))
-normalizeType names (NamedType (TypeId qid ts)) -- TODO Fill out the commented area below
---    | QId (first:_rest) <- qid
---    , Just TypeValue <- Map.lookup first names = NamedType . TypeId qid <$> mapM (normalizeType names) ts
+normalizeType names (NamedType (TypeId qid ts)) -- TODO Check argument count here
+    | QId (first:(rest @ (_:_))) <- qid
+    , Just t <- Map.lookup first names = do
+                  r <- ask
+                  Trait t' <- nestedTraitDeep r t (QId $ init rest)
+                  case List.lookup (last rest) t' of
+                    Just (TraitType n)
+                        | n == length ts -> pure (NamedType (TypeId qid ts))
+                        | otherwise -> throwError (TypeArgError qid n (length ts))
+                    _ -> throwError (NoSuchType qid)
     | otherwise = ask >>= \r -> (\a b -> NamedType (TypeId a b)) <$> lookupFnName qid r <*> mapM (normalizeType names) ts
 normalizeType _ (GroundVar v) = pure $ GroundVar v
 normalizeType _ (QuantVar v) = pure $ QuantVar v
@@ -55,6 +63,7 @@ normalizeTypesTraitInfo names (TraitFunctor args xs) = do
       names'' = Map.singleton (Id "Self") selftrait <> Map.fromList names' <> names
   xs' <- mapM (traverseOf _2 $ normalizeTypesTraitInfo names'') xs
   return $ TraitFunctor args xs'
+normalizeTypesTraitInfo _ (TraitType n) = return $ TraitType n
 
 normalizeTypesTrait :: (MonadReader ReadOnlyState m, MonadError FactorError m) =>
                        Map Id Trait -> Trait -> m Trait

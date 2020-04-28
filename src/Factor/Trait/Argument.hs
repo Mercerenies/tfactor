@@ -65,7 +65,6 @@ subArgInFunctorInfo f (FunctorFunctor args t) =
     let f' v = if any (\(ModuleArg v' _) -> v == v') args then QId [v] else f v
     in -- TODO Substitute in args
        FunctorFunctor args (fmap (subArgInFunctorInfo f') t)
---subArgInFunctorInfo _ FunctorDemandType = FunctorDemandType
 
 substituteTrait :: (Id -> QId) -> Trait -> Trait
 substituteTrait f (Trait ts) = Trait $ fmap (_2 %~ go) ts
@@ -84,3 +83,4 @@ substituteTrait f (Trait ts) = Trait $ fmap (_2 %~ go) ts
                         f' v = if v `elem` argnames then QId [v] else f v
                         Trait xs' = substituteTrait f' (Trait xs)
                     in TraitFunctor args' xs'
+                TraitType n -> TraitType n

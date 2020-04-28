@@ -144,6 +144,8 @@ end
 ** SIDE PLAN
  + [X] Remove trait ~Type~
  + [X] Type resources store their argument count
- + [ ] Traits can demand types that take a specific number of args
+ + [X] Traits can demand types that take a specific number of args
+ + [ ] (Test the above with args)
+ + [ ] Functors can have types in them
  + [ ] Recover test cases, as much as possible
  + [ ] Canonical list type? (or is this out of scope for ~new-user-defined-types~?)

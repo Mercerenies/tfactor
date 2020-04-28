@@ -92,6 +92,7 @@ nestedTrait r (Trait xs) y = foldMapM check xs >>= \case
                 -- correctly. That would be a big project to make it
                 -- work though...
                 TraitFunctor {} -> pure []
+                TraitType {} -> pure []
 
 nestedTraitDeep :: MonadError FactorError m => ReadOnlyState -> Trait -> QId -> m Trait
 nestedTraitDeep r t (QId xs) = foldM (nestedTrait r) t xs
@@ -120,6 +121,7 @@ nestedTraitDeepFunctor r (Trait ys) (QId xs) = do
                 TraitFunctor ty zs
                     | v == last xs -> pure [(ty, zs)]
                     | otherwise -> throwError (NoSuchTrait (QId xs))
+                TraitType {} -> pure []
 
 -- TODO We want to verify properties like "does this included trait
 -- exist" or "did we pass the right number of arguments to the
@@ -156,10 +158,13 @@ moduleSatisfies reader (Trait reqs0) m0 = mapM_ (go (QId []) m0) reqs0
                                   t <- runReaderT (bindTrait q pt args) reader
                                   moduleSatisfies reader t m
                                 _ -> throwError (NoSuchTrait q)
-                   -- TraitDemandType -> if has (moduleType._Just) m0 then
-                   --                        pure ()
-                   --                    else
-                   --                        throwError (TraitError $ MissingFromTrait qid info)
+                   TraitType n -> do
+                             value' <- requireExists qid' info value
+                             case value' of
+                               TypeValue (TypeData n')
+                                   | n == n' -> pure ()
+                                   | otherwise -> throwError (TraitError $ IncompatibleWithTrait qid' info)
+                               _ -> throwError (TraitError $ MissingFromTrait qid' info)
                    TraitFunctor params info' -> do
                              value' <- requireExists qid' info value
                              ParameterizedModule args modl <-
@@ -262,6 +267,9 @@ makeMinimalModuleFor qid (Trait info) = do
                    inner <- makeMinimalInFunctor qid' (Trait info')
                    rid <- appendResourceRO' qid' (FunctorValue (ParameterizedModule args inner))
                    return $ set (moduleNames.at i) (Just rid) modl
+               TraitType n -> do
+                   rid <- appendResourceRO' qid' (TypeValue (TypeData n))
+                   return $ set (moduleNames.at i) (Just rid) modl
   dat <- foldM go emptyModule info
   rid <- appendResourceRO' qid (ModuleValue dat)
   return (dat, rid)
@@ -288,6 +296,7 @@ makeMinimalInFunctor qid (Trait info) = do
                TraitFunctor args info' -> do
                    info'' <- makeMinimalInFunctor qid' (Trait info')
                    return $ Map.insert i (FunctorFunctor args info'') modl
+               TraitType _ -> error "/////"
   foldM go Map.empty info
 
 unsafeImpl :: Sequence

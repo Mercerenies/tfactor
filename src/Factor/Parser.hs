@@ -108,7 +108,7 @@ moduleDecl = do
   return (name, decls)
 
 moduleSyn :: Parser (Id, Either QId TraitRef)
-moduleSyn = do
+moduleSyn = do -- TODO Use val not mod here
   name <- try (symbol "mod" *> unqualifiedId <* symbol "=")
   syn <- qualifiedId
   args <- option (Left syn) $ do
@@ -301,11 +301,12 @@ trait = do
 
 traitInfo :: Parser (Id, TraitInfo)
 traitInfo = traitInfoFun <|> traitInfoMod <|> -- TODO Macro declarations in traits
-            traitInfoInclude <|> traitInfoFunctor
+            traitInfoInclude <|> traitInfoFunctor <|>
+            traitInfoType
 
 traitInfoFun :: Parser (Id, TraitInfo)
 traitInfoFun = do
-  _ <- symbol "val"
+  _ <- symbol "val" -- TODO Change this to fun (I'll be using val for synonyms soon)
   name <- unqualifiedId
   ty <- functionType
   return (name, TraitFunction $ PolyFunctionType (allQuantVars $ FunType ty) ty)
@@ -339,6 +340,17 @@ traitInfoInclude = do
   _ <- symbol "include"
   name <- traitRef
   return (Id "", TraitInclude name) -- TODO Reorganize Trait so that the empty Id isn't necessary here.
+
+traitInfoType :: Parser (Id, TraitInfo)
+traitInfoType = do
+  _ <- symbol "type"
+  name <- unqualifiedId
+  n <- option 0 $ do
+             _ <- symbol "{"
+             args <- sepBy quantType (symbol ",")
+             _ <- symbol "}"
+             return (length args)
+  return (name, TraitType n)
 
 moduleType :: Parser TypeId
 moduleType = do
