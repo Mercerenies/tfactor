@@ -1,0 +1,31 @@
+
+trait ActsOn
+  type t
+  val perform ( Self.t -- Self.t )
+end
+
+mod AddOne
+  require ActsOn
+  mod t = Int end
+  fun perform ( Int -- Int )
+    1 +
+  end
+end
+
+# TODO This actually can't be done either because we can't do module synonyms in a functor
+#mod DoTwice { F : ActsOn }
+#  require ActsOnInt # TODO Can't express this right now since it's inside a functor.
+#  mod t = F.t end
+#  fun perform ( F.t -- F.t )
+#    F.perform F.perform
+#  end
+#end
+
+## Issue #8
+#mod M
+#  mod AddTwo = DoTwice { AddOne } end
+#end
+
+fun test ( -- Bool )
+  10 AddOne.perform 11 =
+end
