@@ -112,7 +112,7 @@ normalizeTypesRes (TraitValue (ParameterizedTrait args t)) = do
   names <- forM args $ \(ModuleArg i (TraitRef q innerargs)) -> lookupFn q reader >>= \case
            TraitValue pt -> fmap ((,) i) $ bindTraitAndNormalize q pt innerargs
            _ -> throwError (NoSuchTrait q)
-  let names' = Map.fromList names
+  let names' = Map.singleton (Id "Self") t <> Map.fromList names
   t' <- normalizeTypesTrait names' t
   return $ TraitValue (ParameterizedTrait args t')
 normalizeTypesRes (FunctorValue (ParameterizedModule args t)) = do
@@ -136,7 +136,8 @@ normalizeAllTypes qids r = foldM (flip normalizeTypesAt) r qids
 
 bindTraitAndNormalize :: (MonadReader ReadOnlyState m, MonadError FactorError m) =>
                          QId -> ParameterizedTrait -> [QId] -> m Trait
-bindTraitAndNormalize qid pt args = bindTrait qid pt args >>= normalizeTypesTrait Map.empty
+bindTraitAndNormalize qid pt args = bindTrait qid pt args >>=
+                                    \t -> normalizeTypesTrait (Map.singleton (Id "Self") t) t
 
 functorToTrait :: QId -> ParameterizedModule -> ParameterizedTrait
 functorToTrait qid0 (ParameterizedModule params info0) =

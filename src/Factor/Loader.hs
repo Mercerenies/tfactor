@@ -22,30 +22,30 @@ import Control.Lens
 -- It may be okay. Think about it, and about the order in which things
 -- happen.
 
-validateTraits :: (MonadError FactorError m, MonadReader ReadOnlyState m) => Module -> m ()
-validateTraits m =
+validateTraits :: (MonadError FactorError m, MonadReader ReadOnlyState m) => QId -> Module -> m ()
+validateTraits qid0 m =
     forM_ (m^.moduleDecls) $ \case
         AssertTrait (TraitRef qid args) ->
             ask >>= lookupFn qid >>= \case
-                TraitValue pt -> bindTraitAndNormalize qid pt args >>= \t -> moduleSatisfies' t m
+                TraitValue pt -> bindTraitAndNormalize qid pt args >>= \t -> moduleSatisfies' t qid0 m
                 _ -> throwError (NoSuchTrait qid)
         Alias _ _ -> pure ()
         Open _ -> pure ()
         ModuleSynonym _ _ -> pure ()
         IncludeModule _ -> pure ()
 
-loadEntity :: (MonadError FactorError m, MonadReader ReadOnlyState m) => ReaderValue -> m ReaderValue
-loadEntity r = do
+loadEntity :: (MonadError FactorError m, MonadReader ReadOnlyState m) => QId -> ReaderValue -> m ReaderValue
+loadEntity qid r = do
   checkTypeOf MacroPass r
   r' <- augmentWithMacros r
   checkTypeOf FunctionPass r'
   case r of
-    ModuleValue m -> validateTraits m
+    ModuleValue m -> validateTraits qid m
     _ -> pure ()
   pure r'
 
 loadEntityAt :: MonadError FactorError m => QId -> ReadOnlyState -> m ReadOnlyState
-loadEntityAt qid r = traverseOf (atQId qid) (\v -> runReaderT (loadEntity v) r) r
+loadEntityAt qid r = traverseOf (atQId qid) (\v -> runReaderT (loadEntity qid v) r) r
 
 loadEntities :: MonadError FactorError m => [QId] -> ReadOnlyState -> m ReadOnlyState
 loadEntities qids r = do

@@ -6,6 +6,7 @@ import Factor.Util
 import Factor.Id
 import Factor.Type
 import Factor.Type.Error
+import Factor.Error
 import Factor.State.Reader
 import Factor.Stack(Stack(..))
 import qualified Factor.Stack as Stack
@@ -111,7 +112,7 @@ occursCheck (Assumptions m m') =
              let zipped = zip vs (fmap fst es) in
              throwError (fromTypeError $ OccursCheck zipped)
 
-consolidate :: (FromTypeError e, MonadError e m,
+consolidate :: (MonadError FactorError m,
                 MonadWriter AssumptionsAll m, MonadReader ReadOnlyState m) =>
                AssumptionsAll -> m Assumptions
 consolidate (AssumptionsAll m0 m1) =
@@ -119,7 +120,7 @@ consolidate (AssumptionsAll m0 m1) =
         mapM (foldM1 unify) m0 <*>
         mapM (foldM1 unifyStack) m1
 
-consolidateUntilDone :: (FromTypeError e, MonadError e m, MonadReader ReadOnlyState m) =>
+consolidateUntilDone :: (MonadError FactorError m, MonadReader ReadOnlyState m) =>
                         AssumptionsAll -> m Assumptions
 consolidateUntilDone asm = fmap removeSynonyms (go asm) >>= \asm' -> occursCheck asm' >> pure asm'
     where go x = runWriterT (consolidate x) >>=
@@ -148,7 +149,10 @@ _unifyHandlesThisCase (QuantVar {}) = ()
 -- GroundVar is trivial as it's just an equality check, which is
 -- handled at the very beginning.
 
-unifyStack :: (FromTypeError e, MonadError e m,
+canon :: (MonadReader ReadOnlyState m, MonadError FactorError m) => QId -> m QId
+canon qid = ask >>= lookupFnName qid
+
+unifyStack :: (MonadError FactorError m,
                MonadWriter AssumptionsAll m, MonadReader ReadOnlyState m) =>
               StackDesc -> StackDesc -> m StackDesc
 unifyStack x y | x == y = pure x
@@ -167,7 +171,7 @@ unifyStack (StackDesc (Stack (a:as)) x) (StackDesc (Stack (b:bs)) y) = do
   StackDesc (Stack abs_) xy <- StackDesc (Stack as) x `unifyStack` StackDesc (Stack bs) y
   return $ StackDesc (Stack (ab:abs_)) xy
 
-unify :: (FromTypeError e, MonadError e m,
+unify :: (MonadError FactorError m,
           MonadWriter AssumptionsAll m, MonadReader ReadOnlyState m) =>
          Type -> Type -> m Type
 unify a b | a == b = pure a
@@ -175,18 +179,23 @@ unify (QuantVar a) (QuantVar b) =
     QuantVar a <$ (assume a (QuantVar b) >> assume b (QuantVar a))
 unify (QuantVar a) b = b <$ assume a b
 unify a (QuantVar b) = a <$ assume b a
-unify (NamedType (TypeId a as)) (NamedType (TypeId b bs))
-    | a == b && length as == length bs = NamedType . TypeId a <$> zipWithM unify as bs
+unify (NamedType (TypeId a as)) (NamedType (TypeId b bs)) = do
+  a' <- canon a
+  b' <- canon b
+  if a' == b' && length as == length bs then
+      NamedType . TypeId a' <$> zipWithM unify as bs
+  else
+      throwError (fromTypeError $ CouldNotUnify (NamedType (TypeId a as)) (NamedType (TypeId b bs)))
 unify (FunType (FunctionType args1 rets1)) (FunType (FunctionType args2 rets2)) =
     liftA2 (fmap FunType . FunctionType) (unifyStack args1 args2) (unifyStack rets1 rets2)
 unify a b = throwError (fromTypeError $ CouldNotUnify a b)
 
-canUnifyFn :: (FromTypeError e, MonadError e m,
+canUnifyFn :: (MonadError FactorError m,
                MonadWriter AssumptionsAll m, MonadReader ReadOnlyState m) =>
                FunctionType -> FunctionType -> m ()
 canUnifyFn = canUnify `on` FunType
 
-canUnify :: (FromTypeError e, MonadError e m,
+canUnify :: (MonadError FactorError m,
              MonadWriter AssumptionsAll m, MonadReader ReadOnlyState m) =>
              Type -> Type -> m ()
 canUnify s t = do
@@ -241,7 +250,7 @@ requireSubtypeRest (RestGround a) (RestGround b)
                               CouldNotUnifyStack (StackDesc mempty $ RestGround a)
                                                  (StackDesc mempty $ RestGround b))
 
-requireSubtypeStack :: (FromTypeError e, MonadError e m,
+requireSubtypeStack :: (MonadError FactorError m,
                         MonadWriter AssumptionsAll m, MonadReader ReadOnlyState m) =>
                        StackDesc -> StackDesc -> m ()
 requireSubtypeStack (StackDesc xs x) (StackDesc ys y) = do
@@ -266,13 +275,13 @@ requireSubtypeStack (StackDesc xs x) (StackDesc ys y) = do
         error "Assertion violated in requireSubtypeStack"
 
 -- Left-to-right composition, so first function happens first.
-composeFunctions :: (FromTypeError e, MonadError e m,
+composeFunctions :: (MonadError FactorError m,
                      MonadWriter AssumptionsAll m, MonadReader ReadOnlyState m) =>
                     FunctionType -> FunctionType -> m FunctionType
 composeFunctions (FunctionType a b) (FunctionType b' c) =
     requireSubtypeStack b b' >> pure (FunctionType a c)
 
-composePFunctions :: (FromTypeError e, MonadError e m,
+composePFunctions :: (MonadError FactorError m,
                       MonadWriter AssumptionsAll m, MonadReader ReadOnlyState m) =>
                      PolyFunctionType -> PolyFunctionType -> m PolyFunctionType
 composePFunctions (PolyFunctionType i f) (PolyFunctionType j g) =

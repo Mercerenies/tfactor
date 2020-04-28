@@ -14,7 +14,6 @@ import Factor.Error
 import Factor.Id
 import Factor.Util
 import Factor.Type
-import Factor.Type.Error
 import Factor.Type.Unify
 import Factor.State.Resource
 import Factor.Code
@@ -34,7 +33,7 @@ requireSubtype :: (FromUnsatisfiedTrait e, MonadError e m) =>
                   ReadOnlyState -> QId -> TraitInfo -> Type -> Type -> m ()
 requireSubtype reader q t a b =
     case evalRWST (a `canUnify` b) reader () of
-      Left (_ :: TypeError) -> throwError (fromUnsatisfiedTrait $ IncompatibleWithTrait q t)
+      Left (_ :: FactorError) -> throwError (fromUnsatisfiedTrait $ IncompatibleWithTrait q t)
       Right ((), _) -> pure ()
 
 requireExists :: (FromUnsatisfiedTrait e, MonadError e m) => QId -> TraitInfo -> Maybe ReaderValue -> m ReaderValue
@@ -127,8 +126,11 @@ nestedTraitDeepFunctor r (Trait ys) (QId xs) = do
 -- TODO We want to verify properties like "does this included trait
 -- exist" or "did we pass the right number of arguments to the
 -- included trait" before requiring the trait in a module.
-moduleSatisfies :: MonadError FactorError m => ReadOnlyState -> Trait -> Module -> m ()
-moduleSatisfies reader (Trait reqs0) m0 = mapM_ (go (QId []) m0) reqs0
+moduleSatisfies :: MonadError FactorError m => ReadOnlyState -> Trait -> QId -> Module -> m ()
+moduleSatisfies reader t0 qid0 m0 = let f v | v == Id "Self" = qid0
+                                            | otherwise = QId [v]
+                                        Trait reqs0 = substituteTrait f t0
+                                    in mapM_ (go qid0 m0) reqs0
     where go qid m (v, info) =
               let qid' = qid <> QId [v]
                   value = (m^.moduleNames.possibly (ix v)) >>= (\rid -> reader^.readerResources.possibly (ix rid))
@@ -157,7 +159,7 @@ moduleSatisfies reader (Trait reqs0) m0 = mapM_ (go (QId []) m0) reqs0
                        lookupFn q reader >>= \case
                                 TraitValue pt -> do
                                   t <- runReaderT (bindTrait q pt args) reader
-                                  moduleSatisfies reader t m
+                                  moduleSatisfies reader t qid m
                                 _ -> throwError (NoSuchTrait q)
                    TraitType n -> do
                              value' <- requireExists qid' info value
@@ -187,11 +189,11 @@ moduleSatisfies reader (Trait reqs0) m0 = mapM_ (go (QId []) m0) reqs0
                              ((modl', rid, args'), reader') <- runStateT (makeMinimalModule (QId [freshname]) (ParameterizedModule args modl)) reader
                              let reader'' = set (readerNames.at freshname) (Just rid) reader'
                              trait <- runReaderT (bindTrait qid' (ParameterizedTrait params (Trait info')) args') reader''
-                             moduleSatisfies reader'' trait modl'
+                             moduleSatisfies reader'' trait qid' modl'
 
 moduleSatisfies' :: (MonadReader ReadOnlyState m, MonadError FactorError m) =>
-                    Trait -> Module -> m ()
-moduleSatisfies' t m = ask >>= \r -> moduleSatisfies r t m
+                    Trait -> QId -> Module -> m ()
+moduleSatisfies' t qid m = ask >>= \r -> moduleSatisfies r t qid m
 
 -- TODO Should we auto-substitute Self here like we do in bindModule?
 bindTrait :: (MonadReader ReadOnlyState m, MonadError FactorError m) =>
@@ -209,7 +211,7 @@ bindTrait qid (ParameterizedTrait params trait) args
                                              -- infinite loop issues in the compiler that
                                              -- we need to detect and err out of.
                             _ -> throwError (NoSuchTrait req)
-                    moduleSatisfies' req' modl
+                    moduleSatisfies' req' arg modl
                     return (param, arg)
         return $ bindTraitUnchecked qid (ParameterizedTrait params trait) args
 
@@ -317,7 +319,7 @@ bindModule mqid fnqid (ParameterizedModule params info) args
                     req' <- get >>= lookupFn req >>= \case
                             TraitValue pt -> get >>= runReaderT (bindTrait req pt innerargs)
                             _ -> throwError (NoSuchTrait req)
-                    get >>= runReaderT (moduleSatisfies' req' modl)
+                    get >>= runReaderT (moduleSatisfies' req' arg modl)
                     return (param, arg)
         -- TODO Self to Factor.Names
         let submap = Map.fromList (zipped ++ [(Id "Self", mqid)])
