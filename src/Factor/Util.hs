@@ -1,7 +1,7 @@
 {-# LANGUAGE RankNTypes #-}
 
 module Factor.Util(sepBy, padLeft, foldM1, insertOrUpdate, errorToMaybe, setFilterMap,
-                   possibly, possibly', foldMapM, containsDuplicate) where
+                   possibly, possibly', foldMapM, containsDuplicate, identifiersFrom) where
 
 import Control.Monad
 import Control.Monad.Except
@@ -52,3 +52,8 @@ containsDuplicate = go . List.sort
     where go (x:y:_) | x == y = Just x
           go (_:xs) = go xs
           go [] = Nothing
+
+-- Given input ['a', 'b'], produces ["a", "b", "aa", "ab", "ba", "bb", "aaa", "aab", ...]
+identifiersFrom :: [a] -> [[a]]
+identifiersFrom xs = concatMap ofLength [1..]
+    where ofLength n = replicateM n xs

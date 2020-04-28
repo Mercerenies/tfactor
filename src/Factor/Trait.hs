@@ -296,7 +296,9 @@ makeMinimalInFunctor qid (Trait info) = do
                TraitFunctor args info' -> do
                    info'' <- makeMinimalInFunctor qid' (Trait info')
                    return $ Map.insert i (FunctorFunctor args info'') modl
-               TraitType _ -> error "/////"
+               TraitType n -> do
+                      let args = take n . fmap Id $ identifiersFrom ['a'..'z']
+                      return $ Map.insert i (FunctorType args []) modl
   foldM go Map.empty info
 
 unsafeImpl :: Sequence
