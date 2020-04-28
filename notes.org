@@ -145,7 +145,7 @@ end
  + [X] Remove trait ~Type~
  + [X] Type resources store their argument count
  + [X] Traits can demand types that take a specific number of args
- + [ ] (Test the above with args)
- + [ ] Functors can have types in them
- + [ ] Recover test cases, as much as possible
+ + [X] (Test the above with args)
+ + [X] Functors can have types in them
+ + [X] Recover test cases, as much as possible
  + [ ] Canonical list type? (or is this out of scope for ~new-user-defined-types~?)

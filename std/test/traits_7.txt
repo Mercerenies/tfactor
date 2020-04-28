@@ -1,0 +1,14 @@
+
+trait HasTypeWithOneArg
+  type t { 'a }
+end
+
+mod Impl
+  require HasTypeWithOneArg
+  type t { 'a }
+    | Instance of 'a
+end
+
+fun test ( -- Bool )
+  5 Impl.Instance [ 5 = ] Impl.*t
+end
