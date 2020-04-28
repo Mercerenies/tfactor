@@ -1,0 +1,34 @@
+
+# As with many of the HasType test cases, this isn't how you would
+# idiomatically express this in the language, as it's more convenient
+# and sensible to just have a parameterized type directly. But HasType
+# does make for useful test cases.
+
+trait HasType
+  type t
+end
+
+mod ContainsTwoOf { F : HasType }
+  type t
+    | Instance of ( F.t F.t )
+end
+
+# Issue #8
+mod M
+  mod HasString mod t = String end end
+  mod HasInt mod t = Int end end
+end
+
+mod N
+  mod TwoString = ContainsTwoOf { M.HasString } end
+  mod TwoInt = ContainsTwoOf { M.HasInt } end
+end
+
+fun drop-string ( String -- )
+  drop
+end
+
+fun test ( -- Bool )
+  "foo" "bar" N.TwoString.Instance [ drop-string drop-string ] N.TwoString.*t
+  10 20 N.TwoInt.Instance [ 20 = swap 10 = and ] N.TwoInt.*t
+end
