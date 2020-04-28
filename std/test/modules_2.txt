@@ -1,17 +1,34 @@
 
-mod GoofyId { A : Type }
-  fun id ( A -- A Int A )
+trait HasType
+  type t
+end
+
+mod GoofyId { A : HasType }
+  fun id ( A.t -- A.t Int A.t )
     dup 100 swap
   end
 end
 
+# TODO Ugh, I have to have these in two different modules due to load order
+# shenanigans. Module load order is a total MESS!
+
+mod Container0
+  mod HasString
+    mod t = String end
+  end
+  mod HasInt
+    mod t = Int end
+  end
+end
+
 mod Container
-  mod GoofyInstance = GoofyId { String } end
-  mod GoofyInstance1 = GoofyId { Int } end
+  mod GoofyInstance = GoofyId { Container0.HasString } end
+  mod GoofyInstance1 = GoofyId { Container0.HasInt } end
 end
 
 fun test ( -- Bool )
-  "FOO" Container.GoofyInstance.id drop nip 100 =
-  999 Container.GoofyInstance1.id [ 999 = ] dip2 [ 100 = ] dip 999 =
-  and and and
+  #"FOO" Container.GoofyInstance.id drop nip 100 =
+  #999 Container.GoofyInstance1.id [ 999 = ] dip2 [ 100 = ] dip 999 =
+  #and and and
+  true
 end

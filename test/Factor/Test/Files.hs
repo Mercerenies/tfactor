@@ -23,9 +23,9 @@ tests p = TestLabel "Factor.Test.Files" $ TestList [
            testFile p "std/test/recursion_1.txt",
            testFile p "std/test/typechecker_1.txt",
            testFile p "std/test/modules_1.txt",
---           testFile p "std/test/modules_2.txt",
+           testFile p "std/test/modules_2.txt",
            testFile p "std/test/modules_3.txt",
---           testFile p "std/test/modules_4.txt",
+           testFile p "std/test/modules_4.txt",
            testFile p "std/test/modules_5.txt",
            testFile p "std/test/usertypes_1.txt",
            testFile p "std/test/usertypes_2.txt",
@@ -44,7 +44,7 @@ tests p = TestLabel "Factor.Test.Files" $ TestList [
            testFile p "std/test/traits_3.txt",
            testFile p "std/test/traits_4.txt",
            testFile p "std/test/traits_5.txt",
---           testFile p "std/test/traits_6.txt",
+           testFile p "std/test/traits_6.txt",
            testFile p "std/test/general_1.txt"
           ]
 

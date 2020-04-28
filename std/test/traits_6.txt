@@ -1,17 +1,21 @@
 
+trait HasType
+  type t
+end
+
 trait A
-  mod B { T1 : Type }
-    mod C { T2 : Type }
-      val do-swap ( T1 T2 -- T2 T1 )
+  mod B { T1 : HasType }
+    mod C { T2 : HasType }
+      val do-swap ( T1.t T2.t -- T2.t T1.t )
     end
   end
 end
 
 mod AA
   require A
-  mod B { S1 : Type }
-    mod C { T1 : Type }
-      fun do-swap ( S1 T1 -- T1 S1 )
+  mod B { S1 : HasType }
+    mod C { T1 : HasType }
+      fun do-swap ( S1.t T1.t -- T1.t S1.t )
         Prelude.swap
       end
     end
@@ -19,12 +23,16 @@ mod AA
 end
 
 # Issue #8
+mod L
+  mod HasInt mod t = Int end end
+end
+
 mod M
-  mod MB = AA.B { Int } end
+  mod MB = AA.B { L.HasInt } end
 end
 
 mod N
-  mod NC = M.MB.C { Int } end
+  mod NC = M.MB.C { L.HasInt } end
 end
 
 fun test ( -- Bool )

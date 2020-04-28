@@ -1,19 +1,27 @@
 
-mod Foo { A : Type }
-  mod Bar { B : Type }
-    fun my-swap ( A B -- B A )
+trait HasType
+  type t
+end
+
+mod Foo { A : HasType }
+  mod Bar { B : HasType }
+    fun my-swap ( A.t B.t -- B.t A.t )
       Prelude.swap
     end
   end
 end
 
 # Issue #8
+mod L
+  mod HasInt mod t = Int end end
+end
+
 mod M
-  mod MyFoo = Foo { Int } end
+  mod MyFoo = Foo { L.HasInt } end
 end
 
 mod N
-  mod MyBar = M.MyFoo.Bar { Int } end
+  mod MyBar = M.MyFoo.Bar { L.HasInt } end
 end
 
 # TODO Definitely some awkwardness if we make M and N one module.
