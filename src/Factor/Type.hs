@@ -193,7 +193,7 @@ allGroundVars :: Type -> [Id]
 allGroundVars = Set.toList . go
     where go (FunType (FunctionType (StackDesc xs x) (StackDesc ys y))) =
               foldMap go (FromTop xs) <> include x <> foldMap go (FromTop ys) <> include y
-          go (NamedType _) = Set.empty
+          go (NamedType (TypeId _ ts)) = foldMap go ts
           go (GroundVar v) = Set.singleton v
           go (QuantVar {}) = Set.empty
           include (RestGround x) = Set.singleton x
@@ -203,7 +203,7 @@ allQuantVars :: Type -> [Id]
 allQuantVars = Set.toList . go
     where go (FunType (FunctionType (StackDesc xs x) (StackDesc ys y))) =
               foldMap go (FromTop xs) <> include x <> foldMap go (FromTop ys) <> include y
-          go (NamedType _) = Set.empty
+          go (NamedType (TypeId _ ts)) = foldMap go ts
           go (GroundVar {}) = Set.empty
           go (QuantVar v) = Set.singleton v
           include (RestQuant x) = Set.singleton x
