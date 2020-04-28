@@ -5,7 +5,6 @@ import Factor.Id
 import Factor.Type
 import Factor.Trait.Types
 import Factor.Code
-import Factor.Stack(Stack)
 
 data Declaration = FunctionDecl PolyFunctionType Function
                  | MacroDecl PolyFunctionType Macro
@@ -21,9 +20,6 @@ data Declaration = FunctionDecl PolyFunctionType Function
                  | RequireDecl TraitRef
                  | IncludeDecl QId
                    deriving (Show, Eq)
-
-data TypeInfo = TypeVal Id (Stack Type)
-                deriving (Show, Eq)
 
 -- data RecordInfo = RecordConstructor Id
 --                 | RecordField Id Type

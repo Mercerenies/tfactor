@@ -4,6 +4,7 @@ module Factor.Trait.Types where
 import Factor.Type
 import Factor.Id
 import Factor.Code
+import Factor.Stack(Stack)
 
 import Data.Map(Map)
 
@@ -40,6 +41,9 @@ data FunctorInfo = FunctorUDFunction PolyFunctionType Function
                  | FunctorTrait ParameterizedTrait
 --                 | FunctorType Int
                    deriving (Eq)
+
+data TypeInfo = TypeVal Id (Stack Type)
+                deriving (Show, Eq)
 
 data UnsatisfiedTrait = MissingFromTrait QId TraitInfo
                       | IncompatibleWithTrait QId TraitInfo
