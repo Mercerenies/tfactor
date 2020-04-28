@@ -39,7 +39,7 @@ data FunctorInfo = FunctorUDFunction PolyFunctionType Function
                  | FunctorModule (Map Id FunctorInfo)
                  | FunctorFunctor [ModuleArg] (Map Id FunctorInfo)
                  | FunctorTrait ParameterizedTrait
---                 | FunctorType Int
+                 | FunctorType [Id] [TypeInfo]
                    deriving (Eq)
 
 data TypeInfo = TypeVal Id (Stack Type)
@@ -73,4 +73,4 @@ instance Show FunctorInfo where
     showsPrec _ (FunctorModule m) = ("<FunctorModule " ++) . shows m . (">" ++)
     showsPrec _ (FunctorTrait t) = ("<FunctorTrait " ++) . shows t . (">" ++)
     showsPrec _ (FunctorFunctor _ _) = ("<FunctorFunctor>" ++) -- TODO Print this better?
---    showsPrec _ (FunctorType n) = ("<FunctorType args=" ++) . shows n . (">" ++)
+    showsPrec _ (FunctorType vs _) = ("<FunctorType args=" ++) . shows (length vs) . (">" ++)

@@ -359,6 +359,7 @@ bindFunctorInfo subfn qid name info m =
               res = FunctorValue (ParameterizedModule args impl')
           rid <- appendResourceRO' qid res
           return $ set (moduleNames.at name) (Just rid) m
+      FunctorType _vs _ts -> error "////"
 
 appendResourceRO' :: MonadState ReadOnlyState m => QId -> ReaderValue -> m RId
 appendResourceRO' qid value = state (appendResourceRO qid value)

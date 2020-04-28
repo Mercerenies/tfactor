@@ -162,6 +162,10 @@ resolveAliasesFunctorInfo m (FunctorFunctor args xs) = do
   -- TODO Again, do we care about shadowing here? (See comments below in this file)
   xs' <- mapM (resolveAliasesFunctorInfo m) xs
   return (FunctorFunctor args' xs')
+resolveAliasesFunctorInfo m (FunctorType vs ts) = do
+  ts' <- forM ts $ \(TypeVal t xs) ->
+           TypeVal t <$> _Unwrapping Stack.FromTop (mapM (resolveAliasesType m)) xs
+  return $ FunctorType vs ts'
 
 resolveAliasesResource :: MonadError FactorError m =>
                           Map Id Alias -> ReaderValue -> m ReaderValue
