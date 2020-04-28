@@ -188,7 +188,8 @@ functorInfo = (\(t, s) -> (fromJust $ functionName s, FunctorUDFunction t s)) <$
               (\(t, s) -> (macroName s, FunctorUDMacro t s)) <$> macroDecl <|>
               (\(i, m) -> (i, FunctorModule m)) <$> modWithinFunctor <|>
               (\(i, t) -> (i, FunctorTrait t)) <$> trait <|>
-              (\(i, a, t) -> (i, FunctorFunctor a t)) <$> functorWithinFunctor
+              (\(i, a, t) -> (i, FunctorFunctor a t)) <$> functorWithinFunctor <|>
+              (\(i, vs, ts) -> (i, FunctorType vs ts)) <$> typeDecl
 
 modWithinFunctor :: Parser (Id, Map Id FunctorInfo)
 modWithinFunctor = do
