@@ -43,7 +43,7 @@ declsToReadOnly qid ds r = foldM go r ds
                      let qid' = qid <> QId [v]
                      inner <- declsToReadOnly qid' def emptyModule
                      traverseOf moduleNames (defineModule qid' v inner) reader
-                TypeDecl v vs info -> declareType qid v vs info reader
+                TypeDecl v vs info -> declareType (TypeToDeclare qid v vs info) reader
                 ModuleSyn v dest -> pure $ over moduleDecls (++ [ModuleSynonym v dest]) reader
                 -- RecordDecl v def
                 --  | Map.member v (reader^.moduleNames) -> throwError (DuplicateDecl v)
