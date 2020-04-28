@@ -19,6 +19,7 @@ import Factor.Type.Unify
 import Factor.State.Resource
 import Factor.Code
 import Factor.Names
+import Factor.State.TypeDecl
 
 import Control.Monad.Reader hiding (reader)
 import Control.Monad.Except
@@ -361,7 +362,10 @@ bindFunctorInfo subfn qid name info m =
               res = FunctorValue (ParameterizedModule args impl')
           rid <- appendResourceRO' qid res
           return $ set (moduleNames.at name) (Just rid) m
-      FunctorType _vs _ts -> error "////"
+      FunctorType vs ts -> do
+          let ts' = fmap (\(TypeVal t xs) -> TypeVal t $ fmap (subArgInType subfn) xs) ts
+          let prefixqid = QId . init $ unQId qid
+          overLens readerResources $ declareType (TypeToDeclare prefixqid name vs ts') m
 
 appendResourceRO' :: MonadState ReadOnlyState m => QId -> ReaderValue -> m RId
 appendResourceRO' qid value = state (appendResourceRO qid value)

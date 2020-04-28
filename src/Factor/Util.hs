@@ -1,10 +1,11 @@
 {-# LANGUAGE RankNTypes #-}
 
 module Factor.Util(sepBy, padLeft, foldM1, insertOrUpdate, errorToMaybe, setFilterMap,
-                   possibly, possibly', foldMapM, containsDuplicate, identifiersFrom) where
+                   possibly, possibly', foldMapM, containsDuplicate, identifiersFrom, overLens) where
 
 import Control.Monad
 import Control.Monad.Except
+import Control.Monad.State
 import Control.Lens
 import Data.Map(Map)
 import qualified Data.Map as Map
@@ -57,3 +58,13 @@ containsDuplicate = go . List.sort
 identifiersFrom :: [a] -> [[a]]
 identifiersFrom xs = concatMap ofLength [1..]
     where ofLength n = replicateM n xs
+
+-- TODO If I'm feeling particularly masochistic someday, I may try to
+-- generalize this type from Lens' to one of the insane type synonyms
+-- buried in Control.Lens.
+overLens :: MonadState s m => Lens' s a -> StateT a m b -> m b
+overLens acc st = do
+  s <- use acc
+  (b, s') <- runStateT st s
+  acc .= s'
+  return b
