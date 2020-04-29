@@ -194,7 +194,7 @@ recordDecl = do
   con <- case constrs of
            [con] -> return con
            _ -> fail ("Wrong number of constructors to record " ++ show name)
-  return (name, args, RecordInfo con fields decls)
+  return (name, args, RecordInfo con (reverse fields) (reverse decls)) -- Unreversing them from construction order
 
 recordInfo :: Parser RecordInfoImpl
 recordInfo =

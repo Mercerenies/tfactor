@@ -58,6 +58,6 @@ desugarRecord name vs (RecordInfo con fields decls) =
         accessorType t = polyFunctionType (stackvar : vs) [targettype] (RestQuant stackvar)
                                                           [t] (RestQuant stackvar)
         accessorFor (i, (n, t)) = FunctionDecl (accessorType t) (Function (Just n) (forNthField fieldcount i))
-        accessors = fmap accessorFor $ zip [0..] fields
+        accessors = fmap accessorFor $ zip [0..] (reverse fields)
         inner = [type_] ++ accessors ++ decls
     in ModuleDecl name inner
