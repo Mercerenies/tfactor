@@ -1,7 +1,7 @@
 {-# LANGUAGE ScopedTypeVariables, FlexibleContexts, RankNTypes #-}
 
 module Factor.State.Reader(ReadOnlyState(ReadOnlyState), ReaderValue(..),
-                           Module(Module), ModuleDecl(..), TypeData(..),
+                           Module(Module), SynonymType(..), ModuleDecl(..), TypeData(..),
                            readerModule, readerNames, readerResources,
                            moduleNames, moduleDecls,
                            newReader, emptyModule, mapToModule,
@@ -106,6 +106,7 @@ allNamesInModule resources k0 = fold . Map.mapWithKey go' . view moduleNames
                                  TraitValue {} -> []
                                  FunctorValue {} -> [] -- Nothing allocated yet.
                                  TypeValue {} -> []
+                                 SynonymPlaceholder {} -> [] -- Nothing visible yet.
               in k : innernames
           go' :: Id -> RId -> [QId]
           go' k v = case getResource v resources of
@@ -133,6 +134,7 @@ readerType (ModuleValue _) = NoType
 readerType (TraitValue _) = NoType
 readerType (FunctorValue _) = NoType
 readerType (TypeValue _) = NoType
+readerType (SynonymPlaceholder _) = NoType
 
 readerFunctionType :: ReaderValue -> Maybe PolyFunctionType
 readerFunctionType v = case readerType v of

@@ -2,7 +2,7 @@
     GeneralizedNewtypeDeriving, TypeFamilies, DeriveTraversable #-}
 
 module Factor.State.Types(EvalState(..), ReadOnlyState(ReadOnlyState), ReaderValue(..), RId,
-                          Module(Module), ModuleDecl(..),
+                          Module(Module), SynonymType(..), ModuleDecl(..),
                           BuiltIn(..), BuiltInConstraints,
                           ResourceTable(..), TypeData(..),
                           readerModule, readerNames, readerResources,
@@ -42,11 +42,16 @@ data ReaderValue = UDFunction PolyFunctionType Function -- User-defined function
                  | TraitValue ParameterizedTrait
                  | FunctorValue ParameterizedModule
                  | TypeValue TypeData
+                 | SynonymPlaceholder SynonymType
 
 data Module = Module {
       _moduleNames :: Map Id RId,
       _moduleDecls :: [ModuleDecl]
     } deriving (Show)
+
+data SynonymType = SynonymGeneral QId
+                 | ActualizeFunctor TraitRef
+                   deriving (Show, Eq)
 
 data ModuleDecl = Alias Id QId
                 | Open QId
@@ -79,6 +84,7 @@ instance Show ReaderValue where
     showsPrec _ (TraitValue t) = ("<TraitValue " ++) . shows t . (">" ++)
     showsPrec _ (FunctorValue m) = ("<FunctorValue " ++) . shows m . (">" ++)
     showsPrec _ (TypeValue (TypeData n)) = ("<TypeValue args=" ++) . shows n . (">" ++)
+    showsPrec _ (SynonymPlaceholder r) = ("<SynonymPlaceholder " ++) . shows r . (">" ++)
 
 type RId = Int
 

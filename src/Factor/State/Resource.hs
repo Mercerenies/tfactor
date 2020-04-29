@@ -77,6 +77,8 @@ modifyRIds f (ResourceTable table) = ResourceTable $ fmap (over _2 go) table
           go (FunctorValue m) = FunctorValue m -- Nothing in here has an allocated RId yet,
                                                -- so there's nothing to modify.
           go (TypeValue ti) = TypeValue ti
+          go (SynonymPlaceholder t) = SynonymPlaceholder t -- Like with functors, nothing
+                                                           -- to modify yet.
 
 traverseWithQId :: Applicative f => ((QId, a) -> f b) -> ResourceTable a -> f (ResourceTable b)
 traverseWithQId f (ResourceTable table) =

@@ -126,6 +126,7 @@ normalizeTypesRes (FunctorValue (ParameterizedModule args t)) = do
   t' <- normalizeTypesFunctor names' t
   return $ FunctorValue (ParameterizedModule args t')
 normalizeTypesRes (TypeValue (TypeData n)) = pure (TypeValue (TypeData n))
+normalizeTypesRes (SynonymPlaceholder t) = pure (SynonymPlaceholder t)
 
 normalizeTypesAt :: MonadError FactorError m => QId -> ReadOnlyState -> m ReadOnlyState
 normalizeTypesAt qid r = traverseOf (atQId qid) (\v -> runReaderT (normalizeTypesRes v) r) r

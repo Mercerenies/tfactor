@@ -197,6 +197,14 @@ resolveAliasesResource m (FunctorValue (ParameterizedModule params info)) = do
                return (ModuleArg i (TraitRef name' args'))
   return (FunctorValue (ParameterizedModule params' info'))
 resolveAliasesResource _ (TypeValue (TypeData n)) = pure (TypeValue (TypeData n))
+resolveAliasesResource m (SynonymPlaceholder t) = do
+  t' <- case t of
+          SynonymGeneral q -> SynonymGeneral <$> resolveAlias m q
+          ActualizeFunctor (TraitRef name args) -> do
+                 name' <- resolveAlias m name
+                 args' <- mapM (resolveAlias m) args
+                 return (ActualizeFunctor (TraitRef name' args'))
+  return (SynonymPlaceholder t')
 
 resolveAliasesResource' :: (MonadError FactorError m, MonadReader ReadOnlyState m) =>
                            Map Id Alias -> QId -> ReaderValue -> m ReaderValue

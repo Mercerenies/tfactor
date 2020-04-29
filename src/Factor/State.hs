@@ -1,7 +1,7 @@
 {-# LANGUAGE FlexibleContexts, ViewPatterns, KindSignatures, RankNTypes, TypeFamilies, ScopedTypeVariables #-}
 
 module Factor.State(ReadOnlyState(ReadOnlyState), ReaderValue(..),
-                    Module(Module), ModuleDecl(..),
+                    Module(Module), SynonymType(..), ModuleDecl(..),
                     readerModule, readerNames, readerResources,
                     moduleNames, moduleDecls,
                     newReader, emptyModule, mapToModule,
@@ -44,7 +44,12 @@ declsToReadOnly qid ds r = foldM go r ds
                      inner <- declsToReadOnly qid' def emptyModule
                      traverseOf moduleNames (defineModule qid' v inner) reader
                 TypeDecl v vs info -> declareType (TypeToDeclare qid v vs info) reader
-                ModuleSyn v dest -> pure $ over moduleDecls (++ [ModuleSynonym v dest]) reader
+                ModuleSyn v dest ->
+                     let qid' = qid <> QId [v]
+                         syn = case dest of
+                                 Left name -> SynonymGeneral name
+                                 Right tr -> ActualizeFunctor tr
+                     in traverseOf moduleNames (defineResource qid' v (SynonymPlaceholder syn)) reader
                 RecordDecl i vs info -> go reader (desugarRecord i vs info)
                 TraitDecl v def ->
                      let qid' = qid <> QId [v]
@@ -62,7 +67,7 @@ newDeclName (FunctionDecl _ (Function Nothing _)) = Nothing
 newDeclName (FunctionDecl _ (Function (Just v) _)) = Just v
 newDeclName (MacroDecl _ (Macro v _)) = Just v
 newDeclName (ModuleDecl v _) = Just v
-newDeclName (ModuleSyn {}) = Nothing -- Doesn't define a resource yet; it'll get expanded later.
+newDeclName (ModuleSyn v _) = Just v
 newDeclName (RecordDecl v _ _) = Just v
 newDeclName (TraitDecl v _) = Just v
 newDeclName (FunctorDecl v _) = Just v

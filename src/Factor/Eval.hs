@@ -54,3 +54,4 @@ callFunction v = ask >>= lookupFn v >>= go
           go (TraitValue _) = throwError NotAFunction
           go (FunctorValue _) = throwError NotAFunction
           go (TypeValue _) = throwError NotAFunction
+          go (SynonymPlaceholder _) = throwError NotAFunction

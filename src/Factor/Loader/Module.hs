@@ -49,24 +49,31 @@ resolveModuleDecl mqid decl m =
       AssertTrait _ -> pure m
     where view' x = view x <$> get
 
-loadModule :: (MonadError FactorError m, MonadState ReadOnlyState m) => QId -> ReaderValue -> m ReaderValue
-loadModule mqid r =
-    case r of
-      UDFunction {} -> pure r
-      BIFunction {} -> pure r
-      UDMacro {} -> pure r
-      ModuleValue m -> ModuleValue <$> foldM (flip $ resolveModuleDecl mqid) m (m^.moduleDecls)
-      TraitValue {} -> pure r
-      FunctorValue {} -> pure r -- TODO Nothing to do here right now, but there will be stuff later.
-      TypeValue {} -> pure r
+loadModule :: (MonadError FactorError m, MonadState ReadOnlyState m) => QId -> Module -> m Module
+loadModule mqid m = foldM (flip $ resolveModuleDecl mqid) m (m^.moduleDecls)
 
 loadModuleAt :: MonadError FactorError m => QId -> ReadOnlyState -> m ReadOnlyState
 loadModuleAt qid r =
   case r^.possibly (atQId qid) of
     Nothing -> throwError (NoSuchModule qid)
-    Just rv -> do
-      (rv', r') <- runStateT (loadModule qid rv) r
-      return $ set (atQId qid) rv' r'
+    Just (UDFunction {}) -> pure r
+    Just (BIFunction {}) -> pure r
+    Just (UDMacro {}) -> pure r
+    Just (ModuleValue m) -> runStateT (loadModule qid m) r >>= \(m', r') ->
+                            return (set (atQId qid) (ModuleValue m') r')
+    Just (TraitValue {}) -> pure r
+    Just (FunctorValue {}) -> pure r -- TODO Nothing to do here right now, but there will be later.
+    Just (TypeValue {}) -> pure r
+    Just (SynonymPlaceholder (SynonymGeneral target)) ->
+        case view (possibly $ atQIdResource target) r of
+          Nothing -> throwError (NoSuchModule target)
+          Just rid -> return (set (atQIdResource qid) rid r)
+    Just (SynonymPlaceholder (ActualizeFunctor (TraitRef dest args))) ->
+        lookupFn dest r >>= \case
+                 FunctorValue pm -> do
+                      (rid, r') <- runStateT (bindModule qid dest pm args) r
+                      return (set (atQIdResource qid) rid r')
+                 _ -> throwError (NoSuchModule dest)
 
 dependenciesFromModuleDecl :: ModuleDecl -> [GraphEdge]
 dependenciesFromModuleDecl (ModuleSynonym _ (Left dest)) = [GraphEdge dest' | dest' <- allPrefixes dest]
@@ -77,6 +84,9 @@ dependenciesFromModuleDecl (IncludeModule dest) = [GraphEdge dest' | dest' <- al
 dependenciesFromModuleDecl (Alias _ _) = []
 dependenciesFromModuleDecl (Open _) = []
 dependenciesFromModuleDecl (AssertTrait _) = []
+
+hits :: QId -> [QId]
+hits = tail . allPrefixes
 
 produceModuleDepGraph :: [QId] -> ReadOnlyState -> Graph QId GraphEdge
 produceModuleDepGraph qids reader =
@@ -93,6 +103,12 @@ produceModuleDepGraph qids reader =
                              TraitValue {} -> []
                              FunctorValue {} -> [] -- TODO This
                              TypeValue {} -> []
+                             SynonymPlaceholder t ->
+                               case t of
+                                 SynonymGeneral q -> [(qid, GraphEdge q') | q' <- hits q]
+                                 ActualizeFunctor (TraitRef q ts) ->
+                                   [(qid, GraphEdge edge) | q0 <- q : ts
+                                                          , edge <- hits q0]
               in parents ++ others
 
 -- As in Factor.Loader.Graph, we reverse the top sort order since we
