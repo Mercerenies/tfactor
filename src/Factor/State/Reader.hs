@@ -123,27 +123,26 @@ allChildrenOf reader qid =
       Right _ -> [qid]
     where go (k, _) = allChildrenOf reader (qid <> QId [k])
 
--- TODO Internally combine these into one function, since they're
--- mutually exclusive, then provide the same public API in a more
--- consolidated way.
+data ReaderType = NoType | RFunType PolyFunctionType | RMacroType PolyFunctionType
+
+readerType :: ReaderValue -> ReaderType
+readerType (UDFunction t _) = RFunType t
+readerType (BIFunction t _) = RFunType t
+readerType (UDMacro t _) = RMacroType t
+readerType (ModuleValue _) = NoType
+readerType (TraitValue _) = NoType
+readerType (FunctorValue _) = NoType
+readerType (TypeValue _) = NoType
 
 readerFunctionType :: ReaderValue -> Maybe PolyFunctionType
-readerFunctionType (UDFunction t _) = Just t
-readerFunctionType (BIFunction t _) = Just t
-readerFunctionType (UDMacro _ _) = Nothing
-readerFunctionType (ModuleValue _) = Nothing
-readerFunctionType (TraitValue _) = Nothing
-readerFunctionType (FunctorValue _) = Nothing
-readerFunctionType (TypeValue _) = Nothing
+readerFunctionType v = case readerType v of
+                         RFunType t -> Just t
+                         _ -> Nothing
 
 readerMacroType :: ReaderValue -> Maybe PolyFunctionType
-readerMacroType (UDFunction _ _) = Nothing
-readerMacroType (BIFunction _ _) = Nothing
-readerMacroType (UDMacro t _) = Just t
-readerMacroType (ModuleValue _) = Nothing
-readerMacroType (TraitValue _) = Nothing
-readerMacroType (FunctorValue _) = Nothing
-readerMacroType (TypeValue _) = Nothing
+readerMacroType v = case readerType v of
+                      RMacroType t -> Just t
+                      _ -> Nothing
 
 merge :: MonadError FactorError m => ReadOnlyState -> ReadOnlyState -> m ReadOnlyState
 merge (ReadOnlyState (Module m a) r) (ReadOnlyState (Module m' a') r') =
