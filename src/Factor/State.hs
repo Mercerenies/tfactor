@@ -45,26 +45,13 @@ declsToReadOnly qid ds r = foldM go r ds
                      traverseOf moduleNames (defineModule qid' v inner) reader
                 TypeDecl v vs info -> declareType (TypeToDeclare qid v vs info) reader
                 ModuleSyn v dest -> pure $ over moduleDecls (++ [ModuleSynonym v dest]) reader
-                -- RecordDecl v def
-                --  | Map.member v (reader^.moduleNames) -> throwError (DuplicateDecl v)
-                --  | otherwise -> do
-                --           let qid' = qid <> QId [v]
-                --           inner <- expandRecordDecl qid' def emptyModule
-                --           let inner' = set moduleType (Just (TypeProperties TAny)) inner
-                --           traverseOf moduleNames (defineModule qid' v inner') reader
+                RecordDecl i vs info -> go reader (desugarRecord i vs info)
                 TraitDecl v def ->
                      let qid' = qid <> QId [v]
                      in traverseOf moduleNames (defineResource qid' v (TraitValue def)) reader
                 FunctorDecl v def ->
                      let qid' = qid <> QId [v]
                      in traverseOf moduleNames (defineResource qid' v (FunctorValue def)) reader
-                -- RecordFunctorDecl v args def
-                --  | Map.member v (reader^.moduleNames) -> throwError (DuplicateDecl v)
-                --  | otherwise ->
-                --      let qid' = qid <> QId [v]
-                --          functor = expandRecordFunDecl qid' def (Map.fromList [(Id "", FunctorDemandType)]) -- TODO 'Id ""'..... yeah
-                --          rv = FunctorValue (ParameterizedModule args functor)
-                --      in traverseOf moduleNames (defineResource qid' v rv) reader
                 AliasDecl i j -> pure $ over moduleDecls (++ [Alias i j]) reader
                 OpenDecl j -> pure $ over moduleDecls (++ [Open j]) reader
                 RequireDecl j -> pure $ over moduleDecls (++ [AssertTrait j]) reader
@@ -76,6 +63,7 @@ newDeclName (FunctionDecl _ (Function (Just v) _)) = Just v
 newDeclName (MacroDecl _ (Macro v _)) = Just v
 newDeclName (ModuleDecl v _) = Just v
 newDeclName (ModuleSyn {}) = Nothing -- Doesn't define a resource yet; it'll get expanded later.
+newDeclName (RecordDecl v _ _) = Just v
 newDeclName (TraitDecl v _) = Just v
 newDeclName (FunctorDecl v _) = Just v
 newDeclName (TypeDecl v _ _) = Just v
