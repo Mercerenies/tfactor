@@ -28,13 +28,10 @@ mod L
 end
 
 mod M
-  mod MB = AA.B { L.HasInt } end
-end
-
-mod N
-  mod NC = M.MB.C { L.HasInt } end
+  mod B = AA.B { L.HasInt } end
+  mod C = B.C { L.HasInt } end
 end
 
 fun test ( -- Bool )
-  100 200 N.NC.do-swap 100 = swap 200 = and
+  100 200 M.C.do-swap 100 = swap 200 = and
 end

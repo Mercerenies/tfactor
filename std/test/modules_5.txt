@@ -17,11 +17,8 @@ mod DoTwice { F : ActsOnInt }
   end
 end
 
-# Issue #8
-mod M
-  mod AddTwo = DoTwice { AddOne } end
-end
+mod AddTwo = DoTwice { AddOne } end
 
 fun test ( -- Bool )
-  10 M.AddTwo.perform 12 =
+  10 AddTwo.perform 12 =
 end

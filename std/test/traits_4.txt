@@ -20,11 +20,8 @@ end
 
 mod SimpleModule end
 
-# Issue #8
-mod M
-  mod Instance = IsHasFunctor.Inner { SimpleModule } end
-end
+mod Instance = IsHasFunctor.Inner { SimpleModule } end
 
 fun test ( -- Bool )
-  100 M.Instance.foo 100 =
+  100 Instance.foo 100 =
 end

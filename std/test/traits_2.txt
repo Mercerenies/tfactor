@@ -17,10 +17,7 @@ mod A
 
 end
 
-# (Issue #8)
-mod M
-  mod B = A end
-end
+mod B = A end
 
 alias Con = Container
 
