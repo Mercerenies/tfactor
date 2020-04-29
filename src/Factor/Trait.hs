@@ -2,7 +2,7 @@
 
 module Factor.Trait(Trait(..), ParameterizedTrait(..), TraitInfo(..), UnsatisfiedTrait(..),
                     FromUnsatisfiedTrait(..),
-                    mergeTraits, nestedTrait, nestedTraitDeep, nestedTraitDeepFunctor,
+                    mergeTraits, traitAt, nestedTrait, nestedTraitDeep, nestedTraitDeepFunctor,
                     moduleSatisfies, moduleSatisfies',
                     bindTrait, bindTraitUnchecked,
                     makeMinimalModule, bindModule, makeFreshModuleName) where
@@ -69,6 +69,22 @@ requireExists _ _ (Just x) = pure x
 
 mergeTraits :: Trait -> Trait -> Trait
 mergeTraits (Trait xs) (Trait ys) = Trait $ xs ++ ys
+
+-- TODO Handle merges here too
+traitAt :: MonadError FactorError m => ReadOnlyState -> Trait -> Id -> m TraitInfo
+traitAt r (Trait xs) y = foldMapM check xs >>= \case
+                         [] -> throwError (NoSuchTrait (QId [y]))
+                         (z:_) -> pure z
+    where check (v, info)
+              | v == y = pure [info]
+              | otherwise = case info of
+                              TraitInclude (TraitRef q args) ->
+                                  lookupFn q r >>= \case
+                                           TraitValue pt -> do
+                                             Trait ts <- runReaderT (bindTrait q pt args) r
+                                             foldMapM check ts
+                                           _ -> throwError (NoSuchTrait q)
+                              _ -> pure []
 
 nestedTrait :: MonadError FactorError m => ReadOnlyState -> Trait -> Id -> m Trait
 nestedTrait r (Trait xs) y = foldMapM check xs >>= \case

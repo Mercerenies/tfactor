@@ -16,7 +16,6 @@ import Control.Monad.Except
 import Control.Lens
 import Data.Map(Map)
 import qualified Data.Map as Map
-import qualified Data.List as List
 
 normalizeType :: (MonadReader ReadOnlyState m, MonadError FactorError m) =>
                  Map Id Trait -> Type -> m Type
@@ -28,12 +27,12 @@ normalizeType names (NamedType (TypeId qid ts)) -- TODO Check argument count her
     | QId (first:(rest @ (_:_))) <- qid
     , Just t <- Map.lookup first names = do
                   r <- ask
-                  Trait t' <- nestedTraitDeep r t (QId $ init rest)
-                  case List.lookup (last rest) t' of
-                    Just (TraitType n)
+                  t' <- nestedTraitDeep r t (QId $ init rest)
+                  traitAt r t' (last rest) >>= \case
+                    TraitType n
                         | n == length ts -> pure (NamedType (TypeId qid ts))
                         | otherwise -> throwError (TypeArgError qid n (length ts))
-                    _ -> throwError (NoSuchType qid)
+                    _ -> throwError (NoSuchType (QId (first:rest)))
     | otherwise = ask >>= \r -> (\a b -> NamedType (TypeId a b)) <$> lookupFnName qid r <*> mapM (normalizeType names) ts
 normalizeType _ (GroundVar v) = pure $ GroundVar v
 normalizeType _ (QuantVar v) = pure $ QuantVar v
