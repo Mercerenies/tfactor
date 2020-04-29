@@ -1,3 +1,4 @@
+{-# LANGUAGE FlexibleContexts #-}
 
 module Factor.Parser(parseStmt, parseSeq, parseDecl, parseFile) where
 
@@ -17,11 +18,13 @@ import Control.Applicative
 import Control.Monad
 import Data.Map(Map)
 import qualified Data.Map as Map
+import Data.Foldable
+import Control.Lens
 
 type Parser = Parsec [Token] ()
 
 keywords :: [String]
-keywords = ["true", "false", "fun", "mod", "end", "macro", "alias", "open",
+keywords = ["true", "false", "fun", "mod", "end", "macro", "alias", "open", "record",
             "field", "constructor", "val", "require", "include", "type", "of"]
 
 -- (Unused right now)
@@ -73,9 +76,8 @@ decl = (\(t, s) -> FunctionDecl t s) <$> functionDecl <|>
        (\(i, j) -> ModuleSyn i j) <$> moduleSyn <|>
        (\(i, m) -> ModuleDecl i m) <$> moduleDecl <|>
        (\(i, t) -> TraitDecl i t) <$> trait <|>
---       (\(i, d) -> RecordDecl i d) <$> recordDecl <|>
+       (\(i, d, n) -> RecordDecl i d n) <$> recordDecl <|>
        (\(i, f) -> FunctorDecl i f) <$> functorDecl <|>
---       (\(i, a, d) -> RecordFunctorDecl i a d) <$> recordFunctorDecl <|>
        (\(i, is, t) -> TypeDecl i is t) <$> typeDecl <|>
        (\(i, j) -> AliasDecl i j) <$> aliasDecl <|>
        (\i -> OpenDecl i) <$> openDecl <|>
@@ -170,18 +172,35 @@ typeInfoStd _ name targs = do
               _ <- symbol ")"
               return (Stack.fromList $ reverse args)
 
--- recordDecl :: Parser (Id, [RecordInfo])
--- recordDecl = do
---   name <- try (symbol "record" *> unqualifiedId <* notFollowedBy (symbol "{"))
---   decls <- many recordInfo
---   _ <- symbol "end"
---   return (name, decls)
+-- An intermediate representation used in the parser for RecordInfo construction
+data RecordInfoImpl = RCon Id | RField Id Type | RDecl Declaration
+                      deriving (Show, Eq)
 
--- recordInfo :: Parser RecordInfo
--- recordInfo =
---     RecordConstructor <$> (symbol "constructor" *> unqualifiedId) <|>
---     RecordField <$> (symbol "field" *> unqualifiedId) <*> type_ <|>
---     RecordOrdinaryDecl <$> decl
+recordDecl :: Parser (Id, [Id], RecordInfo)
+recordDecl = do
+  _ <- symbol "record"
+  name <- unqualifiedId
+  args <- option [] $ do
+             _ <- symbol "{"
+             args <- sepBy quantType (symbol ",")
+             _ <- symbol "}"
+             return args
+  inner <- many recordInfo
+  _ <- symbol "end"
+  let collate (RCon i) = over _1 (i :)
+      collate (RField i t) = over _2 ((i, t) :)
+      collate (RDecl d) = over _3 (d :)
+      (constrs, fields, decls) = foldl' (flip collate) ([], [], []) inner
+  con <- case constrs of
+           [con] -> return con
+           _ -> fail ("Wrong number of constructors to record " ++ show name)
+  return (name, args, RecordInfo con fields decls)
+
+recordInfo :: Parser RecordInfoImpl
+recordInfo =
+    RCon <$> (symbol "constructor" *> unqualifiedId) <|>
+    RField <$> (symbol "field" *> unqualifiedId) <*> (symbol "of" *> type_) <|>
+    RDecl <$> decl
 
 functorInfo :: Parser (Id, FunctorInfo)
 functorInfo = (\(t, s) -> (fromJust $ functionName s, FunctorUDFunction t s)) <$> functionDecl <|>
