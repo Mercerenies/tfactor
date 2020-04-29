@@ -1,3 +1,4 @@
+{-# LANGUAGE GeneralizedNewtypeDeriving #-}
 
 module Factor.Code(Function(..), Macro(..), Data(..), Statement(..),
                    Sequence(..),
@@ -30,7 +31,7 @@ data Statement = Call QId
                  deriving (Show, Eq)
 
 newtype Sequence = Sequence { unSequence :: [Statement] }
-    deriving (Show, Eq)
+    deriving (Show, Eq, Semigroup, Monoid)
 
 functionName :: Function -> Maybe Id
 functionName (Function i _) = i
