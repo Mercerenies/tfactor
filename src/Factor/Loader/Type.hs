@@ -23,7 +23,7 @@ normalizeType names (FunType (FunctionType (StackDesc args a) (StackDesc rets r)
   Stack.FromTop args' <- traverse (normalizeType names) (Stack.FromTop args)
   Stack.FromTop rets' <- traverse (normalizeType names) (Stack.FromTop rets)
   return $ FunType (FunctionType (StackDesc args' a) (StackDesc rets' r))
-normalizeType names (NamedType (TypeId qid ts)) -- TODO Check argument count here
+normalizeType names (NamedType (TypeId qid ts))
     | QId (first:(rest @ (_:_))) <- qid
     , Just t <- Map.lookup first names = do
                   r <- ask

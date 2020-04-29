@@ -23,7 +23,7 @@ mod M
 
   # TODO Can't synonym inside functors yet, which makes the type t undefinable here.
   #mod Tuple2IsEq { AIsEq : Eq , BIsEq : Eq }
-    #require Eq -- TODO Can't require in functors yet
+    #require Eq # TODO Can't require in functors yet
     #mod t = Tuple2.t { AIsEq.t , BIsEq.t } end
     #fun == ( Self.t Self.t -- Bool )
       #[ [ Tuple2.proj1 ] [ Tuple2.proj1 ] bi* AIsEq.== ]

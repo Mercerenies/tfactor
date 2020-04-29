@@ -211,7 +211,7 @@ moduleSatisfies' :: (MonadReader ReadOnlyState m, MonadError FactorError m) =>
                     Trait -> QId -> Module -> m ()
 moduleSatisfies' t qid m = ask >>= \r -> moduleSatisfies r t qid m
 
--- TODO Should we auto-substitute Self here like we do in bindModule?
+-- Note: Doesn't bind Self (Self will be bound during moduleSatisfies)
 bindTrait :: (MonadReader ReadOnlyState m, MonadError FactorError m) =>
              QId -> ParameterizedTrait -> [QId] -> m Trait
 bindTrait qid (ParameterizedTrait params trait) args
