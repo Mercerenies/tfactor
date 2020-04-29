@@ -2,7 +2,7 @@
 trait HasInnerModule
 
   mod Inner
-    val foo ( 'a -- 'a )
+    fun foo ( 'a -- 'a )
   end
 
 end

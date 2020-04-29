@@ -6,7 +6,7 @@ end
 trait A
   mod B { T1 : HasType }
     mod C { T2 : HasType }
-      val do-swap ( T1.t T2.t -- T2.t T1.t )
+      fun do-swap ( T1.t T2.t -- T2.t T1.t )
     end
   end
 end

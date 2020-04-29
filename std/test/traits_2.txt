@@ -1,6 +1,6 @@
 
 trait KnowsTheAnswer
-  val the-answer ( -- Int )
+  fun the-answer ( -- Int )
 end
 
 mod Container

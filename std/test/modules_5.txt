@@ -1,6 +1,6 @@
 
 trait ActsOnInt
-  val perform ( Int -- Int )
+  fun perform ( Int -- Int )
 end
 
 mod AddOne

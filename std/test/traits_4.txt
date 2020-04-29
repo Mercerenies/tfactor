@@ -3,7 +3,7 @@ trait Vacuous end
 
 trait HasFunctor
   mod Inner { A : Vacuous } # TODO Actually use the trait in this test case here.
-    val foo ( Int -- Int )
+    fun foo ( Int -- Int )
   end
 end
 

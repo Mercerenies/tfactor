@@ -326,7 +326,7 @@ traitInfo = traitInfoFun <|> traitInfoMod <|> -- TODO Macro declarations in trai
 
 traitInfoFun :: Parser (Id, TraitInfo)
 traitInfoFun = do
-  _ <- symbol "val" -- TODO Change this to fun (I'll be using val for synonyms soon)
+  _ <- symbol "fun"
   name <- unqualifiedId
   ty <- functionType
   return (name, TraitFunction $ PolyFunctionType (allQuantVars $ FunType ty) ty)

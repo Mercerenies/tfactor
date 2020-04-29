@@ -3,12 +3,12 @@ trait Silly end
 
 trait Eq
   type t
-  val == ( Self.t Self.t -- Bool ) # TODO Get rid of the Self here; i.e. make it implied
+  fun == ( Self.t Self.t -- Bool ) # TODO Get rid of the Self here; i.e. make it implied
 end
 
 trait Ord
   include Eq
-  val lt ( Self.t Self.t -- Bool )
+  fun lt ( Self.t Self.t -- Bool )
 end
 
 mod IntIsOrd

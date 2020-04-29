@@ -1,7 +1,7 @@
 
 trait ActsOn
   type t
-  val perform ( Self.t -- Self.t )
+  fun perform ( Self.t -- Self.t )
 end
 
 mod AddOne
