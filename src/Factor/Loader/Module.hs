@@ -16,6 +16,8 @@ import Control.Monad.Except
 import Control.Monad.State
 import Control.Lens
 import qualified Data.Map as Map
+import qualified Data.List as List
+import Data.Either(isRight)
 
 -- Right now, we need no additional information.
 newtype GraphEdge = GraphEdge QId
@@ -69,31 +71,44 @@ dependenciesFromModuleDecl (Alias _ _) = []
 dependenciesFromModuleDecl (Open _) = []
 dependenciesFromModuleDecl (AssertTrait _) = []
 
-hits :: QId -> [QId]
-hits = tail . allPrefixes
+-- When we're referencing something deep inside another module, the
+-- resource in question may not technically exist yet. In this case,
+-- we should have a dependency based on the "first hit" rule, i.e. we
+-- should depend on the innermost name which currently exists. For
+-- example, if I reference the type named A.B.C.t, and no such
+-- resource exists, I should check A.B.C to see if it exists (for it
+-- may be a functor actualization or a synonym). Then I should check
+-- A.B, then A, and take the first of those which does exist as a
+-- dependency.
+
+firstHit :: ReadOnlyState -> QId -> Maybe QId
+firstHit r qid = List.find exists $ reverse (tail (allPrefixes qid))
+    where exists q = isRight $ lookupFn q r
+
+firstHitEdge :: ReadOnlyState -> QId -> QId -> [(QId, GraphEdge)]
+firstHitEdge r q0 q1 = case firstHit r q1 of
+                         Nothing -> []
+                         Just q1' -> [(q0, GraphEdge q1')]
 
 produceModuleDepGraph :: [QId] -> ReadOnlyState -> Graph QId GraphEdge
 produceModuleDepGraph qids reader =
     Graph.fromEdges qids (concat . mapWithQId go $ reader^.readerResources) proj
     where proj (GraphEdge q) = q
           go (qid, r) =
-              let parents = [(qid, GraphEdge qid') | qid' <- nonemptyPrefixes qid]
-                  others = case r of
-                             UDFunction {} -> []
-                             BIFunction {} -> []
-                             UDMacro {} -> []
-                             ModuleValue m -> [(qid, e) | decl <- m^.moduleDecls
-                                                        , e <- dependenciesFromModuleDecl decl]
-                             TraitValue {} -> []
-                             FunctorValue {} -> [] -- TODO This
-                             TypeValue {} -> []
-                             SynonymPlaceholder t ->
-                               case t of
-                                 SynonymGeneral q -> [(qid, GraphEdge q') | q' <- hits q]
-                                 ActualizeFunctor (TraitRef q ts) ->
-                                   [(qid, GraphEdge edge) | q0 <- q : ts
-                                                          , edge <- hits q0]
-              in parents ++ others
+              case r of
+                UDFunction {} -> []
+                BIFunction {} -> []
+                UDMacro {} -> []
+                ModuleValue m -> [(qid, e) | decl <- m^.moduleDecls
+                                           , e <- dependenciesFromModuleDecl decl]
+                TraitValue {} -> []
+                FunctorValue {} -> [] -- TODO This
+                TypeValue {} -> []
+                SynonymPlaceholder t ->
+                  case t of
+                    SynonymGeneral q -> firstHitEdge reader qid q
+                    ActualizeFunctor (TraitRef q ts) ->
+                        concatMap (firstHitEdge reader qid) (q : ts)
 
 -- As in Factor.Loader.Graph, we reverse the top sort order since we
 -- want to load dependencies BEFORE the things that depend upon them.
