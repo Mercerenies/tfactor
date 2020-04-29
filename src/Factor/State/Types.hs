@@ -56,7 +56,6 @@ data SynonymType = SynonymGeneral QId
 data ModuleDecl = Alias Id QId
                 | Open QId
                 | AssertTrait TraitRef
-                | ModuleSynonym Id (Either QId TraitRef)
                 | IncludeModule QId
                   deriving (Show, Eq)
 

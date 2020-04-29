@@ -122,12 +122,6 @@ resolveAliasesAssert m (AssertTrait (TraitRef qid args)) = do
   qid' <- resolveAlias m qid
   args' <- mapM (resolveAlias m) args
   return (AssertTrait (TraitRef qid' args'))
-resolveAliasesAssert m (ModuleSynonym i ref) = do
-  ref' <- case ref of
-            Left syn -> Left <$> resolveAlias m syn
-            Right (TraitRef name args) ->
-                fmap Right $ TraitRef <$> resolveAlias m name <*> mapM (resolveAlias m) args
-  return $ ModuleSynonym i ref'
 resolveAliasesAssert m (IncludeModule q) = IncludeModule <$> resolveAlias m q
 -- Note that we do nothing with these two, since they've already been
 -- resolved by this point, so it honestly doesn't matter that much.
@@ -237,7 +231,6 @@ handleAliasDecl m a = case a of
                                mname' <- resolveAlias m mname
                                lookupAndOpenModule mname' reader m
                         AssertTrait _ -> pure m
-                        ModuleSynonym _ _ -> pure m
                         IncludeModule _ -> pure m
 
 bindDefaultAliases :: MonadError FactorError m => ReadOnlyState -> Map Id Alias -> m (Map Id Alias)

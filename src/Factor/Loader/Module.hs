@@ -23,20 +23,8 @@ newtype GraphEdge = GraphEdge QId
 
 resolveModuleDecl :: (MonadError FactorError m, MonadState ReadOnlyState m) =>
                      QId -> ModuleDecl -> Module -> m Module
-resolveModuleDecl mqid decl m =
+resolveModuleDecl _mqid decl m =
     case decl of
-      ModuleSynonym i (Left dest) -> view' (possibly $ atQIdResource dest) >>= \case
-                                     Nothing -> throwError (NoSuchModule dest)
-                                     Just r -> forOf (moduleNames.at i) m $ \case
-                                        Nothing -> pure (Just r)
-                                        Just _ -> throwError (DuplicateDecl i)
-      ModuleSynonym i (Right (TraitRef dest args)) -> view' (possibly $ atQId dest) >>= \case
-                                        Just (FunctorValue pm) -> do
-                                          rid <- bindModule (mqid <> QId [i]) dest pm args
-                                          forOf (moduleNames.at i) m $ \case
-                                                Nothing -> pure (Just rid)
-                                                Just _ -> throwError (DuplicateDecl i)
-                                        _ -> throwError (NoSuchModule dest)
       IncludeModule dest -> view' (possibly $ atQId dest) >>= \case
                             Just (ModuleValue m') ->
                                 let go m1 (k, v) = forOf (moduleNames.at k) m1 $ \case
@@ -76,10 +64,6 @@ loadModuleAt qid r =
                  _ -> throwError (NoSuchModule dest)
 
 dependenciesFromModuleDecl :: ModuleDecl -> [GraphEdge]
-dependenciesFromModuleDecl (ModuleSynonym _ (Left dest)) = [GraphEdge dest' | dest' <- allPrefixes dest]
-dependenciesFromModuleDecl (ModuleSynonym _ (Right (TraitRef dest args))) =
-    [GraphEdge dest' | dest' <- allPrefixes dest] ++
-    [GraphEdge a' | a <- args, a' <- allPrefixes a]
 dependenciesFromModuleDecl (IncludeModule dest) = [GraphEdge dest' | dest' <- allPrefixes dest]
 dependenciesFromModuleDecl (Alias _ _) = []
 dependenciesFromModuleDecl (Open _) = []

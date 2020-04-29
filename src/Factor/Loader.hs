@@ -31,7 +31,6 @@ validateTraits qid0 m =
                 _ -> throwError (NoSuchTrait qid)
         Alias _ _ -> pure ()
         Open _ -> pure ()
-        ModuleSynonym _ _ -> pure ()
         IncludeModule _ -> pure ()
 
 loadEntity :: (MonadError FactorError m, MonadReader ReadOnlyState m) => QId -> ReaderValue -> m ReaderValue
