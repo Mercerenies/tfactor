@@ -22,16 +22,10 @@ mod AA
   end
 end
 
-# Issue #8
-mod L
-  mod HasInt mod t = Int end end
-end
-
-mod M
-  mod B = AA.B { L.HasInt } end
-  mod C = B.C { L.HasInt } end
-end
+mod HasInt mod t = Int end end
+mod B = AA.B { HasInt } end
+mod C = B.C { HasInt } end
 
 fun test ( -- Bool )
-  100 200 M.C.do-swap 100 = swap 200 = and
+  100 200 C.do-swap 100 = swap 200 = and
 end

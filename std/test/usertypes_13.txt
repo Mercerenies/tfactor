@@ -4,18 +4,15 @@ record Trivial { 'a }
   field x of 'a
 end
 
-# Issue #8
-mod M
-  mod Trivial1 = Trivial.t end
-  mod Trivial2 = Trivial.t end
-  #mod Trivial3 = Trivial.t { Int } end # TODO I want to be able to say this.
-end
+mod Trivial1 = Trivial.t end
+mod Trivial2 = Trivial.t end
+#mod Trivial3 = Trivial.t { Int } end # TODO I want to be able to say this.
 
-fun convert1->2 ( M.Trivial1 { Int } -- M.Trivial2 { Int } )
+fun convert1->2 ( Trivial1 { Int } -- Trivial2 { Int } )
   id
 end
 
-fun convert2->1 ( M.Trivial2 { Int } -- M.Trivial1 { Int } )
+fun convert2->1 ( Trivial2 { Int } -- Trivial1 { Int } )
   id
 end
 

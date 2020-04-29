@@ -11,23 +11,14 @@ mod Foo { A : HasType }
   end
 end
 
-# Issue #8
-mod L
-  mod HasInt mod t = Int end end
-end
-
-mod M
-  mod MyFoo = Foo { L.HasInt } end
-end
-
-mod N
-  mod MyBar = M.MyFoo.Bar { L.HasInt } end
-end
+mod HasInt mod t = Int end end
+mod MyFoo = Foo { HasInt } end
+mod MyBar = MyFoo.Bar { HasInt } end
 
 # TODO Definitely some awkwardness if we make M and N one module.
 # Alias resolution still doesn't understand the modules that haven't
 # been loaded yet.
 
 fun test ( -- Bool )
-  100 200 N.MyBar.my-swap 100 = swap 200 = and
+  100 200 MyBar.my-swap 100 = swap 200 = and
 end

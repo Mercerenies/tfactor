@@ -13,22 +13,16 @@ mod ContainsTwoOf { F : HasType }
     | Instance of ( F.t F.t )
 end
 
-# Issue #8
-mod M
-  mod HasString mod t = String end end
-  mod HasInt mod t = Int end end
-end
-
-mod N
-  mod TwoString = ContainsTwoOf { M.HasString } end
-  mod TwoInt = ContainsTwoOf { M.HasInt } end
-end
+mod HasString mod t = String end end
+mod HasInt mod t = Int end end
+mod TwoString = ContainsTwoOf { HasString } end
+mod TwoInt = ContainsTwoOf { HasInt } end
 
 fun drop-string ( String -- )
   drop
 end
 
 fun test ( -- Bool )
-  "foo" "bar" N.TwoString.Instance [ drop-string drop-string ] N.TwoString.*t
-  10 20 N.TwoInt.Instance [ 20 = swap 10 = and ] N.TwoInt.*t
+  "foo" "bar" TwoString.Instance [ drop-string drop-string ] TwoString.*t
+  10 20 TwoInt.Instance [ 20 = swap 10 = and ] TwoInt.*t
 end

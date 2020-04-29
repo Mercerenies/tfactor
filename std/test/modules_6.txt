@@ -21,10 +21,7 @@ end
 #  end
 #end
 
-## Issue #8
-#mod M
-#  mod AddTwo = DoTwice { AddOne } end
-#end
+#mod AddTwo = DoTwice { AddOne } end
 
 fun test ( -- Bool )
   10 AddOne.perform 11 =
