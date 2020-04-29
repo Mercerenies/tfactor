@@ -14,7 +14,7 @@ import Factor.Trait.Functor
 
 import Control.Monad.Except
 import Control.Monad.State
-import Control.Lens
+import Control.Lens hiding (children)
 import qualified Data.Map as Map
 import qualified Data.List as List
 import Data.Either(isRight)
@@ -99,8 +99,12 @@ produceModuleDepGraph qids reader =
                 UDFunction {} -> []
                 BIFunction {} -> []
                 UDMacro {} -> []
-                ModuleValue m -> [(qid, e) | decl <- m^.moduleDecls
-                                           , e <- dependenciesFromModuleDecl decl]
+                ModuleValue m ->
+                    let fromdecls = [(qid, e) | decl <- m^.moduleDecls
+                                              , e <- dependenciesFromModuleDecl decl]
+                        children = [(qid, GraphEdge e) | (k, _) <- Map.toList (m^.moduleNames)
+                                                       , let e = qid <> QId [k]]
+                    in fromdecls ++ children
                 TraitValue {} -> []
                 FunctorValue {} -> [] -- TODO This
                 TypeValue {} -> []
