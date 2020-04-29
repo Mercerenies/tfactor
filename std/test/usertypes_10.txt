@@ -1,14 +1,11 @@
 
 record Vector3
   constructor make
-  field x Int
-  field y Int
-  field z Int
+  field x of Int
+  field y of Int
+  field z of Int
 
-  require Type # Wouldn't usually use this like
-               # this, but it's just a test here.
-
-  fun dot ( Vector3 Vector3 -- Int )
+  fun dot ( t t -- Int )
     [ [ 1 ] dip2 [ Vector3.x * ] dup bi* ]
     [ [ 1 ] dip2 [ Vector3.y * ] dup bi* ]
     [ [ 1 ] dip2 [ Vector3.z * ] dup bi* ]
@@ -18,8 +15,6 @@ record Vector3
 end
 
 alias V3 = Vector3
-
-mod ThisModuleIsNotAType end # TODO Make sure this can't be used as a type with a negative test
 
 fun test ( -- Bool )
   100 200 300 Vector3.make [ V3.x 100 = ] keep

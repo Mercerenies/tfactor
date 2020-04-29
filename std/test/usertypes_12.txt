@@ -1,4 +1,6 @@
 
+# (200th test case! Celebrations!)
+
 # Let's see if type names actually canonicalize like they should.
 
 mod Module1
@@ -16,11 +18,11 @@ record DistinctType
   constructor dt
 end
 
-fun convert1 ( Module1.Foo -- M.Module2.Foo ) end
-fun convert2 ( M.Module2.Foo -- M.Bar ) end
-fun convert3 ( M.Bar -- Module1.Foo ) end
+fun convert1 ( Module1.Foo.t -- M.Module2.Foo.t ) end
+fun convert2 ( M.Module2.Foo.t -- M.Bar.t ) end
+fun convert3 ( M.Bar.t -- Module1.Foo.t ) end
 
-# fun failedconvert ( Bar -- DistinctType ) end
+# fun failedconvert ( Bar.t -- DistinctType.t ) end
 
 fun test ( -- Bool )
   true

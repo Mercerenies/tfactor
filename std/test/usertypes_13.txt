@@ -1,0 +1,24 @@
+
+record Trivial { 'a }
+  constructor make
+  field x of 'a
+end
+
+# Issue #8
+mod M
+  mod Trivial1 = Trivial.t end
+  mod Trivial2 = Trivial.t end
+  #mod Trivial3 = Trivial.t { Int } end # TODO I want to be able to say this.
+end
+
+fun convert1->2 ( M.Trivial1 { Int } -- M.Trivial2 { Int } )
+  id
+end
+
+fun convert2->1 ( M.Trivial2 { Int } -- M.Trivial1 { Int } )
+  id
+end
+
+fun test ( -- Bool )
+  10 Trivial.make convert1->2 Trivial.x 10 =
+end

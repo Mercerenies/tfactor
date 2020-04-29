@@ -1,17 +1,19 @@
 
 trait Silly end
 
-trait Eq { X : Type }
-  val == ( X X -- Bool )
+trait Eq
+  type t
+  val == ( Self.t Self.t -- Bool ) # TODO Get rid of the Self here; i.e. make it implied
 end
 
-trait Ord { X : Type }
-  include Eq { X }
-  val lt ( X X -- Bool )
+trait Ord
+  include Eq
+  val lt ( Self.t Self.t -- Bool )
 end
 
 mod IntIsOrd
-  require Ord { Int }
+  require Ord
+  mod t = Int end
 
   fun == ( Int Int -- Bool )
     Prelude.=
@@ -25,14 +27,16 @@ end
 
 record Tuple2
   constructor make
-  field proj1 Int
-  field proj2 Int
+  field proj1 of Int
+  field proj2 of Int
 end
 
-mod Tuple2IsEq
-  require Eq { Tuple2 }
 
-  fun == ( Tuple2 Tuple2 -- Bool )
+mod Tuple2IsEq
+  require Eq
+  mod t = Tuple2.t end
+
+  fun == ( Tuple2.t Tuple2.t -- Bool )
     [ [ Tuple2.proj1 ] [ Tuple2.proj1 ] bi* IntIsOrd.== ]
     [ [ Tuple2.proj2 ] [ Tuple2.proj2 ] bi* IntIsOrd.== ]
     bi2 and

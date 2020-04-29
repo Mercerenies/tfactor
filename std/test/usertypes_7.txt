@@ -8,5 +8,5 @@ fun sum-list ( MyList { Int } -- Int )
 end
 
 fun test ( -- Bool )
-  MyNil 4 MyCons 3 MyCons 2 MyCons 1 MyCons sum-list 10 = 
+  MyNil 4 MyCons 3 MyCons 2 MyCons 1 MyCons sum-list 10 =
 end

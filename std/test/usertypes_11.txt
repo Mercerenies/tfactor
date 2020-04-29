@@ -1,0 +1,39 @@
+
+# Workaround for Issue #8
+mod M
+
+  trait Eq
+    type t
+    val == ( Self.t Self.t -- Bool )
+  end
+
+  mod IntIsEq
+    require Eq
+    mod t = Int end
+    fun == ( Int Int -- Bool )
+      Prelude.=
+    end
+  end
+
+  record Tuple2 { 'a , 'b }
+    constructor make
+    field proj1 of 'a
+    field proj2 of 'b
+  end
+
+  # TODO Can't synonym inside functors yet, which makes the type t undefinable here.
+  #mod Tuple2IsEq { AIsEq : Eq , BIsEq : Eq }
+    #require Eq -- TODO Can't require in functors yet
+    #mod t = Tuple2.t { AIsEq.t , BIsEq.t } end
+    #fun == ( Self.t Self.t -- Bool )
+      #[ [ Tuple2.proj1 ] [ Tuple2.proj1 ] bi* AIsEq.== ]
+      #[ [ Tuple2.proj2 ] [ Tuple2.proj2 ] bi* BIsEq.== ]
+      #bi2 and
+    #end
+  #end
+
+end
+
+fun test ( -- Bool )
+  10 "A" M.Tuple2.make M.Tuple2.proj1 10 =
+end
