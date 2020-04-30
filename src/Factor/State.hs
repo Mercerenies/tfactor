@@ -15,6 +15,7 @@ import Factor.Type
 import Factor.State.Types
 import Factor.State.Resource
 import Factor.State.TypeDecl
+import Factor.Trait.Types
 
 import Data.Map(Map)
 import qualified Data.Map as Map
@@ -54,9 +55,11 @@ declsToReadOnly qid ds r = foldM go r ds
                 TraitDecl v def ->
                      let qid' = qid <> QId [v]
                      in traverseOf moduleNames (defineResource qid' v (TraitValue def)) reader
-                FunctorDecl v def ->
+                FunctorDecl v args decls ->
                      let qid' = qid <> QId [v]
-                     in traverseOf moduleNames (defineResource qid' v (FunctorValue def)) reader
+                         decls' = Map.mapWithKey modDeclToFunctorInfo decls
+                         pm = ParameterizedModule args decls'
+                     in traverseOf moduleNames (defineResource qid' v (FunctorValue pm)) reader
                 AliasDecl i j -> pure $ over moduleDecls (++ [Alias i j]) reader
                 OpenDecl j -> pure $ over moduleDecls (++ [Open j]) reader
                 RequireDecl j -> pure $ over moduleDecls (++ [AssertTrait j]) reader
@@ -70,12 +73,20 @@ newDeclName (ModuleDecl v _) = Just v
 newDeclName (ModuleSyn v _) = Just v
 newDeclName (RecordDecl v _ _) = Just v
 newDeclName (TraitDecl v _) = Just v
-newDeclName (FunctorDecl v _) = Just v
+newDeclName (FunctorDecl v _ _) = Just v
 newDeclName (TypeDecl v _ _) = Just v
 newDeclName (AliasDecl {}) = Nothing
 newDeclName (OpenDecl {}) = Nothing
 newDeclName (RequireDecl {}) = Nothing
 newDeclName (IncludeDecl {}) = Nothing
+
+modDeclToFunctorInfo :: Id -> ParamModuleDecl -> FunctorInfo
+modDeclToFunctorInfo _ (PModFunction t f) = FunctorUDFunction t f
+modDeclToFunctorInfo _ (PModMacro t f) = FunctorUDMacro t f
+modDeclToFunctorInfo _ (PModModule m) = FunctorModule $ Map.mapWithKey modDeclToFunctorInfo m
+modDeclToFunctorInfo _ (PModFunctor args m) = FunctorFunctor args $ Map.mapWithKey modDeclToFunctorInfo m
+modDeclToFunctorInfo _ (PModTrait t) = FunctorTrait t
+modDeclToFunctorInfo _ (PModType v ts) = FunctorType v ts
 
 defineFunction :: MonadState (ResourceTable ReaderValue) m =>
                   QId -> Id -> PolyFunctionType -> Sequence -> Map Id RId -> m (Map Id RId)

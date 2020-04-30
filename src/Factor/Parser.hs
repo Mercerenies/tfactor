@@ -76,8 +76,8 @@ decl = (\(t, s) -> FunctionDecl t s) <$> functionDecl <|>
        (\(i, j) -> ModuleSyn i j) <$> moduleSyn <|>
        (\(i, m) -> ModuleDecl i m) <$> moduleDecl <|>
        (\(i, t) -> TraitDecl i t) <$> trait <|>
-       (\(i, d, n) -> RecordDecl i d n) <$> recordDecl <|>
-       (\(i, f) -> FunctorDecl i f) <$> functorDecl <|>
+       (\(i, d, n) -> RecordDecl i d n) <$> recordDecl decl <|>
+       (\(i, vs, f) -> FunctorDecl i vs f) <$> functorDecl <|>
        (\(i, is, t) -> TypeDecl i is t) <$> typeDecl <|>
        (\(i, j) -> AliasDecl i j) <$> aliasDecl <|>
        (\i -> OpenDecl i) <$> openDecl <|>
@@ -173,11 +173,11 @@ typeInfoStd _ name targs = do
               return (Stack.fromList $ reverse args)
 
 -- An intermediate representation used in the parser for RecordInfo construction
-data RecordInfoImpl = RCon Id | RField Id Type | RDecl Declaration
-                      deriving (Show, Eq)
+data RecordInfoImpl d = RCon Id | RField Id Type | RDecl d
+                        deriving (Show, Eq)
 
-recordDecl :: Parser (Id, [Id], RecordInfo)
-recordDecl = do
+recordDecl :: Parser d -> Parser (Id, [Id], RecordInfo d)
+recordDecl declparser = do
   _ <- symbol "record"
   name <- unqualifiedId
   args <- option [] $ do
@@ -185,7 +185,7 @@ recordDecl = do
              args <- sepBy quantType (symbol ",")
              _ <- symbol "}"
              return args
-  inner <- many recordInfo
+  inner <- many (recordInfo declparser)
   _ <- symbol "end"
   let collate (RCon i) = over _1 (i :)
       collate (RField i t) = over _2 ((i, t) :)
@@ -196,28 +196,28 @@ recordDecl = do
            _ -> fail ("Wrong number of constructors to record " ++ show name)
   return (name, args, RecordInfo con (reverse fields) (reverse decls)) -- Unreversing them from construction order
 
-recordInfo :: Parser RecordInfoImpl
-recordInfo =
+recordInfo :: Parser d -> Parser (RecordInfoImpl d)
+recordInfo declparser =
     RCon <$> (symbol "constructor" *> unqualifiedId) <|>
     RField <$> (symbol "field" *> unqualifiedId) <*> (symbol "of" *> type_) <|>
-    RDecl <$> decl
+    RDecl <$> declparser
 
-functorInfo :: Parser (Id, FunctorInfo)
-functorInfo = (\(t, s) -> (fromJust $ functionName s, FunctorUDFunction t s)) <$> functionDecl <|>
-              (\(t, s) -> (macroName s, FunctorUDMacro t s)) <$> macroDecl <|>
-              (\(i, m) -> (i, FunctorModule m)) <$> modWithinFunctor <|>
-              (\(i, t) -> (i, FunctorTrait t)) <$> trait <|>
-              (\(i, a, t) -> (i, FunctorFunctor a t)) <$> functorWithinFunctor <|>
-              (\(i, vs, ts) -> (i, FunctorType vs ts)) <$> typeDecl
+functorInfo :: Parser (Id, ParamModuleDecl)
+functorInfo = (\(t, s) -> (fromJust $ functionName s, PModFunction t s)) <$> functionDecl <|>
+              (\(t, s) -> (macroName s, PModMacro t s)) <$> macroDecl <|>
+              (\(i, m) -> (i, PModModule m)) <$> modWithinFunctor <|>
+              (\(i, t) -> (i, PModTrait t)) <$> trait <|>
+              (\(i, a, t) -> (i, PModFunctor a t)) <$> functorWithinFunctor <|>
+              (\(i, vs, ts) -> (i, PModType vs ts)) <$> typeDecl
 
-modWithinFunctor :: Parser (Id, Map Id FunctorInfo)
+modWithinFunctor :: Parser (Id, Map Id ParamModuleDecl)
 modWithinFunctor = do
   name <- try (symbol "mod" *> unqualifiedId <* notFollowedBy (symbol "{"))
   decls <- many functorInfo
   _ <- symbol "end"
   return (name, Map.fromList decls)
 
-functorWithinFunctor :: Parser (Id, [ModuleArg], Map Id FunctorInfo)
+functorWithinFunctor :: Parser (Id, [ModuleArg], Map Id ParamModuleDecl)
 functorWithinFunctor = do
   name <- try (symbol "mod" *> unqualifiedId <* lookAhead (symbol "{"))
   params <- option [] $ do
@@ -234,7 +234,7 @@ functorWithinFunctor = do
   _ <- symbol "end"
   return (name, params, info)
 
-functorDecl :: Parser (Id, ParameterizedModule)
+functorDecl :: Parser (Id, [ModuleArg], Map Id ParamModuleDecl)
 functorDecl = do
   name <- try (symbol "mod" *> unqualifiedId <* lookAhead (symbol "{"))
   params <- option [] $ do
@@ -249,7 +249,7 @@ functorDecl = do
               return params
   info <- Map.fromList <$> many functorInfo
   _ <- symbol "end"
-  return (name, ParameterizedModule params info)
+  return (name, params, info)
 
 -- recordFunctorDecl :: Parser (Id, [ModuleArg], [RecordFunInfo])
 -- recordFunctorDecl = do

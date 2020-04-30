@@ -1,5 +1,6 @@
+{-# LANGUAGE RecordWildCards #-}
 
-module Factor.Code.Decl(Declaration(..), TypeInfo(..), RecordInfo(..),
+module Factor.Code.Decl(Declaration(..), TypeInfo(..), ParamModuleDecl(..), RecordInfo(..),
                         desugarRecord) where
 
 import Factor.Id
@@ -10,6 +11,7 @@ import Factor.Names
 import qualified Factor.Stack as Stack
 
 import Data.Foldable
+import Data.Map(Map)
 
 data Declaration = FunctionDecl PolyFunctionType Function
                  | MacroDecl PolyFunctionType Macro
@@ -17,7 +19,7 @@ data Declaration = FunctionDecl PolyFunctionType Function
                  | ModuleSyn Id (Either QId TraitRef)
                  | RecordDecl Id [Id] (RecordInfo Declaration)
                  | TraitDecl Id ParameterizedTrait
-                 | FunctorDecl Id ParameterizedModule
+                 | FunctorDecl Id [ModuleArg] (Map Id ParamModuleDecl)
                  | TypeDecl Id [Id] [TypeInfo]
                  | AliasDecl Id QId
                  | OpenDecl QId
@@ -25,7 +27,18 @@ data Declaration = FunctionDecl PolyFunctionType Function
                  | IncludeDecl QId
                    deriving (Show, Eq)
 
-data RecordInfo = RecordInfo {
+-- Most things that can go inside a functor can be represented here in
+-- the same way they are later in compilation, namely as a
+-- FunctorInfo, but some things, like record declarations, should get
+-- desugared out before we get that far.
+data ParamModuleDecl = PModFunction PolyFunctionType Function
+                     | PModMacro PolyFunctionType Macro
+                     | PModModule (Map Id ParamModuleDecl)
+                     | PModFunctor [ModuleArg] (Map Id ParamModuleDecl)
+                     | PModTrait ParameterizedTrait
+                     | PModType [Id] [TypeInfo]
+                       deriving (Show, Eq)
+
 data RecordInfo t = RecordInfo {
       recordConstructor :: Id,
       recordFields :: [(Id, Type)],
