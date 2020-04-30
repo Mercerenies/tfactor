@@ -208,7 +208,8 @@ functorInfo = (\(t, s) -> (fromJust $ functionName s, PModFunction t s)) <$> fun
               (\(i, m) -> (i, PModModule m)) <$> modWithinFunctor <|>
               (\(i, t) -> (i, PModTrait t)) <$> trait <|>
               (\(i, a, t) -> (i, PModFunctor a t)) <$> functorWithinFunctor <|>
-              (\(i, vs, ts) -> (i, PModType vs ts)) <$> typeDecl
+              (\(i, vs, ts) -> (i, PModType vs ts)) <$> typeDecl <|>
+              (\(i, vs, info) -> (i, PModRecord vs info)) <$> recordDecl functorInfo
 
 modWithinFunctor :: Parser (Id, Map Id ParamModuleDecl)
 modWithinFunctor = do

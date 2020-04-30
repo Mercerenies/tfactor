@@ -1,7 +1,7 @@
 {-# LANGUAGE RecordWildCards #-}
 
 module Factor.Code.Decl(Declaration(..), TypeInfo(..), ParamModuleDecl(..), RecordInfo(..),
-                        desugarRecord) where
+                        desugarRecord, desugarRecordInFunctor) where
 
 import Factor.Id
 import Factor.Type
@@ -12,6 +12,7 @@ import qualified Factor.Stack as Stack
 
 import Data.Foldable
 import Data.Map(Map)
+import qualified Data.Map as Map
 
 data Declaration = FunctionDecl PolyFunctionType Function
                  | MacroDecl PolyFunctionType Macro
@@ -37,6 +38,7 @@ data ParamModuleDecl = PModFunction PolyFunctionType Function
                      | PModFunctor [ModuleArg] (Map Id ParamModuleDecl)
                      | PModTrait ParameterizedTrait
                      | PModType [Id] [TypeInfo]
+                     | PModRecord [Id] (RecordInfo (Id, ParamModuleDecl))
                        deriving (Show, Eq)
 
 data RecordInfo t = RecordInfo {
@@ -84,3 +86,9 @@ desugarRecordImpl (DesugarRecordImpl {..}) name vs (RecordInfo con fields decls)
 
 desugarRecord :: Id -> [Id] -> RecordInfo Declaration -> Declaration
 desugarRecord = desugarRecordImpl (DesugarRecordImpl TypeDecl (const FunctionDecl) ModuleDecl)
+
+desugarRecordInFunctor :: Id -> [Id] -> RecordInfo (Id, ParamModuleDecl) -> (Id, ParamModuleDecl)
+desugarRecordInFunctor = desugarRecordImpl (DesugarRecordImpl tdecl fdecl mdecl)
+    where tdecl i vs ts = (i, PModType vs ts)
+          fdecl i p f = (i, PModFunction p f)
+          mdecl i xs = (i, PModModule $ Map.fromList xs)

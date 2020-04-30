@@ -1,0 +1,26 @@
+
+trait Vacuous end
+
+mod MyFunctor { F : Vacuous }
+
+  record MyTuple { 'a , 'b }
+    constructor make
+    field proj1 of 'a
+    field proj2 of 'b
+  end
+
+end
+
+mod MyVacuous end
+
+mod MyInstance1 = MyFunctor { MyVacuous } end
+mod MyInstance2 = MyFunctor { MyVacuous } end
+
+# TODO Test that the two records are in fact distinct
+
+fun test ( -- Bool )
+  true
+  #10 20 MyInstance1.MyTuple.make MyInstance1.MyTuple.proj1 10 =
+  #"" 20 MyInstance2.MyTuple.make MyInstance2.MyTuple.proj2 20 =
+  #and
+end

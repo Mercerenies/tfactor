@@ -90,6 +90,7 @@ modDeclToFunctorInfo i (PModModule m) = [(i, FunctorModule $ concatMapInMap modD
 modDeclToFunctorInfo i (PModFunctor args m) = [(i, FunctorFunctor args $ concatMapInMap modDeclToFunctorInfo m)]
 modDeclToFunctorInfo i (PModTrait t) = [(i, FunctorTrait t)]
 modDeclToFunctorInfo i (PModType v ts) = [(i, FunctorType v ts), (Id "*" <> i, FunctorGenerated)] -- TODO Factor.Names?
+modDeclToFunctorInfo i (PModRecord vs info) = uncurry modDeclToFunctorInfo $ desugarRecordInFunctor i vs info
 
 defineFunction :: MonadState (ResourceTable ReaderValue) m =>
                   QId -> Id -> PolyFunctionType -> Sequence -> Map Id RId -> m (Map Id RId)
