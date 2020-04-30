@@ -129,17 +129,17 @@ resolveAliasesAssert _ (Open q) = pure (Open q)
 resolveAliasesAssert _ (Alias i q) = pure (Alias i q)
 
 resolveAliasesFunctorInfo :: MonadError FactorError m =>
-                             Map Id Alias -> FunctorInfo -> m FunctorInfo
-resolveAliasesFunctorInfo m (FunctorUDFunction t (Function v ss)) = do
+                             QId -> Map Id Alias -> FunctorInfo -> m FunctorInfo
+resolveAliasesFunctorInfo _ m (FunctorUDFunction t (Function v ss)) = do
   ss' <- resolveAliasesSeq m ss
   t' <- resolveAliasesPolyFnType m t
   return $ FunctorUDFunction t' (Function v ss')
-resolveAliasesFunctorInfo m (FunctorUDMacro t (Macro v ss)) = do
+resolveAliasesFunctorInfo _ m (FunctorUDMacro t (Macro v ss)) = do
   ss' <- resolveAliasesSeq m ss
   t' <- resolveAliasesPolyFnType m t
   return $ FunctorUDMacro t' (Macro v ss')
-resolveAliasesFunctorInfo m (FunctorModule inner) = FunctorModule <$> mapM (resolveAliasesFunctorInfo m) inner
-resolveAliasesFunctorInfo m (FunctorTrait (ParameterizedTrait params (Trait xs))) = do
+resolveAliasesFunctorInfo q m (FunctorModule inner) = FunctorModule <$> Map.traverseWithKey (resolveAliasesFunctorInfo' q m) inner
+resolveAliasesFunctorInfo _ m (FunctorTrait (ParameterizedTrait params (Trait xs))) = do
   xs' <- mapM (\(i, t) -> ((,) i) <$> resolveAliasesTrait m t) xs
   -- TODO Shadowing issues with the names bound by the trait? Or do we care?
   params' <- forM params $ \(ModuleArg i (TraitRef name args)) -> do
@@ -147,19 +147,22 @@ resolveAliasesFunctorInfo m (FunctorTrait (ParameterizedTrait params (Trait xs))
                args' <- mapM (resolveAlias m) args
                return (ModuleArg i (TraitRef name' args'))
   return (FunctorTrait (ParameterizedTrait params' (Trait xs')))
---resolveAliasesFunctorInfo _ FunctorDemandType = pure FunctorDemandType
-resolveAliasesFunctorInfo m (FunctorFunctor args xs) = do
+resolveAliasesFunctorInfo q m (FunctorFunctor args xs) = do
   args' <- forM args $ \(ModuleArg name (TraitRef tname innerargs)) -> do
                            tname' <- resolveAlias m tname
                            innerargs' <- mapM (resolveAlias m) innerargs
                            return $ ModuleArg name (TraitRef tname' innerargs')
   -- TODO Again, do we care about shadowing here? (See comments below in this file)
-  xs' <- mapM (resolveAliasesFunctorInfo m) xs
+  xs' <- Map.traverseWithKey (resolveAliasesFunctorInfo' q m) xs
   return (FunctorFunctor args' xs')
-resolveAliasesFunctorInfo m (FunctorType vs ts) = do
+resolveAliasesFunctorInfo _ m (FunctorType vs ts) = do
   ts' <- forM ts $ \(TypeVal t xs) ->
            TypeVal t <$> _Unwrapping Stack.FromTop (mapM (resolveAliasesType m)) xs
   return $ FunctorType vs ts'
+
+resolveAliasesFunctorInfo' :: MonadError FactorError m =>
+                              QId -> Map Id Alias -> Id -> FunctorInfo -> m FunctorInfo
+resolveAliasesFunctorInfo' q m i f = resolveAliasesFunctorInfo (q <> QId [i]) m f
 
 resolveAliasesResource :: MonadError FactorError m =>
                           Map Id Alias -> ReaderValue -> m ReaderValue
@@ -183,8 +186,9 @@ resolveAliasesResource m (TraitValue (ParameterizedTrait params (Trait xs))) = d
                return (ModuleArg i (TraitRef name' args'))
   return (TraitValue (ParameterizedTrait params' (Trait xs')))
 resolveAliasesResource m (FunctorValue (ParameterizedModule params info)) = do
-  let m' = bindAliasesForFunctor (QId [Id "Self"]) info m
-  info' <- mapM (resolveAliasesFunctorInfo m') info
+  let self = QId [Id "Self"] -- TODO Factor.Names
+      m' = bindAliasesForFunctor self info m
+  info' <- Map.traverseWithKey (resolveAliasesFunctorInfo' self m') info
   -- TODO Shadowing issues with the names bound by the functor? Or do we care?
   params' <- forM params $ \(ModuleArg i (TraitRef name args)) -> do
                name' <- resolveAlias m name
