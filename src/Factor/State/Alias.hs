@@ -138,7 +138,9 @@ resolveAliasesFunctorInfo _ m (FunctorUDMacro t (Macro v ss)) = do
   ss' <- resolveAliasesSeq m ss
   t' <- resolveAliasesPolyFnType m t
   return $ FunctorUDMacro t' (Macro v ss')
-resolveAliasesFunctorInfo q m (FunctorModule inner) = FunctorModule <$> Map.traverseWithKey (resolveAliasesFunctorInfo' q m) inner
+resolveAliasesFunctorInfo q m (FunctorModule inner) =
+    let m' = bindAliasesForFunctor q inner m
+    in FunctorModule <$> Map.traverseWithKey (resolveAliasesFunctorInfo' q m') inner
 resolveAliasesFunctorInfo _ m (FunctorTrait (ParameterizedTrait params (Trait xs))) = do
   xs' <- mapM (\(i, t) -> ((,) i) <$> resolveAliasesTrait m t) xs
   -- TODO Shadowing issues with the names bound by the trait? Or do we care?
@@ -148,6 +150,9 @@ resolveAliasesFunctorInfo _ m (FunctorTrait (ParameterizedTrait params (Trait xs
                return (ModuleArg i (TraitRef name' args'))
   return (FunctorTrait (ParameterizedTrait params' (Trait xs')))
 resolveAliasesFunctorInfo q m (FunctorFunctor args xs) = do
+  -- TODO The name ends up wrong here, since Self will now refer to
+  -- the inner functor, not the outer. Or it might not. Honestly, Self
+  -- with nested functors is pretty buggy right now anyway.
   args' <- forM args $ \(ModuleArg name (TraitRef tname innerargs)) -> do
                            tname' <- resolveAlias m tname
                            innerargs' <- mapM (resolveAlias m) innerargs
