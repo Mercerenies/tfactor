@@ -40,6 +40,7 @@ data FunctorInfo = FunctorUDFunction PolyFunctionType Function
                  | FunctorFunctor [ModuleArg] (Map Id FunctorInfo)
                  | FunctorTrait ParameterizedTrait
                  | FunctorType [Id] [TypeInfo]
+                 | FunctorGenerated
                    deriving (Eq)
 
 data TypeInfo = TypeVal Id (Stack Type)
@@ -74,3 +75,4 @@ instance Show FunctorInfo where
     showsPrec _ (FunctorTrait t) = ("<FunctorTrait " ++) . shows t . (">" ++)
     showsPrec _ (FunctorFunctor _ _) = ("<FunctorFunctor>" ++) -- TODO Print this better?
     showsPrec _ (FunctorType vs _) = ("<FunctorType args=" ++) . shows (length vs) . (">" ++)
+    showsPrec _ (FunctorGenerated) = ("<FunctorGenerated>" ++)

@@ -57,7 +57,7 @@ declsToReadOnly qid ds r = foldM go r ds
                      in traverseOf moduleNames (defineResource qid' v (TraitValue def)) reader
                 FunctorDecl v args decls ->
                      let qid' = qid <> QId [v]
-                         decls' = Map.mapWithKey modDeclToFunctorInfo decls
+                         decls' = concatMapInMap modDeclToFunctorInfo decls
                          pm = ParameterizedModule args decls'
                      in traverseOf moduleNames (defineResource qid' v (FunctorValue pm)) reader
                 AliasDecl i j -> pure $ over moduleDecls (++ [Alias i j]) reader
@@ -80,13 +80,16 @@ newDeclName (OpenDecl {}) = Nothing
 newDeclName (RequireDecl {}) = Nothing
 newDeclName (IncludeDecl {}) = Nothing
 
-modDeclToFunctorInfo :: Id -> ParamModuleDecl -> FunctorInfo
-modDeclToFunctorInfo _ (PModFunction t f) = FunctorUDFunction t f
-modDeclToFunctorInfo _ (PModMacro t f) = FunctorUDMacro t f
-modDeclToFunctorInfo _ (PModModule m) = FunctorModule $ Map.mapWithKey modDeclToFunctorInfo m
-modDeclToFunctorInfo _ (PModFunctor args m) = FunctorFunctor args $ Map.mapWithKey modDeclToFunctorInfo m
-modDeclToFunctorInfo _ (PModTrait t) = FunctorTrait t
-modDeclToFunctorInfo _ (PModType v ts) = FunctorType v ts
+concatMapInMap :: Ord k => (k -> a -> [(k, b)]) -> Map k a -> Map k b
+concatMapInMap f = Map.fromList . concatMap (uncurry f) . Map.toList
+
+modDeclToFunctorInfo :: Id -> ParamModuleDecl -> [(Id, FunctorInfo)]
+modDeclToFunctorInfo i (PModFunction t f) = [(i, FunctorUDFunction t f)]
+modDeclToFunctorInfo i (PModMacro t f) = [(i, FunctorUDMacro t f)]
+modDeclToFunctorInfo i (PModModule m) = [(i, FunctorModule $ concatMapInMap modDeclToFunctorInfo m)]
+modDeclToFunctorInfo i (PModFunctor args m) = [(i, FunctorFunctor args $ concatMapInMap modDeclToFunctorInfo m)]
+modDeclToFunctorInfo i (PModTrait t) = [(i, FunctorTrait t)]
+modDeclToFunctorInfo i (PModType v ts) = [(i, FunctorType v ts), (Id "*" <> i, FunctorGenerated)] -- TODO Factor.Names?
 
 defineFunction :: MonadState (ResourceTable ReaderValue) m =>
                   QId -> Id -> PolyFunctionType -> Sequence -> Map Id RId -> m (Map Id RId)

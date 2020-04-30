@@ -384,6 +384,9 @@ bindFunctorInfo subfn qid name info m =
           let ts' = fmap (\(TypeVal t xs) -> TypeVal t $ fmap (subArgInType subfn) xs) ts
           let prefixqid = QId . init $ unQId qid
           overLens readerResources $ declareType (TypeToDeclare prefixqid name vs ts') m
+      FunctorGenerated -> pure m -- These just disappear; they've
+                                 -- served their purpose by the time
+                                 -- we get here.
 
 appendResourceRO' :: MonadState ReadOnlyState m => QId -> ReaderValue -> m RId
 appendResourceRO' qid value = state (appendResourceRO qid value)

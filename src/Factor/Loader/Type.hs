@@ -96,6 +96,7 @@ normalizeTypesFunctorInfo names (FunctorType vs ts) = do
   ts' <- forM ts $ \(TypeVal t xs) ->
            TypeVal t <$> _Unwrapping Stack.FromTop (mapM (normalizeType names)) xs
   return $ FunctorType vs ts'
+normalizeTypesFunctorInfo _ FunctorGenerated = pure FunctorGenerated
 
 normalizeTypesFunctor :: (MonadReader ReadOnlyState m, MonadError FactorError m) =>
                          Map Id Trait -> Map Id FunctorInfo -> m (Map Id FunctorInfo)
@@ -155,4 +156,5 @@ functorToTrait qid0 (ParameterizedModule params info0) =
                           let Trait m' = toTrait (qid <> QId [i]) m
                           in [TraitFunctor args m']
                       go _ (FunctorType vs _) = [TraitType (length vs)]
+                      go _ FunctorGenerated = [] -- TODO I guess this should probably be *something*...?
                   in Trait $ concatMap (\(i, v) -> map ((,) i) $ go i v) (Map.toList info)

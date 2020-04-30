@@ -67,6 +67,7 @@ subArgInFunctorInfo f (FunctorFunctor args t) =
        FunctorFunctor args (fmap (subArgInFunctorInfo f') t)
 subArgInFunctorInfo f (FunctorType vs ts) =
     FunctorType vs $ fmap (\(TypeVal t xs) -> TypeVal t (fmap (subArgInType f) xs)) ts
+subArgInFunctorInfo _ FunctorGenerated = FunctorGenerated
 
 substituteTrait :: (Id -> QId) -> Trait -> Trait
 substituteTrait f (Trait ts) = Trait $ fmap (_2 %~ go) ts

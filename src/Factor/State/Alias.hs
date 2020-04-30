@@ -164,6 +164,7 @@ resolveAliasesFunctorInfo _ m (FunctorType vs ts) = do
   ts' <- forM ts $ \(TypeVal t xs) ->
            TypeVal t <$> _Unwrapping Stack.FromTop (mapM (resolveAliasesType m)) xs
   return $ FunctorType vs ts'
+resolveAliasesFunctorInfo _ _ FunctorGenerated = pure FunctorGenerated
 
 resolveAliasesFunctorInfo' :: MonadError FactorError m =>
                               QId -> Map Id Alias -> Id -> FunctorInfo -> m FunctorInfo
