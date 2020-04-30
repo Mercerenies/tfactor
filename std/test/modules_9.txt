@@ -1,0 +1,19 @@
+
+# Super simple test case, but it was a parser issue. Simply make sure
+# that functors of zero arguments can exist, parse correctly, and
+# instantiate.
+
+mod F { }
+  fun foo ( -- Int )
+    10
+  end
+end
+
+mod G = F { } end
+mod H = F { } end
+
+fun test ( -- Bool )
+  G.foo 10 =
+  H.foo 10 =
+  and
+end

@@ -25,7 +25,7 @@ type Parser = Parsec [Token] ()
 
 keywords :: [String]
 keywords = ["true", "false", "fun", "mod", "end", "macro", "alias", "open", "record",
-            "field", "constructor", "val", "require", "include", "type", "of"]
+            "field", "constructor", "val", "require", "include", "type", "of", "[", "]", "{", "}"]
 
 -- (Unused right now)
 _id_ :: Parser Id
@@ -51,6 +51,12 @@ nonKeywordQId = try $ do
     [Id x] -> when (x `elem` keywords) $ unexpected $ "keyword " ++ x
     _ -> pure ()
   return $ QId xs
+
+nonKeywordId :: Parser Id
+nonKeywordId = try $ do
+  Id x <- unqualifiedId
+  when (x `elem` keywords) $ unexpected $ "keyword " ++ x
+  return $ Id x
 
 statement :: Parser Statement
 statement = Literal <$> literal <|>
@@ -87,7 +93,7 @@ decl = (\(t, s) -> FunctionDecl t s) <$> functionDecl <|>
 functionDecl :: Parser (PolyFunctionType, Function)
 functionDecl = do
   _ <- symbol "fun" <?> "function declaration"
-  name <- unqualifiedId
+  name <- nonKeywordId
   ty <- functionType
   def <- seq_
   _ <- symbol "end"
@@ -96,7 +102,7 @@ functionDecl = do
 macroDecl :: Parser (PolyFunctionType, Macro)
 macroDecl = do
   _ <- symbol "macro" <?> "macro declaration"
-  name <- unqualifiedId
+  name <- nonKeywordId
   ty <- functionType
   def <- seq_
   _ <- symbol "end"
@@ -104,18 +110,18 @@ macroDecl = do
 
 moduleDecl :: Parser (Id, [Declaration])
 moduleDecl = do
-  name <- try (symbol "mod" *> unqualifiedId <* notFollowedBy (symbol "=" <|> symbol "{")) <?> "module declaration"
+  name <- try (symbol "mod" *> nonKeywordId <* notFollowedBy (symbol "=" <|> symbol "{")) <?> "module declaration"
   decls <- many decl
   _ <- symbol "end"
   return (name, decls)
 
 moduleSyn :: Parser (Id, Either QId TraitRef)
 moduleSyn = do -- TODO Use val not mod here
-  name <- try (symbol "mod" *> unqualifiedId <* symbol "=") <?> "module synonym"
-  syn <- qualifiedId
+  name <- try (symbol "mod" *> nonKeywordId <* symbol "=") <?> "module synonym"
+  syn <- nonKeywordQId
   args <- option (Left syn) $ do
               _ <- symbol "{"
-              args <- sepBy qualifiedId (symbol ",")
+              args <- sepBy nonKeywordQId (symbol ",")
               _ <- symbol "}"
               return (Right $ TraitRef syn args)
   _ <- symbol "end"
@@ -124,7 +130,7 @@ moduleSyn = do -- TODO Use val not mod here
 typeDecl :: Parser (Id, [Id], [TypeInfo])
 typeDecl = do
   _ <- symbol "type" <?> "type declaration"
-  name <- unqualifiedId
+  name <- nonKeywordId
   args <- option [] $ do
              _ <- symbol "{"
              args <- sepBy quantType (symbol ",")
@@ -136,7 +142,7 @@ typeDecl = do
 typeInfo :: Id -> [Id] -> Parser TypeInfo
 typeInfo tname targs = do
   _ <- symbol "|"
-  name <- unqualifiedId
+  name <- nonKeywordId
   args <- typeInfoGADT tname name targs <|> typeInfoStd tname name targs
   return $ TypeVal name args
 
@@ -179,7 +185,7 @@ data RecordInfoImpl d = RCon Id | RField Id Type | RDecl d
 recordDecl :: Parser d -> Parser (Id, [Id], RecordInfo d)
 recordDecl declparser = do
   _ <- symbol "record"
-  name <- unqualifiedId
+  name <- nonKeywordId
   args <- option [] $ do
              _ <- symbol "{"
              args <- sepBy quantType (symbol ",")
@@ -198,8 +204,8 @@ recordDecl declparser = do
 
 recordInfo :: Parser d -> Parser (RecordInfoImpl d)
 recordInfo declparser =
-    RCon <$> (symbol "constructor" *> unqualifiedId) <|>
-    RField <$> (symbol "field" *> unqualifiedId) <*> (symbol "of" *> type_) <|>
+    RCon <$> (symbol "constructor" *> nonKeywordId) <|>
+    RField <$> (symbol "field" *> nonKeywordId) <*> (symbol "of" *> type_) <|>
     RDecl <$> declparser
 
 functorInfo :: Parser (Id, ParamModuleDecl)
@@ -213,18 +219,18 @@ functorInfo = (\(t, s) -> (fromJust $ functionName s, PModFunction t s)) <$> fun
 
 modWithinFunctor :: Parser (Id, Map Id ParamModuleDecl)
 modWithinFunctor = do
-  name <- try (symbol "mod" *> unqualifiedId <* notFollowedBy (symbol "{"))
+  name <- try (symbol "mod" *> nonKeywordId <* notFollowedBy (symbol "{"))
   decls <- many functorInfo
   _ <- symbol "end"
   return (name, Map.fromList decls)
 
 functorWithinFunctor :: Parser (Id, [ModuleArg], Map Id ParamModuleDecl)
 functorWithinFunctor = do
-  name <- try (symbol "mod" *> unqualifiedId <* lookAhead (symbol "{"))
+  name <- try (symbol "mod" *> nonKeywordId <* lookAhead (symbol "{"))
   params <- option [] $ do
               _ <- symbol "{"
               let singleparam = do
-                          argname <- unqualifiedId
+                          argname <- nonKeywordId
                           _ <- symbol ":"
                           argtype <- traitRef
                           return $ ModuleArg argname argtype
@@ -237,11 +243,11 @@ functorWithinFunctor = do
 
 functorDecl :: Parser (Id, [ModuleArg], Map Id ParamModuleDecl)
 functorDecl = do
-  name <- try (symbol "mod" *> unqualifiedId <* lookAhead (symbol "{"))
+  name <- try (symbol "mod" *> nonKeywordId <* lookAhead (symbol "{"))
   params <- option [] $ do
               _ <- symbol "{"
               let singleparam = do
-                          argname <- unqualifiedId
+                          argname <- nonKeywordId
                           _ <- symbol ":"
                           argtype <- traitRef
                           return $ ModuleArg argname argtype
@@ -252,52 +258,29 @@ functorDecl = do
   _ <- symbol "end"
   return (name, params, info)
 
--- recordFunctorDecl :: Parser (Id, [ModuleArg], [RecordFunInfo])
--- recordFunctorDecl = do
---   name <- try (symbol "record" *> unqualifiedId <* lookAhead (symbol "{"))
---   params <- option [] $ do
---               _ <- symbol "{"
---               let singleparam = do
---                           argname <- unqualifiedId
---                           _ <- symbol ":"
---                           argtype <- traitRef
---                           return $ ModuleArg argname argtype
---               params <- sepBy singleparam (symbol ",")
---               _ <- symbol "}"
---               return params
---   info <- many recordFunInfo
---   _ <- symbol "end"
---   return (name, params, info)
-
--- recordFunInfo :: Parser RecordFunInfo
--- recordFunInfo =
---     RecordFunConstructor <$> (symbol "constructor" *> unqualifiedId) <|>
---     RecordFunField <$> (symbol "field" *> unqualifiedId) <*> type_ <|>
---     (\(i, f) -> RecordFunOrdinaryDecl i f) <$> functorInfo
-
 aliasDecl :: Parser (Id, QId)
 aliasDecl = do
   _ <- symbol "alias"
-  name <- unqualifiedId
+  name <- nonKeywordId
   _ <- symbol "="
-  name' <- qualifiedId
+  name' <- nonKeywordQId
   return (name, name')
 
 openDecl :: Parser QId
-openDecl = symbol "open" *> qualifiedId
+openDecl = symbol "open" *> nonKeywordQId
 
 requireDecl :: Parser TraitRef
 requireDecl = symbol "require" *> traitRef
 
 includeDecl :: Parser QId
-includeDecl = symbol "include" *> qualifiedId
+includeDecl = symbol "include" *> nonKeywordQId
 
 traitRef :: Parser TraitRef
 traitRef = do
-  name <- qualifiedId
+  name <- nonKeywordQId
   args <- option [] $ do
              _ <- symbol "{"
-             args <- sepBy qualifiedId (symbol ",")
+             args <- sepBy nonKeywordQId (symbol ",")
              _ <- symbol "}"
              return args
   return $ TraitRef name args
@@ -305,11 +288,11 @@ traitRef = do
 trait :: Parser (Id, ParameterizedTrait)
 trait = do
   _ <- symbol "trait"
-  name <- unqualifiedId
+  name <- nonKeywordId
   params <- option [] $ do
               _ <- symbol "{"
               let singleparam = do
-                          argname <- unqualifiedId
+                          argname <- nonKeywordId
                           _ <- symbol ":"
                           argtype <- traitRef
                           return $ ModuleArg argname argtype
@@ -328,24 +311,24 @@ traitInfo = traitInfoFun <|> traitInfoMod <|> -- TODO Macro declarations in trai
 traitInfoFun :: Parser (Id, TraitInfo)
 traitInfoFun = do
   _ <- symbol "fun"
-  name <- unqualifiedId
+  name <- nonKeywordId
   ty <- functionType
   return (name, TraitFunction $ PolyFunctionType (allQuantVars $ FunType ty) ty)
 
 traitInfoMod :: Parser (Id, TraitInfo)
 traitInfoMod = do
-  name <- try (symbol "mod" *> unqualifiedId <* notFollowedBy (symbol "{"))
+  name <- try (symbol "mod" *> nonKeywordId <* notFollowedBy (symbol "{"))
   inner <- many traitInfo
   _ <- symbol "end"
   return (name, TraitModule inner)
 
 traitInfoFunctor :: Parser (Id, TraitInfo)
 traitInfoFunctor = do
-  name <- try (symbol "mod" *> unqualifiedId <* lookAhead (symbol "{"))
+  name <- try (symbol "mod" *> nonKeywordId <* lookAhead (symbol "{"))
   params <- option [] $ do
               _ <- symbol "{"
               let singleparam = do
-                          argname <- unqualifiedId
+                          argname <- nonKeywordId
                           _ <- symbol ":"
                           argtype <- traitRef
                           return $ ModuleArg argname argtype
@@ -365,7 +348,7 @@ traitInfoInclude = do
 traitInfoType :: Parser (Id, TraitInfo)
 traitInfoType = do
   _ <- symbol "type"
-  name <- unqualifiedId
+  name <- nonKeywordId
   n <- option 0 $ do
              _ <- symbol "{"
              args <- sepBy quantType (symbol ",")
@@ -376,7 +359,7 @@ traitInfoType = do
 moduleType :: Parser TypeId
 moduleType = do
   qid <- try $ do
-           qid <- qualifiedId
+           qid <- nonKeywordQId
            when (qid == QId [Id "--"]) $ unexpected "--"
            return qid
   args <- option [] $ do
