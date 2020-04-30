@@ -86,7 +86,7 @@ decl = (\(t, s) -> FunctionDecl t s) <$> functionDecl <|>
 
 functionDecl :: Parser (PolyFunctionType, Function)
 functionDecl = do
-  _ <- symbol "fun"
+  _ <- symbol "fun" <?> "function declaration"
   name <- unqualifiedId
   ty <- functionType
   def <- seq_
@@ -95,7 +95,7 @@ functionDecl = do
 
 macroDecl :: Parser (PolyFunctionType, Macro)
 macroDecl = do
-  _ <- symbol "macro"
+  _ <- symbol "macro" <?> "macro declaration"
   name <- unqualifiedId
   ty <- functionType
   def <- seq_
@@ -104,14 +104,14 @@ macroDecl = do
 
 moduleDecl :: Parser (Id, [Declaration])
 moduleDecl = do
-  name <- try (symbol "mod" *> unqualifiedId <* notFollowedBy (symbol "=" <|> symbol "{"))
+  name <- try (symbol "mod" *> unqualifiedId <* notFollowedBy (symbol "=" <|> symbol "{")) <?> "module declaration"
   decls <- many decl
   _ <- symbol "end"
   return (name, decls)
 
 moduleSyn :: Parser (Id, Either QId TraitRef)
 moduleSyn = do -- TODO Use val not mod here
-  name <- try (symbol "mod" *> unqualifiedId <* symbol "=")
+  name <- try (symbol "mod" *> unqualifiedId <* symbol "=") <?> "module synonym"
   syn <- qualifiedId
   args <- option (Left syn) $ do
               _ <- symbol "{"
@@ -123,7 +123,7 @@ moduleSyn = do -- TODO Use val not mod here
 
 typeDecl :: Parser (Id, [Id], [TypeInfo])
 typeDecl = do
-  _ <- symbol "type"
+  _ <- symbol "type" <?> "type declaration"
   name <- unqualifiedId
   args <- option [] $ do
              _ <- symbol "{"
