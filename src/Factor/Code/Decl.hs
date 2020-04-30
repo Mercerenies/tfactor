@@ -15,7 +15,7 @@ data Declaration = FunctionDecl PolyFunctionType Function
                  | MacroDecl PolyFunctionType Macro
                  | ModuleDecl Id [Declaration]
                  | ModuleSyn Id (Either QId TraitRef)
-                 | RecordDecl Id [Id] RecordInfo
+                 | RecordDecl Id [Id] (RecordInfo Declaration)
                  | TraitDecl Id ParameterizedTrait
                  | FunctorDecl Id ParameterizedModule
                  | TypeDecl Id [Id] [TypeInfo]
@@ -26,9 +26,10 @@ data Declaration = FunctionDecl PolyFunctionType Function
                    deriving (Show, Eq)
 
 data RecordInfo = RecordInfo {
+data RecordInfo t = RecordInfo {
       recordConstructor :: Id,
       recordFields :: [(Id, Type)],
-      recordDecls :: [Declaration]
+      recordDecls :: [t]
     } deriving (Show, Eq)
 
 callDrop :: Statement
@@ -48,16 +49,25 @@ forNthField total n = Sequence [
     where initial = fold $ replicate n (Sequence [callDrop])
           final = fold $ replicate (total - 1 - n) (Sequence [callSwap, callDrop])
 
-desugarRecord :: Id -> [Id] -> RecordInfo -> Declaration
-desugarRecord name vs (RecordInfo con fields decls) =
+data DesugarRecordImpl t d = DesugarRecordImpl {
+      typeDecl :: Id -> [Id] -> [TypeInfo] -> t,
+      functionDecl :: Id -> PolyFunctionType -> Function -> t,
+      moduleDecl :: Id -> [t] -> d
+    }
+
+desugarRecordImpl :: DesugarRecordImpl t d -> Id -> [Id] -> RecordInfo t -> d
+desugarRecordImpl (DesugarRecordImpl {..}) name vs (RecordInfo con fields decls) =
     let targettype = NamedType (TypeId (QId [name, Id "t"]) $ fmap QuantVar vs)
         fieldtypes = reverse $ fmap snd fields
         stackvar = freshVar "R" vs
-        type_ = TypeDecl (Id "t") vs [TypeVal con (Stack.fromList fieldtypes)]
+        type_ = typeDecl (Id "t") vs [TypeVal con (Stack.fromList fieldtypes)]
         fieldcount = length fields
         accessorType t = polyFunctionType (stackvar : vs) [targettype] (RestQuant stackvar)
                                                           [t] (RestQuant stackvar)
-        accessorFor (i, (n, t)) = FunctionDecl (accessorType t) (Function (Just n) (forNthField fieldcount i))
+        accessorFor (i, (n, t)) = functionDecl n (accessorType t) (Function (Just n) (forNthField fieldcount i))
         accessors = fmap accessorFor $ zip [0..] (reverse fields)
         inner = [type_] ++ accessors ++ decls
-    in ModuleDecl name inner
+    in moduleDecl name inner
+
+desugarRecord :: Id -> [Id] -> RecordInfo Declaration -> Declaration
+desugarRecord = desugarRecordImpl (DesugarRecordImpl TypeDecl (const FunctionDecl) ModuleDecl)
