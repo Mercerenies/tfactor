@@ -1,0 +1,20 @@
+
+# Testing alias resolution inside of functors
+
+trait Vacuous end
+
+mod F { G : Vacuous }
+  fun foo ( -- Int )
+    42
+  end
+  fun bar ( Int -- Int )
+    foo +
+  end
+end
+
+mod L end
+mod M = F { L } end
+
+fun test ( -- Bool )
+  42 M.bar 84 =
+end

@@ -183,7 +183,8 @@ resolveAliasesResource m (TraitValue (ParameterizedTrait params (Trait xs))) = d
                return (ModuleArg i (TraitRef name' args'))
   return (TraitValue (ParameterizedTrait params' (Trait xs')))
 resolveAliasesResource m (FunctorValue (ParameterizedModule params info)) = do
-  info' <- mapM (resolveAliasesFunctorInfo m) info
+  let m' = bindAliasesForFunctor (QId [Id "Self"]) info m
+  info' <- mapM (resolveAliasesFunctorInfo m') info
   -- TODO Shadowing issues with the names bound by the functor? Or do we care?
   params' <- forM params $ \(ModuleArg i (TraitRef name args)) -> do
                name' <- resolveAlias m name
@@ -217,6 +218,10 @@ resolveAliasesResource' aliases0 (QId xs) r = do
               in foldM handleAliasDecl aliases' (m'^.moduleDecls)
   aliases1 <- foldM handleParentModule aliases0 parents
   resolveAliasesResource aliases1 r
+
+bindAliasesForFunctor :: QId -> Map Id FunctorInfo -> Map Id Alias -> Map Id Alias
+bindAliasesForFunctor qid mf m0 = foldl go m0 $ Map.toList mf
+    where go m (i, _) = defAlias i (qid <> QId [i]) m
 
 handleAliasDecl :: (MonadReader ReadOnlyState m, MonadError FactorError m) =>
                    Map Id Alias -> ModuleDecl -> m (Map Id Alias)
