@@ -26,6 +26,11 @@ tokenPos (StringToken s _) = s
 tokenPos (IntToken s _) = s
 tokenPos (SymbolToken s _) = s
 
+-- TODO Decide how we want the "special character" system to work,
+-- because it's oddly ignored by the rest of the parser right now. Do
+-- we want to allow user-defined symbols to have parentheses and
+-- brackets in them?
+
 semiSpecialChars :: [Char]
 semiSpecialChars = ":;()'[]"
 
@@ -73,31 +78,31 @@ satisfy predicate = tokenPrim show nextPos predicate
     where nextPos _ x _ = tokenPos x
 
 string :: Stream s m Token => ParsecT s u m String
-string = satisfy go
+string = satisfy go <?> "string literal"
     where go (StringToken _ s) = Just s
           go _ = Nothing
 
 int :: Stream s m Token => ParsecT s u m Integer
-int = satisfy go
+int = satisfy go <?> "integer literal"
     where go (IntToken _ n) = Just n
           go _ = Nothing
 
 symbol :: Stream s m Token => String -> ParsecT s u m Id
-symbol s = satisfy go
+symbol s = satisfy go <?> ("symbol " ++ show s)
     where go (SymbolToken _ s') | s == s' = Just $ Id s'
           go _ = Nothing
 
 ordinarySymbol :: Stream s m Token => ParsecT s u m Id
-ordinarySymbol = satisfy go
+ordinarySymbol = satisfy go <?> "ordinary symbol"
     where go (SymbolToken _ s) | not (isSpecialSymbol s) = Just $ Id s
           go _ = Nothing
 
 specialSymbol :: Stream s m Token => ParsecT s u m Id
-specialSymbol = satisfy go
+specialSymbol = satisfy go <?> "special symbol"
     where go (SymbolToken _ s) | isSpecialSymbol s = Just $ Id s
           go _ = Nothing
 
 symbolLiteral :: Stream s m Token => ParsecT s u m String
-symbolLiteral = satisfy go
+symbolLiteral = satisfy go <?> "symbol literal"
     where go (SymbolToken _ (':':ss)) = Just ss
           go _ = Nothing
