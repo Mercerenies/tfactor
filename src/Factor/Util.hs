@@ -1,7 +1,8 @@
 {-# LANGUAGE RankNTypes #-}
 
 module Factor.Util(sepBy, padLeft, foldM1, insertOrUpdate, errorToMaybe, setFilterMap,
-                   possibly, possibly', foldMapM, containsDuplicate, identifiersFrom, overLens) where
+                   possibly, possibly', foldMapM, containsDuplicate, identifiersFrom, overLens,
+                   allSplits) where
 
 import Control.Monad
 import Control.Monad.Except
@@ -68,3 +69,14 @@ overLens acc st = do
   (b, s') <- runStateT st s
   acc .= s'
   return b
+
+-- In spirit, this is
+--
+-- allSplits xs = fmap (\n -> splitAt n xs) [0..]
+--
+-- but hilariously, that implementation actually works for infinite
+-- lists and fails in the *finite* case. The below implementation is
+-- correct for both.
+allSplits :: [a] -> [([a], [a])]
+allSplits [] = [([], [])]
+allSplits (x:xs) = ([], (x:xs)) : fmap (_1 %~ (x :)) (allSplits xs)
