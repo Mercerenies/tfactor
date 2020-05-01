@@ -1,0 +1,14 @@
+
+# Just a simple alias
+
+mod Bar
+  fun double ( Int -- Int )
+    2 *
+  end
+end
+
+alias Foo = Bar
+
+fun test ( -- Bool )
+  10 Foo.double Bar.double 40 =
+end

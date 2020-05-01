@@ -1,0 +1,24 @@
+
+# Aliasing into multiple module synonyms
+
+mod A
+  mod B
+    mod C
+      mod D
+        fun foo ( -- Int )
+          999
+        end
+      end
+    end
+  end
+end
+
+mod A1 = A    end
+mod B1 = A1.B end
+mod C1 = B1.C end
+mod D1 = C1.D end
+alias foo = D1.foo
+
+fun test ( -- Bool )
+  foo 999 =
+end

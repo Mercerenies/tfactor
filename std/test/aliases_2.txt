@@ -1,0 +1,13 @@
+
+# Aliases which reference one another
+
+fun push-twenty ( -- Int )
+  20
+end
+
+alias push-twenty0 = push-twenty
+alias push-twenty1 = push-twenty0
+
+fun test ( -- Bool )
+  push-twenty1 20 =
+end

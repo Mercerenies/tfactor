@@ -1,0 +1,24 @@
+
+# Aliasing into a module synonym
+
+mod M
+  mod N
+    mod NN
+      fun foo ( -- Int )
+        97
+      end
+    end
+  end
+  mod P = N end
+  alias Q = P.NN
+  alias foo1 = Q.foo
+
+  fun bar ( -- Int )
+    foo1
+  end
+
+end
+
+fun test ( -- Bool )
+  M.bar 97 =
+end

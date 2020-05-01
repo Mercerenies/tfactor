@@ -10,11 +10,15 @@ import Factor.Code
 import Factor.Names
 import Factor.Type
 import qualified Factor.Stack as Stack
+import Factor.Trait
 import Factor.Trait.Types
+import Factor.Loader.Type
 
 import Data.Map(Map)
 import qualified Data.Map as Map
 import qualified Data.List as List
+import Data.Set(Set)
+import qualified Data.Set as Set
 import Control.Monad.Except
 import Control.Monad.Reader hiding (reader)
 import Control.Lens
@@ -26,6 +30,75 @@ import Control.Lens
 data Alias = AliasValue QId
            | AmbiguousAlias [QId]
              deriving (Show, Eq)
+
+data NameExist = NoExist
+               | NamedResource ReaderValue
+               | NamedTraitEntity TraitInfo
+                 deriving (Show)
+
+-- NameExist is a relatively trivial monoid, whose identity is NoExist
+-- and for which, other than the identity, the <> operation always
+-- returns the left operand.
+instance Semigroup NameExist where
+    NoExist <> y = y
+    x <> _ = x
+
+instance Monoid NameExist where
+    mempty = NoExist
+
+data IntermediateLookup = ILIsMod Module
+                        | ILIsTrait Trait
+                          deriving (Show)
+
+-- TODO doesNameExist still doesn't work with includes.
+
+-- This isn't exactly like Factor.State.Reader.lookupFn. That function
+-- assumes the ID points to a valid resource, whereas this one is
+-- willing to refer to hypothetical resources that haven't been
+-- allocated yet, since during alias resolution we don't care about a
+-- thing's resource ID; we simply want to know that it either exists
+-- or will exist soon.
+doesNameExist :: Map Id Alias -> ReadOnlyState -> QId -> NameExist
+doesNameExist m r q = doesNameExist0 m r Set.empty q
+
+-- doesNameExist calls this function, which uses a set to execute
+-- recursion safeguards. Don't call this function directly.
+doesNameExist0 :: Map Id Alias -> ReadOnlyState -> Set QId -> QId -> NameExist
+doesNameExist0 _ _ s q | q `Set.member` s = NoExist -- TODO Maybe this should be an error?
+doesNameExist0 m0 r s (QId xs0) = go (ILIsMod (r^.readerModule)) xs0
+    where s' = Set.insert (QId xs0) s
+          conclude (ILIsMod m) = NamedResource $ ModuleValue m
+          conclude (ILIsTrait t) = NamedResource $ TraitValue (ParameterizedTrait [] t)
+          go intl [] = conclude intl
+          go (ILIsMod m) [x] =
+              case Map.lookup x (m^.moduleNames) >>= \rid -> r^.readerResources.possibly (ix rid) of
+                Nothing -> NoExist
+                Just y -> NamedResource y
+          go (ILIsTrait t) [x] =
+              case traitAt r t x of
+                Left _ -> NoExist
+                Right y -> NamedTraitEntity y
+          go (ILIsMod m) (x:xs) =
+              case Map.lookup x (m^.moduleNames) >>= \rid -> r^.readerResources.possibly (ix rid) of
+                Nothing -> NoExist
+                Just (ModuleValue m') -> go (ILIsMod m') xs
+                Just (SynonymPlaceholder (SynonymGeneral q)) ->
+                    doesNameExist0 m0 r s' (resolveAliasIgnoreAmbiguity m0 $ q <> QId xs) -- TODO Ambiguity error?
+                Just (SynonymPlaceholder (ActualizeFunctor (TraitRef q _))) ->
+                    case doesNameExist0 m0 r s' (resolveAliasIgnoreAmbiguity m0 q) of -- TODO Ambiguity error?
+                      NoExist -> NoExist
+                      NamedResource (FunctorValue pm) ->
+                          let ParameterizedTrait _ t = functorToTrait q pm
+                          in go (ILIsTrait t) xs
+                      NamedResource _ -> NoExist
+                      NamedTraitEntity (TraitFunctor _ ys) -> go (ILIsTrait (Trait ys)) xs
+                      NamedTraitEntity _ -> NoExist
+                Just _ -> NoExist
+          go (ILIsTrait t) (x:xs) =
+              case traitAt r t x of
+                Left _ -> NoExist
+                Right (TraitModule ys) -> go (ILIsTrait (Trait ys)) xs
+                Right _ -> NoExist
 
 defAlias :: Id -> QId -> Map Id Alias -> Map Id Alias
 defAlias v q = insertOrUpdate go v
@@ -59,6 +132,11 @@ resolveAlias _ (QId []) = pure (QId [])
 resolveAlias m (QId (x:xs)) =
     -- Lookup the first component of a qualified identifier.
     lookupAlias x m >>= \x' -> pure (x' <> QId xs)
+
+resolveAliasIgnoreAmbiguity :: Map Id Alias -> QId -> QId
+resolveAliasIgnoreAmbiguity m q = case resolveAlias m q of
+                                    Left _ -> q
+                                    Right q' -> q'
 
 resolveAliasesData :: MonadError FactorError m => Map Id Alias -> Data -> m Data
 resolveAliasesData _ (Int n) = pure $ Int n
@@ -239,12 +317,15 @@ handleAliasDecl m a = case a of
                         Alias i j -> do
                                j' <- resolveAlias m j
                                -- Ensure that the name exists
-                               _ <- ask >>= lookupFn j'
+                               result <- ask >>= \r -> pure (doesNameExist m r j')
+                               case result of
+                                 NoExist -> throwError (NoSuchFunction j') -- TODO Error messages...
+                                 _ -> pure ()
                                pure $ defAlias i j' m
                         Open mname -> do
                                reader <- ask
                                mname' <- resolveAlias m mname
-                               lookupAndOpenModule mname' reader m
+                               lookupAndOpenModule mname' reader m -- //// Update for doesNameExist above
                         AssertTrait _ -> pure m
                         IncludeModule _ -> pure m
 
