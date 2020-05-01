@@ -52,6 +52,9 @@ data IntermediateLookup = ILIsMod Module
 
 -- TODO doesNameExist still doesn't work with includes.
 
+-- TODO Will need to implement includeNameInModule for the inside of
+-- functors once includes are allowed inside functors.
+
 -- This isn't exactly like Factor.State.Reader.lookupFn. That function
 -- assumes the ID points to a valid resource, whereas this one is
 -- willing to refer to hypothetical resources that haven't been
@@ -67,24 +70,23 @@ doesNameExist0 :: Map Id Alias -> ReadOnlyState -> Set QId -> QId -> NameExist
 doesNameExist0 _ _ s q | q `Set.member` s = NoExist -- TODO Maybe this should be an error?
 doesNameExist0 m0 r s (QId xs0) = go (ILIsMod (r^.readerModule)) xs0
     where s' = Set.insert (QId xs0) s
+          conclude :: IntermediateLookup -> NameExist
           conclude (ILIsMod m) = NamedResource $ ModuleValue m
           conclude (ILIsTrait t) = NamedResource $ TraitValue (ParameterizedTrait [] t)
+          go :: IntermediateLookup -> [Id] -> NameExist
           go intl [] = conclude intl
-          go (ILIsMod m) [x] =
-              case Map.lookup x (m^.moduleNames) >>= \rid -> r^.readerResources.possibly (ix rid) of
-                Nothing -> NoExist
-                Just y -> NamedResource y
+          go (ILIsMod m) [x] = nameInModule0 m0 r m s' x
           go (ILIsTrait t) [x] =
               case traitAt r t x of
                 Left _ -> NoExist
                 Right y -> NamedTraitEntity y
           go (ILIsMod m) (x:xs) =
-              case Map.lookup x (m^.moduleNames) >>= \rid -> r^.readerResources.possibly (ix rid) of
-                Nothing -> NoExist
-                Just (ModuleValue m') -> go (ILIsMod m') xs
-                Just (SynonymPlaceholder (SynonymGeneral q)) ->
+              case nameInModule0 m0 r m s' x of
+                NoExist -> NoExist
+                NamedResource (ModuleValue m') -> go (ILIsMod m') xs
+                NamedResource (SynonymPlaceholder (SynonymGeneral q)) ->
                     doesNameExist0 m0 r s' (resolveAliasIgnoreAmbiguity m0 $ q <> QId xs) -- TODO Ambiguity error?
-                Just (SynonymPlaceholder (ActualizeFunctor (TraitRef q _))) ->
+                NamedResource (SynonymPlaceholder (ActualizeFunctor (TraitRef q _))) ->
                     case doesNameExist0 m0 r s' (resolveAliasIgnoreAmbiguity m0 q) of -- TODO Ambiguity error?
                       NoExist -> NoExist
                       NamedResource (FunctorValue pm) ->
@@ -93,12 +95,28 @@ doesNameExist0 m0 r s (QId xs0) = go (ILIsMod (r^.readerModule)) xs0
                       NamedResource _ -> NoExist
                       NamedTraitEntity (TraitFunctor _ ys) -> go (ILIsTrait (Trait ys)) xs
                       NamedTraitEntity _ -> NoExist
-                Just _ -> NoExist
+                NamedResource _ -> NoExist
+                NamedTraitEntity (TraitModule ys) -> go (ILIsTrait (Trait ys)) xs
+                NamedTraitEntity _ -> NoExist
           go (ILIsTrait t) (x:xs) =
               case traitAt r t x of
                 Left _ -> NoExist
                 Right (TraitModule ys) -> go (ILIsTrait (Trait ys)) xs
                 Right _ -> NoExist
+
+nameInModule :: Map Id Alias -> ReadOnlyState -> Module -> Id -> NameExist
+nameInModule m0 r m x = nameInModule0 m0 r m Set.empty x
+
+nameInModule0 :: Map Id Alias -> ReadOnlyState -> Module -> Set QId -> Id -> NameExist
+nameInModule0 m0 r m s x = stdNameInModule <> includeNameInModule
+    where stdNameInModule = case Map.lookup x (m^.moduleNames) >>= \rid -> r^.readerResources.possibly (ix rid) of
+                              Nothing -> NoExist
+                              Just y -> NamedResource y
+          includeNameInModule = foldMap includeNameInModule' (m^.moduleDecls)
+          includeNameInModule' (IncludeModule qid)
+              | qid `Set.member` s = NoExist -- TODO Cycle error?
+              | otherwise = doesNameExist0 m0 r s (qid <> QId [x])
+          includeNameInModule' _ = NoExist
 
 defAlias :: Id -> QId -> Map Id Alias -> Map Id Alias
 defAlias v q = insertOrUpdate go v
