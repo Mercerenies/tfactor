@@ -1,0 +1,28 @@
+
+mod Foo { }
+
+  fun foo ( -- Int )
+    19
+  end
+
+end
+
+mod Foo1 = Foo { } end
+
+mod Bar
+  include Foo1
+
+  alias foo1 = foo
+
+  fun bar ( -- Int )
+    foo1
+  end
+
+end
+
+#alias bar1 = Bar.bar
+
+fun test ( -- Bool )
+#  bar1 19 =
+  true
+end

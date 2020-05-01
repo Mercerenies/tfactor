@@ -60,6 +60,7 @@ tests p = TestLabel "Factor.Test.Files" $ TestList [
            testFile p "std/test/aliases_6.txt",
            testFile p "std/test/aliases_7.txt",
            testFile p "std/test/aliases_8.txt",
+           testFile p "std/test/aliases_9.txt",
            testFile p "std/test/general_1.txt"
           ]
 

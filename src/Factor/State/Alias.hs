@@ -133,13 +133,28 @@ openModule0 r mname modl s aliases0 = aliases2
           aliases2 = List.foldl' go' aliases1 (modl^.moduleDecls)
           go aliases k _ = defAlias k (mname <> QId [k]) aliases
           go' aliases (IncludeModule q) =
-             case doesNameExist0 aliases r s q of
+             case doesNameExist0 aliases r s (resolveAliasIgnoreAmbiguity aliases q) of
                NoExist -> aliases
                NamedResource (ModuleValue m) -> openModule0 r mname m (Set.insert q s) aliases
+               NamedResource (SynonymPlaceholder (SynonymGeneral q1)) ->
+                   case lookupAndOpenModule q1 r aliases of
+                     Right aliases' -> aliases'
+                     Left _ -> aliases
+               NamedResource (SynonymPlaceholder (ActualizeFunctor (TraitRef f _))) ->
+                   let f' = resolveAliasIgnoreAmbiguity aliases f
+                   in case doesNameExist0 aliases r s f' of
+                        NoExist -> aliases
+                        NamedResource (FunctorValue pm) ->
+                            let ParameterizedTrait _ (Trait t) = functorToTrait f' pm
+                            in openForTrait aliases t
+                        NamedResource _ -> aliases
+                        NamedTraitEntity (TraitFunctor _ xs) -> openForTrait aliases xs
+                        NamedTraitEntity _ -> aliases
                NamedResource _ -> aliases
-               NamedTraitEntity (TraitModule _m) -> aliases -- ////
+               NamedTraitEntity (TraitModule m) -> openForTrait aliases m
                NamedTraitEntity _ -> aliases
           go' aliases _ = aliases
+          openForTrait aliases m = List.foldl' (\a (i, v) -> go a i v) aliases m
 
 lookupAndOpenModule :: MonadError FactorError m =>
                        QId -> ReadOnlyState -> Map Id Alias -> m (Map Id Alias)
@@ -321,7 +336,7 @@ resolveAliasesResource m (SynonymPlaceholder t) = do
 resolveAliasesResource' :: (MonadError FactorError m, MonadReader ReadOnlyState m) =>
                            Map Id Alias -> QId -> ReaderValue -> m ReaderValue
 resolveAliasesResource' aliases0 (QId xs) r = do
-  let parents = List.inits xs
+  let parents = init $ List.inits xs
       handleParentModule aliases mname = do
         m <- case mname of
                [] -> Just <$> asks (view readerModule)
@@ -355,7 +370,7 @@ handleAliasDecl m a = case a of
                         Open mname -> do
                                reader <- ask
                                mname' <- resolveAlias m mname
-                               lookupAndOpenModule mname' reader m -- //// Update for doesNameExist above
+                               lookupAndOpenModule mname' reader m
                         AssertTrait _ -> pure m
                         IncludeModule _ -> pure m
 
