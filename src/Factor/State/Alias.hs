@@ -50,8 +50,6 @@ data IntermediateLookup = ILIsMod Module
                         | ILIsTrait Trait
                           deriving (Show)
 
--- TODO doesNameExist still doesn't work with includes.
-
 -- TODO Will need to implement includeNameInModule for the inside of
 -- functors once includes are allowed inside functors.
 
@@ -126,14 +124,27 @@ defAlias v q = insertOrUpdate go v
               | otherwise = AmbiguousAlias [q, q']
           go (Just (AmbiguousAlias qs)) = AmbiguousAlias (q:qs)
 
-openModule :: QId -> Module -> Map Id Alias -> Map Id Alias
-openModule mname (view moduleNames -> modl) aliases0 = Map.foldlWithKey' go aliases0 modl
-    where go aliases k _ = defAlias k (mname <> QId [k]) aliases
+openModule :: ReadOnlyState -> QId -> Module -> Map Id Alias -> Map Id Alias
+openModule r mname modl aliases0 = openModule0 r mname modl Set.empty aliases0
+
+openModule0 :: ReadOnlyState -> QId -> Module -> Set QId -> Map Id Alias -> Map Id Alias
+openModule0 r mname modl s aliases0 = aliases2
+    where aliases1 = Map.foldlWithKey' go aliases0 (modl^.moduleNames)
+          aliases2 = List.foldl' go' aliases1 (modl^.moduleDecls)
+          go aliases k _ = defAlias k (mname <> QId [k]) aliases
+          go' aliases (IncludeModule q) =
+             case doesNameExist0 aliases r s q of
+               NoExist -> aliases
+               NamedResource (ModuleValue m) -> openModule0 r mname m (Set.insert q s) aliases
+               NamedResource _ -> aliases
+               NamedTraitEntity (TraitModule _m) -> aliases -- ////
+               NamedTraitEntity _ -> aliases
+          go' aliases _ = aliases
 
 lookupAndOpenModule :: MonadError FactorError m =>
                        QId -> ReadOnlyState -> Map Id Alias -> m (Map Id Alias)
 lookupAndOpenModule mname reader aliases = lookupFn mname reader >>= \case
-                                           ModuleValue m -> return $ openModule mname m aliases
+                                           ModuleValue m -> return $ openModule reader mname m aliases
                                            _ -> throwError (NoSuchModule mname)
 
 -- Looking up an alias that doesn't exist is not an error; it simply
@@ -319,9 +330,10 @@ resolveAliasesResource' aliases0 (QId xs) r = do
                          _ -> pure Nothing
         case m of
           Nothing -> pure aliases
-          Just m' ->
-              let aliases' = openModule (QId mname) m' aliases
-              in foldM handleAliasDecl aliases' (m'^.moduleDecls)
+          Just m' -> do
+                 reader <- ask
+                 let aliases' = openModule reader (QId mname) m' aliases
+                 foldM handleAliasDecl aliases' (m'^.moduleDecls)
   aliases1 <- foldM handleParentModule aliases0 parents
   resolveAliasesResource aliases1 r
 
