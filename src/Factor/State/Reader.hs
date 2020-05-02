@@ -28,42 +28,33 @@ import Data.Maybe(listToMaybe)
 
 -- TODO Is this whole thing valid from a Traversal law standpoint...?
 
-atRId :: RId -> Traversal' ReadOnlyState ReaderValue
-atRId rid = readerResources . ix rid
+--atRId :: RId -> Traversal' ReadOnlyState ReaderValue
+--atRId rid = readerResources . ix rid
 
 moduleHelper :: Traversal' ReaderValue Module
 moduleHelper f (ModuleValue m) = ModuleValue <$> f m
 moduleHelper _ x = pure x
 
-atQIdResource0 :: forall f. Applicative f => QId -> (RId -> f RId) -> ReadOnlyState -> f ReadOnlyState
-atQIdResource0 (QId xs0) f r0 = go xs0' readerNames
+atQIdResourceGeneral :: forall f. Applicative f => QId ->
+                        ((RId, ReaderValue) -> f (RId, ReaderValue)) ->
+                        ReadOnlyState -> f ReadOnlyState
+atQIdResourceGeneral (QId xs0) f r0 = go xs0' readerNames
     where xs0' = if listToMaybe xs0 == Just rootAliasName then tail xs0 else xs0
           go :: [Id] -> Traversal' ReadOnlyState (Map Id RId) -> f ReadOnlyState
           go [] _ = pure r0
-          go [x] r = (r . ix x) f r0
+          go [x] r =
+              case Map.lookup x (r0^.r) >>= \rid -> (,) rid <$> getResource rid (r0^.readerResources) of
+                Nothing -> pure r0
+                Just (rid, rv) -> (\(rid', rv') -> over readerResources (modifyResource (const rv') rid) $ over r (Map.insert x rid') r0) <$> f (rid, rv)
           go (x:xs) r = case Map.lookup x (r0^.r) of
                           Nothing -> pure r0
                           Just rid -> go xs (readerResources . ix rid . moduleHelper . moduleNames)
 
--- So for whatever reason, Haskell needed some help (in the form of
--- ScopedTypeVariables) getting the type signatures of atQIdResource0
--- right. So the type signature up there is messy, and this function
--- acts simply as an assertion that it's still the traversal that I
--- want.
 atQIdResource :: QId -> Traversal' ReadOnlyState RId
-atQIdResource = atQIdResource0
+atQIdResource q = atQIdResourceGeneral q . _1
 
 atQId :: QId -> Traversal' ReadOnlyState ReaderValue
-atQId (QId xs0) f r0 = go xs0' (r0^.readerNames)
-    where xs0' = if listToMaybe xs0 == Just rootAliasName then tail xs0 else xs0
-          go [] _ = pure r0
-          go [x] r = case Map.lookup x r of
-                       Nothing -> pure r0
-                       Just rid -> atRId rid f r0
-          go (x:xs) r = case Map.lookup x r >>= flip getResource (r0^.readerResources) of
-                          Nothing -> pure r0
-                          Just (ModuleValue m) -> go xs (m^.moduleNames)
-                          Just _ -> pure r0
+atQId q = atQIdResourceGeneral q . _2
 
 -- TODO This is used for more than just functions. Change its name to
 -- reflect that, and make it stop throwing NoSuchFunction, since that

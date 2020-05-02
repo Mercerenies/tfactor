@@ -3,6 +3,7 @@
 module Factor.State.Resource(ResourceTable(..), RId, newResourceTable,
                              appendResource, appendResource', appendResourceRO,
                              getResource, getResourceName, getResource', getResourceName',
+                             modifyResource,
                              defineResource, resourceCount, catResources,
                              modifyRIds, traverseWithQId, mapWithQId) where
 
@@ -51,6 +52,9 @@ getResourceName' :: MonadError FactorError m => RId -> ResourceTable a -> m QId
 getResourceName' i t = case getResourceName i t of
                          Nothing -> throwError (InternalError $ "Invalid resource ID " ++ show i)
                          Just x -> pure x
+
+modifyResource :: (a -> a) -> RId -> ResourceTable a -> ResourceTable a
+modifyResource f i (ResourceTable table) = ResourceTable $ Seq.adjust (_2 %~ f) i table
 
 defineResource :: MonadState (ResourceTable a) m =>
                   QId -> Id -> a -> Map Id RId -> m (Map Id RId)
