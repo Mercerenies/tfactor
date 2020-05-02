@@ -145,22 +145,39 @@ openModule0 r mname modl s aliases0 = aliases2
                    in case doesNameExist0 aliases r s f' of
                         NoExist -> aliases
                         NamedResource (FunctorValue pm) ->
-                            let ParameterizedTrait _ (Trait t) = functorToTrait f' pm
-                            in openForTrait aliases t
+                            let ParameterizedTrait _ t = functorToTrait f' pm
+                            in openTrait0 r mname t s aliases
                         NamedResource _ -> aliases
-                        NamedTraitEntity (TraitFunctor _ xs) -> openForTrait aliases xs
+                        NamedTraitEntity (TraitFunctor _ xs) ->
+                            openTrait0 r mname (Trait xs) s aliases
                         NamedTraitEntity _ -> aliases
                NamedResource _ -> aliases
-               NamedTraitEntity (TraitModule m) -> openForTrait aliases m
+               NamedTraitEntity (TraitModule m) -> openTrait0 r mname (Trait m) s aliases
                NamedTraitEntity _ -> aliases
           go' aliases _ = aliases
-          openForTrait aliases m = List.foldl' (\a (i, v) -> go a i v) aliases m
+
+openTrait :: ReadOnlyState -> QId -> Trait -> Map Id Alias -> Map Id Alias
+openTrait r q t a = openTrait0 r q t Set.empty a
+
+-- TODO Should we bindTrait here when we get the ParameterizedTrait
+-- case? Can we even do that?
+openTrait0 :: ReadOnlyState -> QId -> Trait -> Set QId -> Map Id Alias -> Map Id Alias
+openTrait0 r qid (Trait xs) s aliases = List.foldl' go aliases xs
+    where go a (_, TraitInclude (TraitRef tname _)) =
+              let tname' = resolveAliasIgnoreAmbiguity a tname
+              in case doesNameExist0 a r s tname' of
+                   NoExist -> a
+                   NamedResource (TraitValue (ParameterizedTrait _ t)) -> openTrait0 r qid t s a
+                   NamedResource _ -> a
+                   NamedTraitEntity _ -> a -- TODO Is it possible to get an include here?
+          go a (k, _) = defAlias k (qid <> QId [k]) a
 
 lookupAndOpenModule :: MonadError FactorError m =>
                        QId -> ReadOnlyState -> Map Id Alias -> m (Map Id Alias)
-lookupAndOpenModule mname reader aliases = lookupFn mname reader >>= \case
-                                           ModuleValue m -> return $ openModule reader mname m aliases
-                                           _ -> throwError (NoSuchModule mname)
+lookupAndOpenModule mname reader aliases =
+    case doesNameExist aliases reader mname of
+      NamedResource (ModuleValue m) -> return $ openModule reader mname m aliases
+      _ -> throwError (NoSuchModule mname)
 
 -- Looking up an alias that doesn't exist is not an error; it simply
 -- means we're not using an alias. Looking up an ambiguous alias is a
