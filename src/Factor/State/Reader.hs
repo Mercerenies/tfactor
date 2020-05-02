@@ -16,6 +16,7 @@ import Factor.Error
 import Factor.Id
 import Factor.Type
 import Factor.Names
+import Factor.Util
 
 import Control.Monad.Except
 import Control.Monad.State
@@ -36,16 +37,16 @@ moduleHelper f (ModuleValue m) = ModuleValue <$> f m
 moduleHelper _ x = pure x
 
 atQIdResourceGeneral :: forall f. Applicative f => QId ->
-                        ((RId, ReaderValue) -> f (RId, ReaderValue)) ->
+                        ((RId, QId, ReaderValue) -> f (RId, QId, ReaderValue)) ->
                         ReadOnlyState -> f ReadOnlyState
 atQIdResourceGeneral (QId xs0) f r0 = go xs0' readerNames
     where xs0' = if listToMaybe xs0 == Just rootAliasName then tail xs0 else xs0
           go :: [Id] -> Traversal' ReadOnlyState (Map Id RId) -> f ReadOnlyState
           go [] _ = pure r0
           go [x] r =
-              case Map.lookup x (r0^.r) >>= \rid -> (,) rid <$> getResource rid (r0^.readerResources) of
+              case Map.lookup x (r0^.r) >>= \rid -> (,) rid <$> getResourceFull rid (r0^.readerResources) of
                 Nothing -> pure r0
-                Just (rid, rv) -> (\(rid', rv') -> over readerResources (modifyResource (const rv') rid) $ over r (Map.insert x rid') r0) <$> f (rid, rv)
+                Just (rid, (q, rv)) -> (\(rid', q', rv') -> over readerResources (modifyResourceFull (const (q', rv')) rid) $ over r (Map.insert x rid') r0) <$> f (rid, q, rv)
           go (x:xs) r = case Map.lookup x (r0^.r) of
                           Nothing -> pure r0
                           Just rid -> go xs (readerResources . ix rid . moduleHelper . moduleNames)
@@ -54,34 +55,20 @@ atQIdResource :: QId -> Traversal' ReadOnlyState RId
 atQIdResource q = atQIdResourceGeneral q . _1
 
 atQId :: QId -> Traversal' ReadOnlyState ReaderValue
-atQId q = atQIdResourceGeneral q . _2
+atQId q = atQIdResourceGeneral q . _3
 
 -- TODO This is used for more than just functions. Change its name to
 -- reflect that, and make it stop throwing NoSuchFunction, since that
 -- error may not be right.
 lookupFn :: MonadError FactorError m => QId -> ReadOnlyState -> m ReaderValue
-lookupFn (QId ids) reader =
-  let go (ModuleValue names) i =
-          case (names^.moduleNames.at i) >>= flip getResource (reader^.readerResources) of
-            Nothing -> throwError $ NoSuchFunction (QId ids)
-            Just x -> pure x
-      go _ _ = throwError $ NoSuchModule (QId ids)
-      ids' = if listToMaybe ids == Just rootAliasName then tail ids else ids
-  in foldM go (ModuleValue $ view readerModule reader) ids'
+lookupFn q reader = case reader^.possibly (atQIdResourceGeneral q._3) of
+                      Nothing -> throwError $ NoSuchFunction q
+                      Just x -> pure x
 
 lookupFnName :: MonadError FactorError m => QId -> ReadOnlyState -> m QId
-lookupFnName (QId ids) reader =
-  let go (ModuleValue names) [i] =
-          case (names^.moduleNames.at i) >>= flip getResourceName (reader^.readerResources) of
-            Nothing -> throwError $ NoSuchFunction (QId ids)
-            Just x -> pure x
-      go (ModuleValue names) (i:is) =
-          case (names^.moduleNames.at i) >>= flip getResource (reader^.readerResources) of
-            Nothing -> throwError $ NoSuchFunction (QId ids)
-            Just x -> go x is
-      go _ _ = throwError $ NoSuchModule (QId ids)
-      ids' = if listToMaybe ids == Just rootAliasName then tail ids else ids
-  in go (ModuleValue $ view readerModule reader) ids'
+lookupFnName q reader = case reader^.possibly (atQIdResourceGeneral q._2) of
+                          Nothing -> throwError $ NoSuchFunction q
+                          Just x -> pure x
 
 
 allNamesInModule :: ResourceTable ReaderValue -> QId -> Module -> [QId]

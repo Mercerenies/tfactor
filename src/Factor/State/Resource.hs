@@ -2,8 +2,9 @@
 
 module Factor.State.Resource(ResourceTable(..), RId, newResourceTable,
                              appendResource, appendResource', appendResourceRO,
-                             getResource, getResourceName, getResource', getResourceName',
-                             modifyResource,
+                             getResourceFull, getResource, getResourceName,
+                             getResource', getResourceName',
+                             modifyResourceFull, modifyResource,
                              defineResource, resourceCount, catResources,
                              modifyRIds, traverseWithQId, mapWithQId) where
 
@@ -37,6 +38,9 @@ appendResourceRO qid value r =
     let (rid, table) = appendResource qid value $ r^.readerResources
     in (rid, set readerResources table r) -- TODO Can this be done strictly with lenses?
 
+getResourceFull :: RId -> ResourceTable a -> Maybe (QId, a)
+getResourceFull i (ResourceTable table) = table !? i
+
 getResource :: RId -> ResourceTable a -> Maybe a
 getResource i (ResourceTable table) = fmap snd $ table !? i
 
@@ -55,6 +59,9 @@ getResourceName' i t = case getResourceName i t of
 
 modifyResource :: (a -> a) -> RId -> ResourceTable a -> ResourceTable a
 modifyResource f i (ResourceTable table) = ResourceTable $ Seq.adjust (_2 %~ f) i table
+
+modifyResourceFull :: ((QId, a) -> (QId, a)) -> RId -> ResourceTable a -> ResourceTable a
+modifyResourceFull f i (ResourceTable table) = ResourceTable $ Seq.adjust f i table
 
 defineResource :: MonadState (ResourceTable a) m =>
                   QId -> Id -> a -> Map Id RId -> m (Map Id RId)
