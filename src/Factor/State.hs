@@ -30,6 +30,10 @@ import Control.Monad.Except
 import Control.Monad.State
 import Control.Lens
 
+-- ///// Functors need to store their current alias resolution table
+-- for instantiation later. And we need to be careful where the alias
+-- table is going when we declare/instantiate a functor.
+
 evalDecl :: (MonadState ReadOnlyState m, MonadError FactorError m, MonadAliases m) =>
             QId -> Declaration -> m ()
 evalDecl qid decl = do
