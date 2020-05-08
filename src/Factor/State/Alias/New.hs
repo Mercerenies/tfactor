@@ -5,6 +5,7 @@ module Factor.State.Alias.New where
 
 import Factor.Id
 
+import Data.Functor
 import Control.Applicative
 import Control.Monad.Reader
 import Control.Monad.Writer
@@ -15,6 +16,7 @@ import Control.Monad.RWS
 import Control.Monad.Cont
 import Control.Monad.Trans.Maybe
 import Data.Map(Map)
+import qualified Data.Map as Map
 
 -- Eventually, this file will just be Factor.State.Alias. For
 -- compatibility reasons, we're keeping that file around for now. But
@@ -27,7 +29,7 @@ import Data.Map(Map)
 
 type Alias = QId
 
-newtype AliasesT m a = AliasesT { runAliasesT :: StateT (Map Id Alias) m a }
+newtype AliasesT m a = AliasesT { unAliasesT :: StateT (Map Id Alias) m a }
     deriving (Functor, Applicative, Monad, MonadTrans, MFunctor, MonadFix,
               MonadReader r, MonadWriter w, MonadError e, MonadRWS r w s,
               MonadFail, MonadIO, MonadCont, Alternative, MonadPlus)
@@ -62,3 +64,33 @@ instance (Monoid w, MonadAliases m) => MonadAliases (RWST r w s m)
 instance MonadAliases m => MonadAliases (ExceptT e m)
 instance MonadAliases m => MonadAliases (ContT r m)
 instance MonadAliases m => MonadAliases (MaybeT m)
+
+runAliasesT :: AliasesT m a -> Map Id Alias -> m (a, Map Id Alias)
+runAliasesT = runStateT . unAliasesT
+
+evalAliasesT :: Monad m => AliasesT m a -> Map Id Alias -> m a
+evalAliasesT = evalStateT . unAliasesT
+
+execAliasesT :: Monad m => AliasesT m a -> Map Id Alias -> m (Map Id Alias)
+execAliasesT = execStateT . unAliasesT
+
+modifyAliases :: MonadAliases m => (Map Id Alias -> Map Id Alias) -> m ()
+modifyAliases f = stateAliases (\s -> ((), f s))
+
+getsAliases :: MonadAliases m => (Map Id Alias -> a) -> m a
+getsAliases f = fmap f getAliases
+
+defAlias :: MonadAliases m => Id -> QId -> m ()
+defAlias i q = modifyAliases (Map.insert i q)
+
+preserveAliases :: MonadAliases m => m a -> m a
+preserveAliases x = getAliases >>= \a -> x <* putAliases a
+
+lookupAlias :: MonadAliases m => Id -> m QId
+lookupAlias i = getAliases <&> \s -> case Map.lookup i s of
+                                       Nothing -> QId [i]
+                                       Just q -> q
+
+resolveAlias :: MonadAliases m => QId -> m QId
+resolveAlias (QId []) = pure (QId [])
+resolveAlias (QId (x:xs)) = (<> QId xs) <$> lookupAlias x

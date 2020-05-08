@@ -12,6 +12,7 @@ import Factor.State.Reader
 import Factor.State.Stack
 import Factor.State.Types(BuiltIn(..))
 import Factor.State.Resource
+import Factor.State.Alias.New
 import Factor.Id
 import Factor.Type
 import Factor.Error
@@ -29,6 +30,7 @@ import Control.Monad.State
 import Data.Map(Map)
 import qualified Data.Map as Map
 import Data.Foldable
+import Data.Function
 
 newtype Prelude = Prelude ReadOnlyState
 
@@ -263,9 +265,11 @@ loadPreludeImpl = do
   contents <- liftIO $ readFile preludeFileName
   contents' <- liftParseError $ parseManyTokens preludeFileName contents
   decls <- liftParseError $ parseFile preludeFileName contents'
-  newbindings <- flip execStateT newReader $
-                 evalDecls (QId []) [ModuleDecl preludeModuleName decls]
-  fullyLoadBindings bindPrimitives newbindings
+  reader <- bindPrimitives newReader
+  reader' <- evalDecls (QId []) [ModuleDecl preludeModuleName decls] &
+             flip execStateT reader &
+             flip evalAliasesT Map.empty
+  loadBindings (allNames reader') reader'
 
 loadPrelude :: (MonadError FactorError m, MonadIO m) => m Prelude
 loadPrelude = fmap Prelude loadPreludeImpl `catchError` (\e -> throwError (InternalError $ show e))

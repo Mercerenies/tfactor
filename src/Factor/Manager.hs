@@ -10,6 +10,7 @@ import Factor.State.Resource
 import Factor.Loader
 import Factor.Loader.Module
 import Factor.Loader.Type
+import Factor.Id
 
 import Control.Monad.Except
 import Control.Monad.Reader hiding (reader)
@@ -29,3 +30,7 @@ fullyLoadBindings bindfn newbindings = do
   let names' = concatMap (allChildrenOf reader'') names
   reader''' <- normalizeAllTypes names' reader''
   loadEntities names' reader'''
+
+loadBindings :: MonadError FactorError m =>
+                [QId] -> ReadOnlyState -> m ReadOnlyState
+loadBindings names = normalizeAllTypes names >=> loadEntities names

@@ -18,6 +18,7 @@ import Factor.State.Types
 import Factor.State.Resource
 import Factor.State.TypeDecl
 import Factor.State.Reader
+import Factor.State.Alias.New
 import Factor.Trait
 import Factor.Trait.Types
 import Factor.Util
@@ -29,8 +30,7 @@ import Control.Monad.Except
 import Control.Monad.State
 import Control.Lens
 
--- //// Pass an alias table through this and do alias resolution
-evalDecl :: (MonadState ReadOnlyState m, MonadError FactorError m) =>
+evalDecl :: (MonadState ReadOnlyState m, MonadError FactorError m, MonadAliases m) =>
             QId -> Declaration -> m ()
 evalDecl qid decl = do
   get >>= checkDupName qid decl
@@ -49,14 +49,15 @@ evalDecl qid decl = do
         let qid' = qid <> QId [v]
         rid <- state (appendResourceRO qid' (ModuleValue emptyModule))
         modifyM (defineAt qid' rid)
-        evalDecls qid' def
+        preserveAliases $ evalDecls qid' def
     TypeDecl v vs info ->
         modifyM . traverseOf (atCurrentModule qid) $ declareType' (TypeToDeclare qid v vs info)
-    ModuleSyn v (Left name) ->
-        let qid' = qid <> QId [v] in
-        use (possibly $ atQIdResource name) >>= \case
-        Nothing -> throwError (NoSuchModule name)
-        Just rid -> modifyM (defineAt qid' rid)
+    ModuleSyn v (Left name) -> do
+        let qid' = qid <> QId [v]
+        name' <- resolveAlias name
+        use (possibly $ atQIdResource name') >>= \case
+         Nothing -> throwError (NoSuchModule name')
+         Just rid -> modifyM (defineAt qid' rid)
     ModuleSyn v (Right (TraitRef dest args)) ->
         let qid' = qid <> QId [v] in
         get >>= lookupFn dest >>= \case
@@ -75,7 +76,7 @@ evalDecl qid decl = do
             pm = ParameterizedModule args decls'
         rid <- state (appendResourceRO qid' (FunctorValue pm))
         modifyM (defineAt qid' rid)
-    AliasDecl _ _ -> pure () -- //// This
+    AliasDecl i q -> defAlias i q
     OpenDecl _ -> pure () -- //// This
     RequireDecl j -> modifying (atCurrentModule qid.moduleDecls) (++ [AssertTrait j])
     IncludeDecl target -> do
@@ -91,7 +92,7 @@ evalDecl qid decl = do
                 _ -> throwError (NoSuchModule target)
         void $ Map.traverseWithKey go (modl^.moduleNames)
 
-evalDecls :: (MonadState ReadOnlyState m, MonadError FactorError m) =>
+evalDecls :: (MonadState ReadOnlyState m, MonadError FactorError m, MonadAliases m) =>
              QId -> [Declaration] -> m ()
 evalDecls qid decls = mapM_ (evalDecl qid) decls
 
