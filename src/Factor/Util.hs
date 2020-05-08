@@ -2,7 +2,7 @@
 
 module Factor.Util(sepBy, padLeft, foldM1, insertOrUpdate, errorToMaybe, setFilterMap,
                    possibly, possibly', foldMapM, containsDuplicate, identifiersFrom, overLens,
-                   allSplits) where
+                   allSplits, modifyM, traversalToList, traversalIsEmpty) where
 
 import Control.Monad
 import Control.Monad.Except
@@ -80,3 +80,12 @@ overLens acc st = do
 allSplits :: [a] -> [([a], [a])]
 allSplits [] = [([], [])]
 allSplits (x:xs) = ([], (x:xs)) : fmap (_1 %~ (x :)) (allSplits xs)
+
+modifyM :: MonadState s m => (s -> m s) -> m ()
+modifyM f = get >>= f >>= put
+
+traversalToList :: Traversal s t a a -> s -> [a]
+traversalToList t s = fst $ traverseOf t (\a -> ([a], a)) s
+
+traversalIsEmpty :: Traversal s t a a -> s -> Bool
+traversalIsEmpty t s = null $ traversalToList t s

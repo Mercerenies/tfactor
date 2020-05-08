@@ -5,7 +5,7 @@ module Factor.State.Reader(ReadOnlyState(ReadOnlyState), ReaderValue(..),
                            readerModule, readerNames, readerResources,
                            moduleNames, moduleDecls,
                            newReader, emptyModule, mapToModule,
-                           atQIdResource, atQId, lookupFn, lookupFnName,
+                           atQIdResource, atQId, defineAt, lookupFn, lookupFnName,
                            allNamesInModule, allNames, allChildrenOf,
                            readerFunctionType, readerMacroType,
                            merge, mapToReader) where
@@ -56,6 +56,18 @@ atQIdResource q = atQIdResourceGeneral q . _1
 
 atQId :: QId -> Traversal' ReadOnlyState ReaderValue
 atQId q = atQIdResourceGeneral q . _3
+
+defineAt :: MonadError FactorError m => QId -> RId -> ReadOnlyState -> m ReadOnlyState
+defineAt (QId []) _ reader = pure reader
+defineAt (QId [x]) rid reader = pure (set (readerNames.at x) (Just rid) reader)
+defineAt (QId xs) rid reader = do
+  let targetname = QId (init xs)
+      target :: Traversal' ReadOnlyState ReaderValue
+      target = atQId targetname
+      go (ModuleValue m) = pure . ModuleValue $ over moduleNames (Map.insert (last xs) rid) m
+      go _ = throwError (NoSuchModule targetname)
+  when (traversalIsEmpty target reader) $ throwError (NoSuchModule targetname)
+  traverseOf target go reader
 
 -- TODO This is used for more than just functions. Change its name to
 -- reflect that, and make it stop throwing NoSuchFunction, since that

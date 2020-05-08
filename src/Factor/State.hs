@@ -15,7 +15,9 @@ import Factor.Type
 import Factor.State.Types
 import Factor.State.Resource
 import Factor.State.TypeDecl
+import Factor.State.Reader
 import Factor.Trait.Types
+import Factor.Util
 
 import Data.Map(Map)
 import qualified Data.Map as Map
@@ -23,6 +25,29 @@ import Control.Monad.Reader hiding (reader)
 import Control.Monad.Except
 import Control.Monad.State
 import Control.Lens
+
+evalDecl :: (MonadState ReadOnlyState m, MonadError FactorError m) =>
+            QId -> Declaration -> m ()
+evalDecl qid decl = do
+  get >>= checkDupName qid decl
+  case decl of
+    FunctionDecl _ (Function Nothing _) ->
+        throwError (InternalError "Unnamed top-level function")
+    FunctionDecl t (Function (Just v) def) -> do
+        let qid' = qid <> QId [v]
+        rid <- state (appendResourceRO qid' (UDFunction t $ Function (Just v) def))
+        modifyM (defineAt qid' rid)
+    MacroDecl t (Macro v def) -> do
+        let qid' = qid <> QId [v]
+        rid <- state (appendResourceRO qid' (UDMacro t $ Macro v def))
+        modifyM (defineAt qid' rid)
+
+checkDupName :: MonadError FactorError m =>
+                QId -> Declaration -> ReadOnlyState -> m ()
+checkDupName qid d r
+    | Just v <- newDeclName d
+    , Right _ <- lookupFn (qid <> QId [v]) r = throwError (DuplicateDecl v)
+checkDupName _ _ _ = pure ()
 
 declsToReadOnly :: (MonadState (ResourceTable ReaderValue) m, MonadError FactorError m) =>
                    QId -> [Declaration] -> Module -> m Module
