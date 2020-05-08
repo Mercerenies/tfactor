@@ -1,10 +1,12 @@
-{-# LANGUAGE FlexibleContexts, ViewPatterns, KindSignatures, RankNTypes, TypeFamilies, ScopedTypeVariables #-}
+{-# LANGUAGE FlexibleContexts, ViewPatterns, KindSignatures, RankNTypes,
+  TypeFamilies, ScopedTypeVariables, LambdaCase #-}
 
 module Factor.State(ReadOnlyState(ReadOnlyState), ReaderValue(..),
                     Module(Module), SynonymType(..), ModuleDecl(..),
                     readerModule, readerNames, readerResources,
                     moduleNames, moduleDecls,
                     newReader, emptyModule, mapToModule,
+                    evalDecl, evalDecls,
                     declsToReadOnly) where
 
 import Factor.Error
@@ -16,6 +18,7 @@ import Factor.State.Types
 import Factor.State.Resource
 import Factor.State.TypeDecl
 import Factor.State.Reader
+import Factor.Trait
 import Factor.Trait.Types
 import Factor.Util
 
@@ -26,6 +29,7 @@ import Control.Monad.Except
 import Control.Monad.State
 import Control.Lens
 
+-- //// Pass an alias table through this and do alias resolution
 evalDecl :: (MonadState ReadOnlyState m, MonadError FactorError m) =>
             QId -> Declaration -> m ()
 evalDecl qid decl = do
@@ -41,6 +45,64 @@ evalDecl qid decl = do
         let qid' = qid <> QId [v]
         rid <- state (appendResourceRO qid' (UDMacro t $ Macro v def))
         modifyM (defineAt qid' rid)
+    ModuleDecl v def -> do
+        let qid' = qid <> QId [v]
+        rid <- state (appendResourceRO qid' (ModuleValue emptyModule))
+        modifyM (defineAt qid' rid)
+        evalDecls qid' def
+    TypeDecl v vs info ->
+        modifyM . traverseOf (atCurrentModule qid) $ declareType' (TypeToDeclare qid v vs info)
+    ModuleSyn v (Left name) ->
+        let qid' = qid <> QId [v] in
+        use (possibly $ atQIdResource name) >>= \case
+        Nothing -> throwError (NoSuchModule name)
+        Just rid -> modifyM (defineAt qid' rid)
+    ModuleSyn v (Right (TraitRef dest args)) ->
+        let qid' = qid <> QId [v] in
+        get >>= lookupFn dest >>= \case
+        FunctorValue pm -> do
+                      rid <- bindModule qid' dest pm args
+                      modifyM (defineAt qid' rid)
+        _ -> throwError (NoSuchModule dest)
+    RecordDecl i vs info -> evalDecl qid (desugarRecord i vs info)
+    TraitDecl v def -> do
+        let qid' = qid <> QId [v]
+        rid <- state (appendResourceRO qid' (TraitValue def))
+        modifyM (defineAt qid' rid)
+    FunctorDecl v args decls -> do
+        let qid' = qid <> QId [v]
+            decls' = concatMapInMap modDeclToFunctorInfo decls
+            pm = ParameterizedModule args decls'
+        rid <- state (appendResourceRO qid' (FunctorValue pm))
+        modifyM (defineAt qid' rid)
+    AliasDecl _ _ -> pure () -- //// This
+    OpenDecl _ -> pure () -- //// This
+    RequireDecl j -> modifying (atCurrentModule qid.moduleDecls) (++ [AssertTrait j])
+    IncludeDecl target -> do
+        let go v rid = do
+               let qid' = qid <> QId [v]
+               reader <- get
+               case lookupFn qid' reader of
+                 Left _ -> pure ()
+                 Right _ -> throwError (DuplicateDecl v)
+               modifyM (defineAt qid' rid)
+        modl <- get >>= lookupFn target >>= \case
+                ModuleValue m -> pure m
+                _ -> throwError (NoSuchModule target)
+        void $ Map.traverseWithKey go (modl^.moduleNames)
+
+evalDecls :: (MonadState ReadOnlyState m, MonadError FactorError m) =>
+             QId -> [Declaration] -> m ()
+evalDecls qid decls = mapM_ (evalDecl qid) decls
+
+atCurrentModule :: QId -> Traversal' ReadOnlyState Module
+atCurrentModule qid = atQId qid . go
+    where go f (ModuleValue m) = ModuleValue <$> f m
+          go _ rv = pure rv
+
+declareType' :: (MonadState ReadOnlyState m, MonadError FactorError m) =>
+                TypeToDeclare -> Module -> m Module
+declareType' t m = overLens readerResources (declareType t m)
 
 checkDupName :: MonadError FactorError m =>
                 QId -> Declaration -> ReadOnlyState -> m ()
