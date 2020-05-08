@@ -4,6 +4,7 @@ module Factor.Loader.Module where
 
 import Factor.State.Reader
 import Factor.State.Resource
+import Factor.State.Alias.New
 import Factor.Id
 import Factor.Util
 import Factor.Util.Graph(Graph, Cycle(..))
@@ -61,7 +62,7 @@ loadModuleAt qid r =
     Just (SynonymPlaceholder (ActualizeFunctor (TraitRef dest args))) ->
         lookupFn dest r >>= \case
                  FunctorValue pm -> do
-                      (rid, r') <- runStateT (bindModule qid dest pm args) r
+                      (rid, r') <- evalAliasesT (runStateT (bindModule qid dest pm args) r) Map.empty
                       return (set (atQIdResource qid) rid r')
                  _ -> throwError (NoSuchModule dest)
 

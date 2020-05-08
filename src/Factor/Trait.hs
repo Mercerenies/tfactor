@@ -10,6 +10,7 @@ module Factor.Trait(Trait(..), ParameterizedTrait(..), TraitInfo(..), Unsatisfie
 import Factor.Trait.Types
 import Factor.Trait.Argument
 import Factor.State.Reader
+import Factor.State.Alias.New
 import Factor.Error
 import Factor.Id
 import Factor.Util
@@ -142,7 +143,7 @@ nestedTraitDeepFunctor r (Trait ys) (QId xs) = do
 -- TODO We want to verify properties like "does this included trait
 -- exist" or "did we pass the right number of arguments to the
 -- included trait" before requiring the trait in a module.
-moduleSatisfies :: MonadError FactorError m => ReadOnlyState -> Trait -> QId -> Module -> m ()
+moduleSatisfies :: (MonadError FactorError m) => ReadOnlyState -> Trait -> QId -> Module -> m ()
 moduleSatisfies reader t0 qid0 m0 = let f v | v == Id "Self" = qid0
                                             | otherwise = QId [v]
                                         Trait reqs0 = substituteTrait f t0
@@ -253,7 +254,7 @@ makeMinimalModule qid pm = do
                              return (QId [modlname])
   -- TODO Require the functor name as an argument here (requires a bit
   -- of tweaking in Functor.Type.Checker)
-  rid <- bindModule qid (QId []) pm args
+  rid <- evalAliasesT (bindModule qid (QId []) pm args) Map.empty
   get >>= \r -> case r^.readerResources.possibly (ix rid) of
                   Just (ModuleValue m) -> return (m, rid, args)
                   _ -> error "Internal error in makeMinimalModule (unexpected shape after bindModule)"
@@ -323,7 +324,7 @@ makeMinimalInFunctor qid (Trait info) = do
 unsafeImpl :: Sequence
 unsafeImpl = Sequence [Call $ QId [primitivesModuleName, Id "unsafe"]] -- TODO Factor.Names this
 
-bindModule :: (MonadState ReadOnlyState m, MonadError FactorError m) =>
+bindModule :: (MonadState ReadOnlyState m, MonadError FactorError m, MonadAliases m) =>
               QId -> QId -> ParameterizedModule -> [QId] -> m RId
 bindModule mqid fnqid (ParameterizedModule params info) args
     | length params /= length args = throwError $ FunctorArgError fnqid (length params) (length args)
@@ -343,7 +344,7 @@ bindModule mqid fnqid (ParameterizedModule params info) args
         modl <- foldM (\m (k, v) -> bindFunctorInfo subfn (mqid <> QId [k]) k v m) emptyModule $ Map.toList info
         appendResourceRO' mqid (ModuleValue modl)
 
-bindFunctorInfo :: (MonadState ReadOnlyState m, MonadError FactorError m) =>
+bindFunctorInfo :: (MonadState ReadOnlyState m, MonadError FactorError m, MonadAliases m) =>
                    (Id -> QId) -> QId -> Id -> FunctorInfo -> Module -> m Module
 bindFunctorInfo subfn qid name info m =
     case info of

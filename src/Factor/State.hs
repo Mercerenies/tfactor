@@ -40,15 +40,15 @@ evalDecl qid decl = do
     FunctionDecl t (Function (Just v) def) -> do
         let qid' = qid <> QId [v]
         rid <- state (appendResourceRO qid' (UDFunction t $ Function (Just v) def))
-        modifyM (defineAt qid' rid)
+        defineAt' qid v rid
     MacroDecl t (Macro v def) -> do
         let qid' = qid <> QId [v]
         rid <- state (appendResourceRO qid' (UDMacro t $ Macro v def))
-        modifyM (defineAt qid' rid)
+        defineAt' qid v rid
     ModuleDecl v def -> do
         let qid' = qid <> QId [v]
         rid <- state (appendResourceRO qid' (ModuleValue emptyModule))
-        modifyM (defineAt qid' rid)
+        defineAt' qid v rid
         preserveAliases $ evalDecls qid' def
     TypeDecl v vs info ->
         modifyM . traverseOf (atCurrentModule qid) $ declareType' (TypeToDeclare qid v vs info)
@@ -96,12 +96,18 @@ evalDecls :: (MonadState ReadOnlyState m, MonadError FactorError m, MonadAliases
              QId -> [Declaration] -> m ()
 evalDecls qid decls = mapM_ (evalDecl qid) decls
 
+defineAt' :: (MonadState ReadOnlyState m, MonadError FactorError m, MonadAliases m) =>
+             QId -> Id -> RId -> m ()
+defineAt' qid name rid =
+    let qid' = qid <> QId [name] in
+    defAlias name qid' >> modifyM (defineAt qid' rid)
+
 atCurrentModule :: QId -> Traversal' ReadOnlyState Module
 atCurrentModule qid = atQId qid . go
     where go f (ModuleValue m) = ModuleValue <$> f m
           go _ rv = pure rv
 
-declareType' :: (MonadState ReadOnlyState m, MonadError FactorError m) =>
+declareType' :: (MonadState ReadOnlyState m, MonadError FactorError m, MonadAliases m) =>
                 TypeToDeclare -> Module -> m Module
 declareType' t m = overLens readerResources (declareType t m)
 
@@ -132,7 +138,7 @@ declsToReadOnly qid ds r = foldM go r ds
                      let qid' = qid <> QId [v]
                      inner <- declsToReadOnly qid' def emptyModule
                      traverseOf moduleNames (defineModule qid' v inner) reader
-                TypeDecl v vs info -> declareType (TypeToDeclare qid v vs info) reader
+                TypeDecl v vs info -> evalAliasesT (declareType (TypeToDeclare qid v vs info) reader) Map.empty
                 ModuleSyn v dest ->
                      let qid' = qid <> QId [v]
                          syn = case dest of

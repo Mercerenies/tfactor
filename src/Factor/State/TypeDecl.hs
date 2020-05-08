@@ -6,6 +6,7 @@ import Factor.Id
 import Factor.Trait.Types
 import Factor.State.Types
 import Factor.State.Resource
+import Factor.State.Alias.New
 import qualified Factor.Stack as Stack
 import Factor.Error
 import Factor.Code
@@ -25,7 +26,7 @@ data TypeToDeclare = TypeToDeclare {
       typeDeclInfo :: [TypeInfo]
     } deriving (Show, Eq)
 
-declareType :: (MonadState (ResourceTable ReaderValue) m, MonadError FactorError m) =>
+declareType :: (MonadState (ResourceTable ReaderValue) m, MonadError FactorError m, MonadAliases m) =>
                TypeToDeclare -> Module -> m Module
 declareType (tdecl @ (TypeToDeclare qid v vs info)) reader = do
   let qid' = qid <> QId [v]
@@ -38,14 +39,15 @@ declareType (tdecl @ (TypeToDeclare qid v vs info)) reader = do
     _ -> pure ()
   let res = TypeValue (TypeData $ length vs)
   reader' <- traverseOf moduleNames (defineResource qid' v res) reader
+  defAlias v qid'
   reader'' <- bindConstructors tdecl reader'
   bindPattern tdecl patternname reader''
 
-bindConstructors :: (MonadState (ResourceTable ReaderValue) m, MonadError FactorError m) =>
+bindConstructors :: (MonadState (ResourceTable ReaderValue) m, MonadError FactorError m, MonadAliases m) =>
                     TypeToDeclare -> Module -> m Module
 bindConstructors (TypeToDeclare qid v vs ts) reader0 = foldM go reader0 (zip [0 :: Int ..] ts)
     where desttype = NamedType (TypeId (qid <> QId [v]) (fmap QuantVar vs))
-          go reader (idx, TypeVal n ss) =
+          go reader (idx, TypeVal n ss) = do
               let usedvars = vs ++ (concatMap allQuantVars $ Stack.toList ss)
                   restvar = freshVar "R" usedvars
                   restvar' = RestQuant restvar
@@ -59,12 +61,14 @@ bindConstructors (TypeToDeclare qid v vs ts) reader0 = foldM go reader0 (zip [0 
                           Call (QId [rootAliasName, primitivesModuleName, Id "unsafe1"]) -- TODO Put this name in Factor.Names
                          ]
                   qidn = qid <> QId [n]
-              in traverseOf moduleNames (defineResource qidn n (UDFunction pfntype $ Function (Just n) impl)) reader
+              defAlias n qidn
+              traverseOf moduleNames (defineResource qidn n (UDFunction pfntype $ Function (Just n) impl)) reader
 
-bindPattern :: (MonadState (ResourceTable ReaderValue) m, MonadError FactorError m) =>
+bindPattern :: (MonadState (ResourceTable ReaderValue) m, MonadError FactorError m, MonadAliases m) =>
                TypeToDeclare -> Id -> Module -> m Module
-bindPattern (TypeToDeclare qid tname vs ts) pname reader =
-      traverseOf moduleNames (defineResource qidn pname (UDFunction pfntype $ Function (Just pname) impl)) reader
+bindPattern (TypeToDeclare qid tname vs ts) pname reader = do
+  defAlias pname qidn
+  traverseOf moduleNames (defineResource qidn pname (UDFunction pfntype $ Function (Just pname) impl)) reader
     where typename = NamedType (TypeId (qid <> QId [tname]) (fmap QuantVar vs))
           qidn = qid <> QId [pname]
           usedvars = vs
