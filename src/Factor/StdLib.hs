@@ -263,10 +263,8 @@ loadPreludeImpl = do
   contents <- liftIO $ readFile preludeFileName
   contents' <- liftParseError $ parseManyTokens preludeFileName contents
   decls <- liftParseError $ parseFile preludeFileName contents'
-  newbindings <- flip evalStateT newResourceTable $ do
-    definednames <- declsToReadOnly (QId []) [ModuleDecl preludeModuleName decls] emptyModule
-    resourcetable <- get
-    return $ ReadOnlyState definednames resourcetable
+  newbindings <- flip execStateT newReader $
+                 evalDecls (QId []) [ModuleDecl preludeModuleName decls]
   fullyLoadBindings bindPrimitives newbindings
 
 loadPrelude :: (MonadError FactorError m, MonadIO m) => m Prelude
